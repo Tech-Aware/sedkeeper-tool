@@ -1,17 +1,9 @@
-import logging
 import sys
 import os
+import logging
+from log_config import setup_logging, get_logger, SUCCESS
 
-from view import View, InitializationError
-
-def setup_logging() -> int:
-    log_level = logging.DEBUG if len(sys.argv) >= 2 and sys.argv[1] in ['-v', '--verbose'] else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - [%(filename)s:%(lineno)d] - %(levelname)s - %(name)s - %(funcName)s() - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    return log_level
+from view import View
 
 def get_application_path() -> str:
     if getattr(sys, 'frozen', False):
@@ -26,7 +18,7 @@ def check_cert_directory(app_path: str, logger: logging.Logger) -> None:
         logger.error(f"Cert directory not found: {cert_dir}")
         return
 
-    logger.info("Cert directory found")
+    logger.log(SUCCESS, "Cert directory found")
     for cert_file in os.listdir(cert_dir):
         cert_path = os.path.join(cert_dir, cert_file)
         if os.path.isfile(cert_path):
@@ -35,9 +27,9 @@ def check_cert_directory(app_path: str, logger: logging.Logger) -> None:
             logger.warning(f"Expected cert file not found: {cert_path}")
 
 def main() -> None:
-    log_level = setup_logging()
-    logger = logging.getLogger(__name__)
-    logger.info(f"Log level: {logging.getLevelName(log_level)}")
+    setup_logging()
+    logger = get_logger(__name__)
+    logger.info(f"Log level: {logging.getLevelName(logger.getEffectiveLevel())}")
 
     app_path = get_application_path()
     logger.info(f"Application path: {app_path}")
@@ -46,12 +38,9 @@ def main() -> None:
     check_cert_directory(app_path, logger)
 
     try:
-        view = View(log_level)
+        view = View()
         view.resizable(False, False)
         view.mainloop()
-    except InitializationError as e:
-        logger.critical(f"Failed to initialize the application: {e}")
-        sys.exit(1)
     except Exception as e:
         logger.critical(f"An unexpected error occurred: {e}", exc_info=True)
         sys.exit(1)
