@@ -28,7 +28,7 @@
     - Menu
     
   - Main Window
-    - Welcome View
+    - Welcome to View
     - First view displayed when the application opens
     
   - Main Layout
@@ -44,7 +44,7 @@
     
   - Main Display Area
     - My Secrets (Home Frame)
-      - Table with 3 columns: Id, Type, Label
+      - Table with three columns: ID, Type, Label
         - Lists all secrets present on the card
         
       - Secret Details Frame
