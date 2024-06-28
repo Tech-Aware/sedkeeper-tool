@@ -81,4 +81,8 @@
   - Change PIN
   - Display card authenticity
   - Initialize a Satochip card
-  - Display the log usage historic 
+  - Display the log usage historic
+
+- Seedkeeper version management
+  - Displaying or not some possibility or information depending on the seedkeeper version
+  - Between V1 and V2 that contains different functionality added or deprecated
