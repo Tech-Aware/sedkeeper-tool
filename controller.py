@@ -7,7 +7,7 @@ from pysatochip.pysatochip.CardConnector import (
     CardConnector,
     CardNotPresentError, PinRequiredError, WrongPinError,
     PinBlockedError, UnexpectedSW12Error, CardSetupNotDoneError,
-    UninitializedSeedError
+    UninitializedSeedError, ApduError
 )
 
 from log_config import get_logger, SUCCESS, setup_logging
@@ -34,13 +34,18 @@ def log_method(func):
 
 class Controller:
     @log_method
-    def __init__(self, client, view, loglevel=logging.INFO):
+    def __init__(self, cc, view, loglevel=logging.INFO):
         try:
             super().__init__()
             self._initialize_attributes()
             self.view = view
             self.view.controller = self
-            self.cc = CardConnector(self, loglevel=loglevel)
+            try:
+                self.cc = CardConnector(self, loglevel=loglevel)
+                logger.log(SUCCESS, "CardConnector initialized successfully.")
+            except Exception as e:
+                logger.error("Failed to initialize CardConnector.", exc_info=True)
+                raise ControllerError(f"Failed to initialize CardConnector {e}") from e
             logger.log(SUCCESS, "Controller initialization completed successfully")
         except Exception as e:
             logger.critical("Failed to initialize Controller", exc_info=True)
@@ -116,7 +121,7 @@ class Controller:
                 raise CardSetupNotDoneError("Failed to retrieve card status")
         except Exception as e:
             logger.error(f"Error fetching card status: {e}")
-            raise
+            raise ApduError(f"Error fetching card status: {e}")
 
 
 
