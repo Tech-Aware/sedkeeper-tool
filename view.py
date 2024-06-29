@@ -1,3 +1,4 @@
+import logging
 import sys
 from typing import Optional, Dict, List, Callable
 from functools import wraps
@@ -5,6 +6,8 @@ import webbrowser
 
 import customtkinter
 from PIL import Image, ImageTk
+
+from controller import Controller
 
 from log_config import get_logger, SUCCESS, setup_logging
 from exceptions import FrameError, UIElementError, InitializationError, ButtonCreationError, MainMenuError
@@ -40,13 +43,14 @@ def log_method(func):
 
 class View(customtkinter.CTk):
     @log_method
-    def __init__(self):
+    def __init__(self, loglevel=logging.INFO):
         try:
             super().__init__()
             self._initialize_attributes()
             self._setup_main_window()
             self._declare_widgets()
             self._set_close_protocol()
+            self.controller = Controller(None, self, loglevel=loglevel)
             logger.log(SUCCESS, "View initialization completed successfully")
         except Exception as e:
             logger.critical("Failed to initialize View", exc_info=True)
@@ -263,6 +267,7 @@ class View(customtkinter.CTk):
         # TODO: Implement full functionality to show help
         self._show_message("Showing help")
 
+    @log_method
     def _show_message(self, message):
         # This method could update a status bar or show a popup in the UI
         print(message)  # Placeholder: replace with actual UI update
@@ -454,7 +459,7 @@ class View(customtkinter.CTk):
 if __name__ == "__main__":
     setup_logging()
     try:
-        app = View()
+        app = View(loglevel=logging.DEBUG)  # ou le niveau que vous préférez
         app.welcome()
         app.mainloop()
     except Exception as e:
