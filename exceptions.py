@@ -3,6 +3,16 @@ class SeedkeeperError(Exception):
     pass
 
 
+class CardError(SeedkeeperError):
+    """Exception raised for errors related to card operations."""
+    pass
+
+
+class ControllerError(SeedkeeperError):
+    """Base exception class for Controller-related errors."""
+    pass
+
+
 class ViewError(SeedkeeperError):
     """Base exception class for View-related errors."""
     pass
@@ -23,12 +33,11 @@ class InitializationError(ViewError):
     pass
 
 
-class ControllerError(SeedkeeperError):
-    """Base exception class for Controller-related errors."""
+class ButtonCreationError(ViewError):
+    """Exception raised when there's an error creating a button."""
     pass
 
 
-class CardError(SeedkeeperError):
-    """Exception raised for errors related to card operations."""
+class MainMenuError(ViewError):
+    """Exception raised for errors in the main menu creation or manipulation."""
     pass
-
