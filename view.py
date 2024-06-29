@@ -51,6 +51,8 @@ class View(customtkinter.CTk):
             raise InitializationError(f"Failed to initialize View: {e}") from e
 
     """UTILS FOR INITIALIZATION"""
+
+    @log_method
     def _initialize_attributes(self):
         self.card_type: Optional[str] = None
         self.setup_done: Optional[bool] = None
@@ -93,6 +95,7 @@ class View(customtkinter.CTk):
         self.counter: Optional[int] = None
         self.display_menu: bool = False
 
+    @log_method
     def _set_close_protocol(self):
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         logger.debug("WM_DELETE_WINDOW protocol set successfully")
@@ -107,6 +110,7 @@ class View(customtkinter.CTk):
         # self.controller.cc.card_disconnect()
 
     """UTILS"""
+    @log_method
     def _clear_current_frame(self):
         if self.current_frame:
             logger.debug("Clearing current frame")
@@ -157,13 +161,18 @@ class View(customtkinter.CTk):
         except FrameError as e:
             logger.error(f"Frame error in welcome method: {e}")
             self._handle_view_error("An error occurred while setting up the welcome frame.")
+            # todo: replace handle view error for show_error
         except UIElementError as e:
             logger.error(f"UI element error in welcome method: {e}")
             self._handle_view_error("An error occurred while creating UI elements.")
+            # todo: replace handle view error for show_error
+
         except Exception as e:
             logger.error(f"Unexpected error in welcome method: {e}", exc_info=True)
             self._handle_view_error("An unexpected error occurred. Please try again.")
+            # todo: replace handle view error for show_error
 
+    @log_method
     def _setup_welcome_frame(self):
         logger.debug("Creating new welcome frame")
         try:
@@ -172,6 +181,7 @@ class View(customtkinter.CTk):
         except Exception as e:
             raise FrameError(f"Failed to create welcome frame: {e}")
 
+    @log_method
     def _create_welcome_background(self):
         logger.debug("Creating welcome background")
         try:
@@ -222,6 +232,7 @@ class View(customtkinter.CTk):
             logger.error(error_msg, exc_info=True)
             raise UIElementError(error_msg) from e
 
+    @log_method
     def _create_welcome_labels(self):
         logger.debug("Creating welcome labels")
         try:
@@ -243,6 +254,7 @@ class View(customtkinter.CTk):
         except Exception as e:
             raise UIElementError(f"Failed to create welcome labels: {e}")
 
+    @log_method
     def _create_welcome_button(self):
         logger.debug("Creating welcome button")
         try:
@@ -258,6 +270,8 @@ class View(customtkinter.CTk):
         # Implement the start_setup logic here
         pass
 
+    # todo: replace handle view error for show_error
+    @log_method
     def _handle_view_error(self, message: str):
         """Handle view-related errors by showing an error message to the user."""
         try:
