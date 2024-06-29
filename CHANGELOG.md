@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Added
+- New `exceptions.py` file for centralized exception handling
+- Comprehensive logging system with colored output in `log_config.py`
+- Welcome screen with logo display in `View` class
+
+### Changed
+- Refactored `View` class in `view.py` for improved structure and error handling
+- Updated `create_button` method for consistent styling and better error management
+- Revised `_create_welcome_header` method to include logo display and styled text
+- Improved initialization process in `seedkeeper_tool.py`
+
+### Fixed
+- Resolved issues with UI not displaying properly
+- Corrected error handling in various UI element creation methods
+
 ## [0.1.0] - 2024-06-28
 
 ### Added
