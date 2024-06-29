@@ -88,7 +88,6 @@ class View(customtkinter.CTk):
         self.button: Optional[customtkinter.CTkButton] = None
         self.finish_button: Optional[customtkinter.CTkButton] = None
         self.menu: Optional[customtkinter.CTkFrame] = None
-        self.counter: Optional[int] = None
         self.display_menu: bool = False
 
     def _set_close_protocol(self):

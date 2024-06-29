@@ -24,6 +24,7 @@ class ColoredFormatter(logging.Formatter):
         'INFO': Fore.WHITE,
         'SUCCESS': Fore.GREEN,
         'WARNING': Fore.YELLOW,
+        'EXCEPTION': Fore.YELLOW,
         'ERROR': Fore.RED,
         'CRITICAL': Fore.RED + Back.WHITE
     }
@@ -46,3 +47,4 @@ def setup_logging():
 
 def get_logger(name):
     return logging.getLogger(name)
+
