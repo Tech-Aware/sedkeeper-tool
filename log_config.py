@@ -24,7 +24,6 @@ class ColoredFormatter(logging.Formatter):
         'INFO': Fore.WHITE,
         'SUCCESS': Fore.GREEN,
         'WARNING': Fore.YELLOW,
-        'EXCEPTION': Fore.YELLOW,
         'ERROR': Fore.RED,
         'CRITICAL': Fore.RED + Back.WHITE
     }
@@ -48,3 +47,14 @@ def setup_logging():
 def get_logger(name):
     return logging.getLogger(name)
 
+
+if __name__ == "__main__":
+    # Test the logging configuration
+    setup_logging()
+    logger = get_logger(__name__)
+    logger.debug("This is a debug message")
+    logger.info("This is an info message")
+    logger.log(SUCCESS, "This is a success message")
+    logger.warning("This is a warning message")
+    logger.error("This is an error message")
+    logger.critical("This is a critical message")
