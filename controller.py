@@ -108,7 +108,7 @@ class Controller:
         try:
             response, sw1, sw2, seedKeeper_status = self.cc.seedkeeper_get_status()
             if seedKeeper_status:
-                logger.debug(f"Card status: {d}")
+                logger.debug(f"Card status: {seedKeeper_status}")
                 self.number_secrets = seedKeeper_status['nbr_secrets']
                 self.total_memory = seedKeeper_status['total_memory']
                 self.free_memory = seedKeeper_status['free_memory']
@@ -122,8 +122,6 @@ class Controller:
         except Exception as e:
             logger.error(f"Error fetching card status: {e}")
             raise ApduError(f"Error fetching card status: {e}")
-
-
 
     @log_method
     def request(self, request_type: str, *args):
