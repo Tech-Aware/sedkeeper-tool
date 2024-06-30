@@ -146,7 +146,7 @@ class View(customtkinter.CTk):
                         logger.info("Getting card status")
                         (self.card_present, self.card_version, self.needs2FA, self.is_seeded,
                          self.setup_done, self.card_type, self.pin_left) = self.controller.get_card_status()
-                        logger.info("Card status retrieved successfully")
+                        logger.log(SUCCESS, "Card status retrieved successfully")
 
                         self.controller.card_event = True
                         logger.debug("Controller card event set to True")
@@ -183,7 +183,7 @@ class View(customtkinter.CTk):
                     logger.info("Getting current card status")
                     (self.card_present, self.card_version, self.needs2FA, self.is_seeded,
                      self.setup_done, self.card_type, self.pin_left) = self.controller.get_card_status()
-                    logger.info("Current card status retrieved successfully")
+                    logger.log(SUCCESS, "Current card status retrieved successfully")
 
                     self.controller.card_event = True
                     logger.debug("Controller card event set to True")
@@ -234,26 +234,50 @@ class View(customtkinter.CTk):
             canvas.create_image(142, 63, image=logo_photo, anchor="center")
             canvas.image = logo_photo  # conserver une référence
 
-            # New menu items
+            # Menu items
             self.create_button_for_main_menu_item(
-                menu_frame, "My secrets", "secrets_icon.png", 0.26, 0.585,
-                command=self.show_secrets, state='normal'
+                menu_frame,
+                "My secrets" if self.controller.card_present else "Insert card",
+                "secrets_icon.png" if self.controller.card_present else "insert_card_icon.jpg",
+                0.26, 0.585 if self.controller.card_present else 0.578,
+                command=self.show_secrets if self.controller.card_present else None,
+                state=state,
             )
             self.create_button_for_main_menu_item(
-                menu_frame, "Generate", "generate_icon.png", 0.33, 0.56,
-                command=self.generate_secret, state='normal'
+                menu_frame,
+                "Generate",
+                "generate_icon.png" if self.controller.card_present else "generate_locked_icon.png",
+                0.33, 0.56,
+                command=self.generate_secret if self.controller.card_present else None,
+                state=state,
+                text_color="white" if self.controller.card_present else "grey",
             )
             self.create_button_for_main_menu_item(
-                menu_frame, "Import", "import_icon.png", 0.40, 0.51,
-                command=self.import_secret, state='normal'
+                menu_frame,
+                "Import",
+                "import_icon.png" if self.controller.card_present else "import_locked_icon.png",
+                0.40, 0.51,
+                command=self.import_secret if self.controller.card_present else None,
+                state=state,
+                text_color="white" if self.controller.card_present else "grey"
             )
             self.create_button_for_main_menu_item(
-                menu_frame, "Settings", "settings_icon.png", 0.74, 0.546,
-                command=self.show_settings, state='normal'
+                menu_frame,
+                "Settings",
+                "settings_icon.png" if self.controller.card_present else "settings_locked_icon.png",
+                0.74, 0.546,
+                command=self.show_settings if self.controller.card_present else None,
+                state=state,
+                text_color="white" if self.controller.card_present else "grey"
             )
             self.create_button_for_main_menu_item(
-                menu_frame, "Help", "help_icon.png", 0.81, 0.49,
-                command=self.show_help, state='normal'
+                menu_frame,
+                "Help",
+                "help_icon.png",
+                0.81, 0.49,
+                command=self.show_help,
+                state='normal',
+                text_color="white"
             )
             self.create_button_for_main_menu_item(
                 menu_frame, "Go to the webshop", "webshop_icon.png", 0.95, 0.82,
@@ -276,7 +300,8 @@ class View(customtkinter.CTk):
         rel_y: float,
         rel_x: float,
         state: str,
-        command: Optional[Callable] = None
+        command: Optional[Callable] = None,
+        text_color: str = 'white',
     ) -> Optional[customtkinter.CTkButton]:
         try:
             icon_path = f"{ICON_PATH}{icon_name}"
@@ -287,6 +312,7 @@ class View(customtkinter.CTk):
             button = customtkinter.CTkButton(
                 frame,
                 text=button_label,
+                text_color=text_color if text_color is not "white" else "white",
                 font=customtkinter.CTkFont(family="Outfit", weight="normal", size=18),
                 image=photo_image,
                 bg_color=BG_MAIN_MENU,
@@ -295,7 +321,7 @@ class View(customtkinter.CTk):
                 compound="left",
                 cursor="hand2",
                 command=command,
-                state='normal'
+                state=state
             )
             button.image = photo_image  # keep a reference!
             button.place(rely=rel_y, relx=rel_x, anchor="e")
