@@ -7,22 +7,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased]
 
 ### Added
-- Implemented proper MVC architecture with Controller initialization in View
-- Added loglevel parameter to Controller and View for better logging control
-- Improved error handling and logging throughout the application
+- New `exceptions.py` file for centralized exception handling:
+  - Added specific exception classes: `ViewError`, `FrameError`, `UIElementError`, `InitializationError`, `ControllerError`, `CardError`, `ButtonCreationError`, `MainMenuError`
+- Comprehensive logging system with colored output in `log_config.py`
+- Welcome screen with logo display in `View` class
+- Main menu implementation with icon buttons in the `View` class
+- New methods in `View` class:
+  - `show_secrets`, `generate_secret`, `import_secret`, `show_settings`, `show_help`
+  - `_create_welcome_background`, `_create_welcome_header`, `_create_welcome_labels`, `_create_welcome_button`
+  - `create_button_for_main_menu_item` for creating main menu buttons with icons
+- Integration with web browser to open the webshop
+- `log_method` decorator for detailed function logging
+- Constants for UI colors and paths in `view.py`
+- New attributes in `View` class for tracking application state (e.g., `card_type`, `setup_done`, `is_seeded`, etc.)
 
 ### Changed
-- Refactored View class to properly initialize and use Controller
-- Updated main script (seedkeeper_tool.py) to pass loglevel to View
-- Modified Controller class to accept loglevel parameter
-- Updated CardConnector initialization in Controller to use loglevel
+- Refactor `menu item` to do well alignement
+- Refactored `View` class in `view.py` for improved structure and error handling:
+  - Implemented `_initialize_attributes` method for better attribute management
+  - Updated `__init__` method with more robust error handling
+  - Improved `_setup_main_window` and `_declare_widgets` methods
+- Updated `create_button` method to `create_welcome_button` for consistent styling and better error management
+- Revised `_create_welcome_header` method to include logo display and styled text
+- Improved initialization process in `seedkeeper_tool.py`
+- Enhanced main menu with new layout and functionality:
+  - Added icon support for menu items
+  - Implemented state management for menu items based on card presence
+- Updated error handling throughout the `View` class with specific exception types
+- Modified `on_close_app` method to handle application closure more gracefully
+- Refactored `update_status` method in `View` class:
+  - Improved error handling with specific exceptions (`CardError`, `ViewError`)
+  - Removed `self._handle_view_error()` calls in favor of raising specific exceptions
+  - Enhanced logging for better debugging and error tracking
+  - Streamlined status updates for connected, disconnected, and current status scenarios
 
 ### Fixed
-- Resolved issue with missing smartcard module by adding pyscard to requirements
-- Fixed unexpected keyword argument 'loglevel' error in Controller initialization
+- Resolved issues with UI not displaying properly
+- Corrected error handling in various UI element creation methods
+- Improved error messages and logging throughout the application
 
-### Development
-- Added instructions for switching to 64-bit Python for improved cryptographic performance
+### Removed
+- Removed outdated TODO comments
+- Eliminated `self._handle_view_error()` calls from `update_status` method in favor of more specific exception handling
 
 ## [0.1.0] - 2024-06-28
 
@@ -37,7 +63,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Implemented `check_cert_directory()` function for certificate validation
 - Created `log_config.py` for centralized logging configuration
 - New `exceptions.py` file for centralized exception handling:
-  - Added specific exception classes: `SeedkeeperError`, `ViewError`, `FrameError`, `UIElementError`, `InitializationError`, `ControllerError`, `CardError`, `ButtonCreationError`, `MainMenuError`
+  - Added specific exception classes: `ViewError`, `FrameError`, `UIElementError`, `InitializationError`, `ControllerError`, `CardError`, `ButtonCreationError`, `MainMenuError`
 - Comprehensive logging system with colored output in `log_config.py`
 - Welcome screen with logo display in `View` class
 - Main menu implementation with icon buttons in the `View` class
