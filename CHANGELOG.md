@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased]
 
 ### Added
+- New picture for menu items
 - New `exceptions.py` file for centralized exception handling:
   - Added specific exception classes: `ViewError`, `FrameError`, `UIElementError`, `InitializationError`, `ControllerError`, `CardError`, `ButtonCreationError`, `MainMenuError`
 - Comprehensive logging system with colored output in `log_config.py`
@@ -22,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - New attributes in `View` class for tracking application state (e.g., `card_type`, `setup_done`, `is_seeded`, etc.)
 
 ### Changed
-- Refactor `menu item` to do well alignement
+- Refactor `menu item` to do well alignement and conditional comportement
 - Refactored `View` class in `view.py` for improved structure and error handling:
   - Implemented `_initialize_attributes` method for better attribute management
   - Updated `__init__` method with more robust error handling
