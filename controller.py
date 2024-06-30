@@ -3,16 +3,14 @@ from typing import Optional, Dict, List, Callable
 from functools import wraps
 import logging
 
-from pysatochip.pysatochip.CardConnector import (
-    CardConnector,
-    CardNotPresentError, PinRequiredError, WrongPinError,
-    PinBlockedError, UnexpectedSW12Error, CardSetupNotDoneError,
-    UninitializedSeedError, ApduError
+from pysatochip.pysatochip.CardConnector import (CardConnector, CardNotPresentError, PinRequiredError, WrongPinError,
+                                                 PinBlockedError, UnexpectedSW12Error, CardSetupNotDoneError,
+                                                 UninitializedSeedError, ApduError, SeedKeeperError,
 )
 
 from log_config import get_logger, SUCCESS, setup_logging
-from exceptions import SeedkeeperError, CardError, ControllerError, ViewError, FrameError, UIElementError, \
-    InitializationError, ButtonCreationError, MainMenuError
+from exceptions import (CardError, ControllerError, ViewError, FrameError, UIElementError, InitializationError,
+                        ButtonCreationError, MainMenuError)
 
 logger = get_logger(__name__)
 

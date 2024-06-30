@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 from controller import Controller
 
 from log_config import get_logger, SUCCESS, setup_logging
-from exceptions import FrameError, UIElementError, InitializationError, ButtonCreationError, MainMenuError
+from exceptions import ViewError, FrameError, UIElementError, InitializationError, ButtonCreationError, MainMenuError
 
 logger = get_logger(__name__)
 
@@ -58,7 +58,7 @@ class View(customtkinter.CTk):
 
     """UTILS"""
 
-    """FOR INITIALIZATION"""
+    # FOR INITIALIZATION
     @log_method
     def _initialize_attributes(self):
         self.card_type: Optional[str] = None
@@ -74,7 +74,7 @@ class View(customtkinter.CTk):
         self.pin_left: Optional[int] = None
         self.is_seedkeeper_v1: Optional[bool] = None
 
-    """FOR MAIN WINDOW"""
+    # FOR MAIN WINDOW
     @log_method
     def _setup_main_window(self):
         self.title("SEEDKEEPER TOOL")
@@ -117,7 +117,7 @@ class View(customtkinter.CTk):
         # Assuming self.controller.cc.card_disconnect() exists
         # self.controller.cc.card_disconnect()
 
-    """FOR UI MANAGEMENT"""
+    # FOR UI MANAGEMENT
     @log_method
     def _clear_current_frame(self):
         if self.current_frame:
@@ -134,6 +134,79 @@ class View(customtkinter.CTk):
                 self.welcome_frame.destroy()
             except Exception as e:
                 raise FrameError(f"Failed to clear current frame: {e}")
+
+    # FOR CARD MANAGEMENT
+    @log_method
+    def update_status(self, is_connected=None):
+        logger.info("Entering update_status method")
+        try:
+            if is_connected is not None:
+                if is_connected:
+                    try:
+                        logger.info("Getting card status")
+                        (self.card_present, self.card_version, self.needs2FA, self.is_seeded,
+                         self.setup_done, self.card_type, self.pin_left) = self.controller.get_card_status()
+                        logger.info("Card status retrieved successfully")
+
+                        self.controller.card_event = True
+                        logger.debug("Controller card event set to True")
+
+                        self._log_card_status()
+
+                        if not self.welcome_in_display:
+                            self.my_secrets_list()
+
+                    except Exception as e:
+                        logger.error(f"An error occurred while getting card status: {e}", exc_info=True)
+                        raise self.controller.cc.CardError("Failed to get card status") from e
+
+                else:
+                    try:
+                        logger.info("Card disconnected, resetting status")
+                        self.card_present = self.card_version = self.needs2FA = self.is_seeded = None
+                        self.setup_done = self.card_type = self.card_label = self.pin_left = None
+
+                        self.controller.card_event = False
+                        logger.debug("Controller card event set to False")
+
+                        self._log_card_status()
+
+                        if self.app_open:
+                            self.my_secrets_list()
+
+                    except Exception as e:
+                        logger.error(f"An error occurred while resetting card status: {e}", exc_info=True)
+                        raise self.controller.cc.CardError("Failed to reset card status") from e
+
+            else:
+                try:
+                    logger.info("Getting current card status")
+                    (self.card_present, self.card_version, self.needs2FA, self.is_seeded,
+                     self.setup_done, self.card_type, self.pin_left) = self.controller.get_card_status()
+                    logger.info("Current card status retrieved successfully")
+
+                    self.controller.card_event = True
+                    logger.debug("Controller card event set to True")
+
+                    self._log_card_status()
+
+                except Exception as e:
+                    logger.error(f"An error occurred while getting current card status: {e}", exc_info=True)
+                    raise CardError("Failed to get current card status") from e
+
+        except Exception as e:
+            logger.error(f"An unexpected error occurred in update_status method: {e}", exc_info=True)
+            raise ViewError("An unexpected error occurred in update_status") from e
+
+    def _log_card_status(self):
+        logger.info(f"Card presence: {self.card_present}")
+        logger.info(f"Applet major version: {self.card_version}")
+        logger.info(f"Needs 2FA: {self.needs2FA}")
+        logger.info(f"Is seeded: {self.is_seeded}")
+        logger.info(f"Setup done: {self.setup_done}")
+        logger.info(f"Card type: {self.card_type}")
+        logger.info(f"Card label: {self.card_label}")
+        logger.info(f"Tries remaining: {self.pin_left}")
 
     """FOR MAIN MENU"""
 
@@ -273,8 +346,7 @@ class View(customtkinter.CTk):
         print(message)  # Placeholder: replace with actual UI update
         logger.info(message)
 
-
-    """FOR BUILD FRAME"""
+    # FOR BUILD FRAME
     @log_method
     def create_welcome_button(self, text: str, command: Optional[Callable] = None, frame: Optional[customtkinter.CTkFrame] = None) -> customtkinter.CTkButton:
         logger.debug("Creating button")
