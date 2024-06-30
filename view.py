@@ -192,7 +192,7 @@ class View(customtkinter.CTk):
 
                 except Exception as e:
                     logger.error(f"An error occurred while getting current card status: {e}", exc_info=True)
-                    raise CardError("Failed to get current card status") from e
+                    raise self.controller.cc.CardError("Failed to get current card status") from e
 
         except Exception as e:
             logger.error(f"An unexpected error occurred in update_status method: {e}", exc_info=True)
