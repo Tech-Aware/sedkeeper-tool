@@ -135,7 +135,7 @@ class View(customtkinter.CTk):
             except Exception as e:
                 raise FrameError(f"Failed to clear current frame: {e}")
 
-    # FOR CARD MANAGEMENT
+    # FOR CARD INFORMATION
     @log_method
     def update_status(self, is_connected=None):
         logger.info("Entering update_status method")
@@ -511,19 +511,29 @@ class View(customtkinter.CTk):
         logger.debug("Creating welcome labels")
         try:
             labels = [
-                ("Seedkeeper-tool\n______________", 0.4),
+                ("Seedkeeper-tool", 0.4),
                 ("The companion app for your Seedkeeper card.", 0.5),
                 ("It will help you to safely store and manage your crypto-related", 0.55),
-                ("secrets including seedphrases, passwords and credentials.", 0.65),
+                ("secrets including seedphrases, passwords and credentials.", 0.60),
+                ('First time using the app? Plug your Seedkeeper card into the', 0.7),
+                ('card reader and follow the guide...', 0.75)
             ]
 
             for text, rely in labels:
-                label = customtkinter.CTkLabel(
-                    self.welcome_frame,
-                    text=text,
-                    font=customtkinter.CTkFont(size=18),
-                    text_color="white"
-                )
+                if text == "Seedkeeper-tool":
+                    label = customtkinter.CTkLabel(
+                        self.welcome_frame,
+                        text=text,
+                        font=customtkinter.CTkFont(size=18, weight='bold'),
+                        text_color="white"
+                    )
+                else:
+                    label = customtkinter.CTkLabel(
+                        self.welcome_frame,
+                        text=text,
+                        font=customtkinter.CTkFont(size=18),
+                        text_color="white"
+                    )
                 label.place(relx=0.05, rely=rely, anchor="w")
         except Exception as e:
             raise UIElementError(f"Failed to create welcome labels: {e}")
