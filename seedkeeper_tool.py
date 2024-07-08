@@ -1,32 +1,87 @@
 import sys
 import os
-import logging
+from typing import NoReturn
 from log_config import setup_logging, get_logger, SUCCESS
-from exceptions import SeedkeeperError, CardError, ControllerError
-
+from exceptions import InitializationError
 from view import View
+from pysatochip import cert
 
 logger = get_logger(__name__)
 
 
-def main() -> None:
+def get_application_path() -> str:
+    """Determine and return the application path."""
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def check_cert_directory(app_path: str) -> bool:
+    """
+    Check if the cert directory and files exist.
+    Return True if the directory is found, False otherwise.
+    """
+    cert_dir = os.path.join(app_path, 'pysatochip', 'cert')
+    logger.debug(f"Cert directory: {cert_dir}")
+
+    if not os.path.exists(cert_dir):
+        logger.warning(f"Cert directory not found: {cert_dir}")
+        return False
+
+    logger.debug("Cert directory found")
+    for cert_file in os.listdir(cert_dir):
+        cert_path = os.path.join(cert_dir, cert_file)
+        if os.path.isfile(cert_path):
+            logger.log(SUCCESS, f"Cert file found: {cert_path}")
+        else:
+            logger.warning(f"Expected cert file not found: {cert_path}")
+
+    return True
+
+
+def initialize_view() -> View:
+    """Initialize and return the View object."""
+    logger.info("Initializing View")
+    try:
+        view = View()
+        logger.log(SUCCESS, "View initialized successfully")
+        return view
+    except Exception as e:
+        logger.error(f"Failed to initialize View: {e}")
+        raise InitializationError(f"Failed to initialize View: {e}") from e
+
+
+def configure_view(view: View) -> None:
+    """Configure the view properties."""
+    logger.info("Setting window properties")
+    view.resizable(False, False)
+    view.title("Seedkeeper Tool")
+
+
+def main() -> NoReturn:
+    """Main function to run the Seedkeeper Tool."""
     setup_logging()
     logger.info("Starting Seedkeeper Tool")
 
     try:
-        logger.info("Initializing View")
-        view = View()
-        logger.info("View initialized successfully")
+        app_path = get_application_path()
+        os.chdir(app_path)
 
-        logger.info("Setting window properties")
-        view.resizable(False, False)
-        view.title("Seedkeeper Tool")
+        cert_dir_exists = check_cert_directory(app_path)
+        if not cert_dir_exists:
+            logger.warning("Continuing execution without cert directory. Some features may be limited.")
+
+        view = initialize_view()
+        configure_view(view)
 
         logger.info("Displaying welcome screen")
-        view.welcome()
+        view.welcome()  # Removed cert_dir_missing argument
 
         logger.info("Starting main event loop")
         view.mainloop()
+    except InitializationError as e:
+        logger.critical(f"Initialization error: {e}")
+        sys.exit(1)
     except Exception as e:
         logger.critical(f"An unexpected error occurred: {e}", exc_info=True)
         sys.exit(1)

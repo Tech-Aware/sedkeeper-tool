@@ -28,8 +28,22 @@ class ColoredFormatter(logging.Formatter):
         'CRITICAL': Fore.RED + Back.WHITE
     }
 
+    SPECIAL_LOGS = [
+        "Logging card status",
+        "Card presence: True",
+        "Applet major version: 0",
+        "Needs 2FA: False",
+        "Is seeded: True",
+        "Setup done: True",
+        "Card type: SeedKeeper",
+        "Card label: None",
+        "Tries remaining: 5"
+    ]
+
     def format(self, record):
         log_color = self.COLORS.get(record.levelname, Fore.WHITE)
+        if any(special_log in record.msg for special_log in self.SPECIAL_LOGS):
+            log_color = Fore.MAGENTA
         log_fmt = f'{log_color}%(asctime)s - [%(filename)s:%(lineno)d] - %(levelname)s - %(name)s - %(funcName)s() - %(message)s{Style.RESET_ALL}'
         formatter = logging.Formatter(log_fmt, datefmt='%Y-%m-%d %H:%M:%S')
         return formatter.format(record)
@@ -46,15 +60,3 @@ def setup_logging():
 
 def get_logger(name):
     return logging.getLogger(name)
-
-
-if __name__ == "__main__":
-    # Test the logging configuration
-    setup_logging()
-    logger = get_logger(__name__)
-    logger.debug("This is a debug message")
-    logger.info("This is an info message")
-    logger.log(SUCCESS, "This is a success message")
-    logger.warning("This is a warning message")
-    logger.error("This is an error message")
-    logger.critical("This is a critical message")
