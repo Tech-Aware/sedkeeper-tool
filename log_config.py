@@ -20,12 +20,12 @@ logging.Logger.success = success
 
 class ColoredFormatter(logging.Formatter):
     COLORS = {
-        'DEBUG': Fore.BLUE,
-        'INFO': Fore.WHITE,
+        'DEBUG': Fore.WHITE,
+        'INFO': Fore.BLUE,
         'SUCCESS': Fore.GREEN,
         'WARNING': Fore.YELLOW,
         'ERROR': Fore.RED,
-        'CRITICAL': Fore.RED + Back.WHITE
+        'CRITICAL': Fore.RED + Back.BLACK
     }
 
     SPECIAL_LOGS = [

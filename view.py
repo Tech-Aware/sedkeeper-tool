@@ -13,8 +13,7 @@ from PIL import Image, ImageTk
 from controller import Controller
 
 from log_config import get_logger, SUCCESS, setup_logging
-from exceptions import (ViewError, FrameError, UIElementError, InitializationError, ButtonCreationError, MainMenuError,
-                        SecretFrameCreationError)
+from exceptions import *
 
 from pysatochip.version import PYSATOCHIP_VERSION
 from pysatochip.CardConnector import CardError
@@ -52,414 +51,659 @@ class View(customtkinter.CTk):
     @log_method
     def __init__(self, loglevel=logging.INFO):
         try:
-            logger.info("Initializing View")
+            logger.info("001 Starting View initialization")
             super().__init__()
-            self._initialize_attributes()
-            logger.debug("Attributes initialized")
 
-            self._setup_main_window()
-            logger.debug("Main window set up")
+            try:
+                self._initialize_attributes()
+                logger.debug("002 Attributes initialized successfully")
+            except AttributeError as e:
+                logger.error(f"003 Failed to initialize attributes: {e}")
+                raise InitializationError("004 Attribute initialization failed") from e
 
-            self._declare_widgets()
-            logger.debug("Widgets declared")
+            try:
+                self._setup_main_window()
+                logger.debug("005 Main window set up successfully")
+            except tkinter.TclError as e:
+                logger.error(f"006 Failed to set up main window: {e}")
+                raise InitializationError("007 Main window setup failed") from e
 
-            self._set_close_protocol()
-            logger.debug("Close protocol set")
+            try:
+                self._declare_widgets()
+                logger.debug("008 Widgets declared successfully")
+            except tkinter.TclError as e:
+                logger.error(f"009 Failed to declare widgets: {e}")
+                raise InitializationError("010 Widget declaration failed") from e
 
-            self.controller = Controller(None, self, loglevel=loglevel)
-            logger.debug("Controller initialized")
+            try:
+                self._set_close_protocol()
+                logger.debug("011 Close protocol set successfully")
+            except AttributeError as e:
+                logger.error(f"012 Failed to set close protocol: {e}")
+                raise InitializationError("013 Close protocol setup failed") from e
 
-            logger.log(SUCCESS, "View initialization completed successfully")
+            try:
+                self.controller = Controller(None, self, loglevel=loglevel)
+                logger.debug("014 Controller initialized successfully")
+            except Exception as e:
+                logger.error(f"015 Failed to initialize controller: {e}")
+                raise InitializationError("016 Controller initialization failed") from e
+
+            logger.log(SUCCESS, "017 View initialization completed successfully")
+        except InitializationError as e:
+            logger.critical(f"018 View initialization failed: {e}", exc_info=True)
+            raise
         except Exception as e:
-            logger.critical("Failed to initialize View", exc_info=True)
-            raise InitializationError(f"Failed to initialize View: {e}") from e
+            logger.critical(f"019 Unexpected error during View initialization: {e}", exc_info=True)
+            raise InitializationError(f"020 Unexpected error during View initialization: {e}") from e
 
-    #######################################################################################################
-    """ UTILS """
+    ####################################################################################################################
+    """ 
+    ################################################## UTILS ###########################################################
+    """
+    ####################################################################################################################
 
-    #######################################################################################################
-
+    ########################################
     # FOR INITIALIZATION
+    ########################################
+
     @log_method
     def _initialize_attributes(self):
         try:
-            logger.debug("Initializing attributes")
-            self.menu = None
+            logger.info("001 Starting attribute initialization")
+
+            # Card-related attributes
             self.card_type: Optional[str] = None
-            self.setup_done: Optional[bool] = None
-            self.is_seeded: Optional[bool] = None
-            self.needs2FA: Optional[bool] = None
             self.card_version: Optional[str] = None
             self.card_present: Optional[bool] = None
             self.card_label: Optional[str] = None
+            logger.debug("002 Card-related attributes initialized")
+
+            # Card status attributes
+            self.setup_done: Optional[bool] = None
+            self.is_seeded: Optional[bool] = None
+            self.needs2FA: Optional[bool] = None
+            self.is_seedkeeper_v1: Optional[bool] = None
+            logger.debug("003 Card status attributes initialized")
+
+            # Application state attributes
+            self.menu = None
             self.app_open: bool = True
             self.welcome_in_display: bool = True
             self.spot_if_unlock: bool = False
             self.pin_left: Optional[int] = None
-            self.is_seedkeeper_v1: Optional[bool] = None
-            logger.debug("All attributes initialized to their default values")
-        except Exception as e:
-            logger.error(f"Error in _initialize_attributes: {e}", exc_info=True)
-            raise InitializationError(f"Failed to initialize attributes: {e}") from e
+            logger.debug("004 Application state attributes initialized")
 
-    #############################################################
+            logger.log(SUCCESS, "005 All attributes initialized successfully to their default values")
+        except AttributeError as e:
+            logger.error(f"006 AttributeError in _initialize_attributes: {e}", exc_info=True)
+            raise AttributeInitializationError(f"007 Failed to initialize attributes: {e}") from e
+        except Exception as e:
+            logger.error(f"008 Unexpected error in _initialize_attributes: {e}", exc_info=True)
+            raise InitializationError(f"009 Unexpected error during attribute initialization: {e}") from e
+
+    ########################################
     # FOR MAIN WINDOW
+    ########################################
+
     @log_method
     def _setup_main_window(self):
         try:
-            logger.info("Setting up main window")
-            self.title("SEEDKEEPER TOOL")
-            logger.debug("Window title set")
+            logger.info("001 Starting main window setup")
 
-            window_width = 1000
-            window_height = 600
-            screen_width = self.winfo_screenwidth()
-            screen_height = self.winfo_screenheight()
-            center_x = int((screen_width - window_width) / 2)
-            center_y = int((screen_height - window_height) / 2)
-            self.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
-            logger.debug(f"Window geometry set to {window_width}x{window_height}, centered on screen")
+            try:
+                self.title("SEEDKEEPER TOOL")
+                logger.debug("002 Window title set successfully")
+            except tkinter.TclError as e:
+                logger.error(f"003 Failed to set window title: {e}")
+                raise WindowSetupError("004 Failed to set window title") from e
 
-            self.main_frame = customtkinter.CTkFrame(self, width=1000, height=600, bg_color='black',
-                                                     fg_color='black')
-            self.main_frame.place(relx=0.5, rely=0.5, anchor="center")
-            logger.debug("Main frame created and placed")
+            try:
+                window_width = 1000
+                window_height = 600
+                screen_width = self.winfo_screenwidth()
+                screen_height = self.winfo_screenheight()
+                center_x = int((screen_width - window_width) / 2)
+                center_y = int((screen_height - window_height) / 2)
+                self.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
+                logger.debug(
+                    f"005 Window geometry set successfully to {window_width}x{window_height}, centered on screen")
+            except tkinter.TclError as e:
+                logger.error(f"006 Failed to set window geometry: {e}")
+                raise WindowSetupError("007 Failed to set window geometry") from e
 
-            logger.log(SUCCESS, "Main window setup completed successfully")
+            try:
+                self.main_frame = customtkinter.CTkFrame(self, width=1000, height=600, bg_color='black',
+                                                         fg_color='black')
+                self.main_frame.place(relx=0.5, rely=0.5, anchor="center")
+                logger.debug("008 Main frame created and placed successfully")
+            except tkinter.TclError as e:
+                logger.error(f"009 Failed to create or place main frame: {e}")
+                raise FrameCreationError("010 Failed to create or place main frame") from e
+
+            logger.log(SUCCESS, "011 Main window setup completed successfully")
+        except (WindowSetupError, FrameCreationError) as e:
+            logger.error(f"012 Error in _setup_main_window: {e}", exc_info=True)
+            raise UIElementError(f"013 Failed to set up main window: {e}") from e
         except Exception as e:
-            logger.error(f"Error in _setup_main_window: {e}", exc_info=True)
-            raise UIElementError(f"Failed to set up main window: {e}") from e
+            logger.error(f"014 Unexpected error in _setup_main_window: {e}", exc_info=True)
+            raise UIElementError(f"015 Unexpected error during main window setup: {e}") from e
 
     @log_method
     def _declare_widgets(self):
         try:
-            logger.info("Declaring widgets")
+            logger.info("001 Starting widget declaration")
             self.current_frame: Optional[customtkinter.CTkFrame] = None
+            logger.debug("002 Current frame initialized")
+
             self.canvas: Optional[customtkinter.CTkCanvas] = None
             self.background_photo: Optional[ImageTk.PhotoImage] = None
             self.create_background_photo: Optional[callable] = None
+            logger.debug("003 Canvas and background photo attributes initialized")
+
             self.header: Optional[customtkinter.CTkLabel] = None
             self.text_box: Optional[customtkinter.CTkTextbox] = None
+            logger.debug("004 Header and text box attributes initialized")
+
             self.button: Optional[customtkinter.CTkButton] = None
             self.finish_button: Optional[customtkinter.CTkButton] = None
+            logger.debug("005 Button attributes initialized")
+
             self.menu: Optional[customtkinter.CTkFrame] = None
             self.counter: Optional[int] = None
             self.display_menu: bool = False
-            logger.debug("All widget attributes initialized to None or default values")
+            logger.debug("006 Menu attributes initialized")
 
-            logger.log(SUCCESS, "Widgets declared successfully")
+            logger.log(SUCCESS, "007 All widgets declared successfully")
+        except AttributeError as e:
+            logger.error(f"008 AttributeError in _declare_widgets: {e}", exc_info=True)
+            raise UIElementError(f"009 Failed to declare widgets: {e}") from e
         except Exception as e:
-            logger.error(f"Error in _declare_widgets: {e}", exc_info=True)
-            raise UIElementError(f"Failed to declare widgets: {e}") from e
+            logger.error(f"010 Unexpected error in _declare_widgets: {e}", exc_info=True)
+            raise UIElementError(f"011 Unexpected error during widget declaration: {e}") from e
 
     @log_method
     def _set_close_protocol(self):
         try:
-            logger.info("Setting close protocol")
+            logger.info("001 Starting close protocol setup")
             self.protocol("WM_DELETE_WINDOW", self._on_close_app)
-            logger.log(SUCCESS, "Close protocol set successfully")
+            logger.log(SUCCESS, "002 Close protocol set successfully")
+        except tkinter.TclError as e:
+            logger.error(f"003 TclError in _set_close_protocol: {e}", exc_info=True)
+            raise UIElementError(f"004 Failed to set close protocol: {e}") from e
         except Exception as e:
-            logger.error(f"Error in _set_close_protocol: {e}", exc_info=True)
-            raise UIElementError(f"Failed to set close protocol: {e}") from e
+            logger.error(f"005 Unexpected error in _set_close_protocol: {e}", exc_info=True)
+            raise UIElementError(f"006 Unexpected error during close protocol setup: {e}") from e
 
     @log_method
     def _on_close_app(self):
         try:
-            logger.info("Closing application")
+            logger.info("001 Starting application closure")
             self.app_open = False
+            logger.debug("002 App open flag set to False")
             self.destroy()
-            logger.log(SUCCESS, "Application closed successfully")
-        except Exception as e:
-            logger.error(f"Error while closing application: {e}", exc_info=True)
+            logger.log(SUCCESS, "003 Application closed successfully")
+        except tkinter.TclError as e:
+            logger.error(f"004 TclError while closing application: {e}", exc_info=True)
             # Even if there's an error, we should try to force close the application
             self.quit()
+            logger.warning("005 Forced application quit due to error during normal closure")
+        except Exception as e:
+            logger.error(f"006 Unexpected error while closing application: {e}", exc_info=True)
+            # Even if there's an unexpected error, we should try to force close the application
+            self.quit()
+            logger.warning("007 Forced application quit due to unexpected error during closure")
 
     @log_method
     def _restart_app(self):
-        self.destroy()
-        os.execl(sys.executable, sys.executable, *sys.argv)
+        try:
+            logger.info("001 Starting application restart")
+            self.destroy()
+            logger.debug("002 Current application instance destroyed")
+            logger.log(SUCCESS, "003 Application restart initiated successfully")
+            os.execl(sys.executable, sys.executable, *sys.argv)
+        except OSError as e:
+            logger.error(f"004 OSError during application restart: {e}", exc_info=True)
+            raise ApplicationRestartError(f"005 Failed to restart application: {e}") from e
+        except Exception as e:
+            logger.error(f"006 Unexpected error during application restart: {e}", exc_info=True)
+            raise ApplicationRestartError(f"007 Unexpected error during application restart: {e}") from e
 
-    #############################################################
+    ########################################
     # FOR UI MANAGEMENT
+    ########################################
+
     @log_method
     def _create_label(self, text, bg_fg_color: str = None, frame=None) -> customtkinter.CTkLabel:
         try:
-            logger.debug("Entering create_label method")
+            logger.info(f"001 Starting label creation with text: '{text}'")
             label = None
 
-            try:
-                if bg_fg_color is not None:
-                    try:
-                        logger.debug(f"Creating label with background color: {bg_fg_color}")
-                        label = customtkinter.CTkLabel(self.current_frame, text=text, bg_color=bg_fg_color,
-                                                       fg_color=bg_fg_color,
-                                                       font=customtkinter.CTkFont(family="Outfit", size=18,
-                                                                                  weight="normal"))
-                    except Exception as e:
-                        logger.warning(f"An error occurred while creating label with background color: {e}",
-                                       exc_info=True)
-                else:
-                    try:
-                        logger.debug(f"Creating label with background color: whitesmoke")
-                        label = customtkinter.CTkLabel(self.main_frame, text=text, bg_color="whitesmoke",
-                                                       fg_color="whitesmoke",
-                                                       font=customtkinter.CTkFont(family="Outfit", size=18,
-                                                                                  weight="normal"))
-                    except Exception as e:
-                        logger.warning(f"An error occurred while creating label with background color: {e}",
-                                       exc_info=True)
-
-                if label is None:
-                    try:
-                        logger.debug("Creating default label with transparent background")
-                        label = customtkinter.CTkLabel(self.current_frame, text=text, bg_color="transparent",
-                                                       fg_color="transparent",
-                                                       font=customtkinter.CTkFont(family="Outfit", size=16,
-                                                                                  weight="normal"))
-                    except Exception as e:
-                        logger.error(f"An error occurred while creating default label: {e}", exc_info=True)
-
-                logger.debug("Label created successfully")
-            except Exception as e:
-                logger.warning(f"An error occurred while creating the label: {e}", exc_info=True)
+            if bg_fg_color is not None:
                 try:
-                    label = customtkinter.CTkLabel(self.current_frame, text=text, bg_color="transparent",
-                                                   fg_color="transparent",
-                                                   font=customtkinter.CTkFont(family="Outfit", size=20,
+                    logger.debug(f"002 Creating label with background color: {bg_fg_color}")
+                    label = customtkinter.CTkLabel(self.current_frame, text=text, bg_color=bg_fg_color,
+                                                   fg_color=bg_fg_color,
+                                                   font=customtkinter.CTkFont(family="Outfit", size=18,
                                                                               weight="normal"))
-                    logger.debug("Default label created due to previous error")
+                    logger.debug("003 Label created with specified background color")
                 except Exception as e:
-                    logger.error(f"An error occurred while creating the default label after a previous error: {e}",
-                                 exc_info=True)
-                    raise
+                    logger.warning(f"004 ThemeError while creating label with background color: {e}")
+                    # Continue to try creating a default label
 
-            logger.debug("Exiting create_label method successfully")
+            if label is None:
+                try:
+                    logger.debug("005 Creating label with default whitesmoke background")
+                    label = customtkinter.CTkLabel(self.main_frame, text=text, bg_color="whitesmoke",
+                                                   fg_color="whitesmoke",
+                                                   font=customtkinter.CTkFont(family="Outfit", size=18,
+                                                                              weight="normal"))
+                    logger.debug("006 Label created with default background")
+                except Exception as e:
+                    logger.warning(f"007 ThemeError while creating label with default background: {e}")
+                    # Continue to try creating a label with transparent background
+
+            if label is None:
+                logger.debug("008 Creating label with transparent background")
+                label = customtkinter.CTkLabel(self.current_frame, text=text, bg_color="transparent",
+                                               fg_color="transparent",
+                                               font=customtkinter.CTkFont(family="Outfit", size=16,
+                                                                          weight="normal"))
+                logger.debug("009 Label created with transparent background")
+
+            logger.log(SUCCESS, f"010 Label created successfully with text: '{text}'")
             return label
         except Exception as e:
-            logger.error(f"An unexpected error occurred in create_label: {e}", exc_info=True)
-            return None
+            logger.error(f"011 Unexpected error in _create_label: {e}", exc_info=True)
+            raise LabelCreationError(f"012 Failed to create label: {e}") from e
 
+    @log_method
     def _create_entry(self, show_option: str = None) -> customtkinter.CTkEntry:
         try:
-            logger.debug("Entering create_entry method")
+            logger.info("001 Starting entry creation")
             entry = None
 
             try:
                 if show_option is not None:
-                    logger.debug("Creating entry with secure write")
+                    logger.debug(f"002 Creating entry with secure write option: {show_option}")
                     entry = customtkinter.CTkEntry(self.current_frame, width=555, height=37, corner_radius=10,
-                                                   bg_color='white',
-                                                   fg_color=BG_BUTTON, border_color=BG_BUTTON,
+                                                   bg_color='white', fg_color=BG_BUTTON, border_color=BG_BUTTON,
                                                    show=f"{show_option}", text_color='grey')
-                    logger.debug(f"Entry created with secure write option: {show_option}")
+                    logger.debug("003 Entry created with secure write option")
                 else:
-                    logger.debug("Creating entry without secure write")
+                    logger.debug("004 Creating entry without secure write option")
                     entry = customtkinter.CTkEntry(self.current_frame, width=555, height=37, corner_radius=10,
-                                                   bg_color='white',
-                                                   fg_color=BG_BUTTON, border_color=BG_BUTTON, text_color='grey')
-                    logger.debug("Entry created without secure write option")
+                                                   bg_color='white', fg_color=BG_BUTTON, border_color=BG_BUTTON,
+                                                   text_color='grey')
+                    logger.debug("005 Entry created without secure write option")
 
-                logger.debug("Exiting create_entry method successfully")
+                logger.log(SUCCESS, "006 Entry created successfully")
                 return entry
             except Exception as e:
-                logger.error(f"An error occurred while creating the entry: {e}", exc_info=True)
-                raise
+                logger.error(f"007 ThemeError while creating entry: {e}", exc_info=True)
+                raise EntryCreationError(f"008 Failed to create entry due to theme error: {e}") from e
+
         except Exception as e:
-            logger.error(f"An unexpected error occurred in create_entry: {e}", exc_info=True)
-            return None
+            logger.error(f"009 Unexpected error in _create_entry: {e}", exc_info=True)
+            raise EntryCreationError(f"010 Unexpected error during entry creation: {e}") from e
+
+    @log_method
+    def create_welcome_button(self, text: str, command: Optional[Callable] = None,
+                              frame: Optional[customtkinter.CTkFrame] = None) -> customtkinter.CTkButton:
+        try:
+            logger.info(f"Creating welcome button: {text}")
+            target_frame = frame or self.welcome_frame
+            button = customtkinter.CTkButton(
+                target_frame,
+                text=text,
+                command=command,
+                corner_radius=100,
+                font=customtkinter.CTkFont(family="Outfit", size=18, weight="normal"),
+                bg_color=DEFAULT_BG_COLOR,
+                fg_color=BG_MAIN_MENU,
+                hover_color=BG_HOVER_BUTTON,
+                cursor="hand2",
+                width=120,
+                height=35
+            )
+            logger.log(SUCCESS, f"Welcome button '{text}' created successfully")
+            return button
+        except Exception as e:
+            error_msg = f"Failed to create welcome button '{text}': {e}"
+            logger.error(error_msg, exc_info=True)
+            raise UIElementError(error_msg) from e
 
     @log_method
     def _create_button(self, text: str = None, command=None, frame=None) -> customtkinter.CTkButton:
         try:
-            logger.debug("UTILS: VIew.create_button() | creating button")
+            logger.info(f"001 Starting button creation with text: '{text}'")
             button = None
 
             try:
                 if command is None:
-                    try:
-                        logger.debug("Creating button without command")
-                        button = customtkinter.CTkButton(self.current_frame, text=text, corner_radius=100,
-                                                         font=customtkinter.CTkFont(family="Outfit", size=18,
-                                                                                    weight="normal"),
-                                                         bg_color='white', fg_color=BG_MAIN_MENU,
-                                                         hover_color=BG_HOVER_BUTTON, cursor="hand2", width=120, height=35)
-                    except Exception as e:
-                        logger.error(f"Error creating button without command: {e}", exc_info=True)
-                        raise
+                    logger.debug("002 Creating button without command")
+                    button = customtkinter.CTkButton(self.current_frame, text=text, corner_radius=100,
+                                                     font=customtkinter.CTkFont(family="Outfit", size=18,
+                                                                                weight="normal"),
+                                                     bg_color='white', fg_color=BG_MAIN_MENU,
+                                                     hover_color=BG_HOVER_BUTTON, cursor="hand2", width=120, height=35)
+                    logger.debug("003 Button created without command")
                 else:
-                    try:
-                        logger.debug("Creating button with command")
-                        button = customtkinter.CTkButton(self.current_frame, text=text, corner_radius=100,
-                                                         font=customtkinter.CTkFont(family="Outfit", size=18,
-                                                                                    weight="normal"),
-                                                         bg_color='white', fg_color=BG_MAIN_MENU,
-                                                         hover_color=BG_HOVER_BUTTON, cursor="hand2", width=120, height=35,
-                                                         command=command)
-                    except Exception as e:
-                        logger.error(f"Error creating button with command: {e}", exc_info=True)
-                        raise
-                logger.debug("Exiting create_button method successfully")
-            except Exception as e:
-                logger.error(f"An error occurred while creating the button: {e}", exc_info=True)
-                raise
+                    logger.debug("004 Creating button with command")
+                    button = customtkinter.CTkButton(self.current_frame, text=text, corner_radius=100,
+                                                     font=customtkinter.CTkFont(family="Outfit", size=18,
+                                                                                weight="normal"),
+                                                     bg_color='white', fg_color=BG_MAIN_MENU,
+                                                     hover_color=BG_HOVER_BUTTON, cursor="hand2", width=120, height=35,
+                                                     command=command)
+                    logger.debug("005 Button created with command")
 
-            logger.debug("Button created successfully")
-            return button
+                logger.log(SUCCESS, f"006 Button created successfully with text: '{text}'")
+                return button
+            except Exception as e:
+                logger.error(f"007 Error while creating button: {e}", exc_info=True)
+                raise ButtonCreationError(f"008 Failed to create button: {e}") from e
+
         except Exception as e:
-            logger.error(f"Unexpected error in create_button: {e}", exc_info=True)
-            return None
+            logger.error(f"009 Unexpected error in _create_button: {e}", exc_info=True)
+            raise ButtonCreationError(f"010 Unexpected error during button creation: {e}") from e
 
     @log_method
     def _create_an_header(self, title_text: str = None, icon_name: str = None):
         try:
-            logger.info(f"Creating header with title: {title_text} and icon: {icon_name}")
+            logger.info(f"001 Starting header creation with title: '{title_text}' and icon: '{icon_name}'")
 
-            header_frame = customtkinter.CTkFrame(self.current_frame, fg_color="whitesmoke", bg_color="whitesmoke", width=750,
+            header_frame = customtkinter.CTkFrame(self.current_frame, fg_color="whitesmoke", bg_color="whitesmoke",
+                                                  width=750,
                                                   height=40)
-            logger.debug("Header frame created")
+            logger.debug("002 Header frame created")
 
             if title_text and icon_name:
                 icon_path = f"{ICON_PATH}{icon_name}"
-                image = Image.open(icon_path)
-                photo_image = customtkinter.CTkImage(image, size=(40, 40))
-                logger.debug("Icon loaded and resized")
+                try:
+                    image = Image.open(icon_path)
+                    photo_image = customtkinter.CTkImage(image, size=(40, 40))
+                    logger.debug("003 Icon loaded and resized")
 
-                button = customtkinter.CTkButton(header_frame, text=f"   {title_text}", image=photo_image,
-                                                 font=customtkinter.CTkFont(family="Outfit", size=25, weight="bold"),
-                                                 bg_color="whitesmoke", fg_color="whitesmoke", text_color="black",
-                                                 hover_color="whitesmoke", compound="left")
-                button.image = photo_image
-                button.place(rely=0.5, relx=0, anchor="w")
-                logger.debug("Header button created and placed")
+                    button = customtkinter.CTkButton(header_frame, text=f"   {title_text}", image=photo_image,
+                                                     font=customtkinter.CTkFont(family="Outfit", size=25,
+                                                                                weight="bold"),
+                                                     bg_color="whitesmoke", fg_color="whitesmoke", text_color="black",
+                                                     hover_color="whitesmoke", compound="left")
+                    button.image = photo_image
+                    button.place(rely=0.5, relx=0, anchor="w")
+                    logger.debug("004 Header button created and placed")
+                except FileNotFoundError:
+                    logger.error(f"005 Icon file not found: {icon_path}")
+                    raise HeaderCreationError(f"006 Failed to load icon: {icon_path}")
+                except Exception as e:
+                    logger.error(f"007 Error while creating header button: {e}")
+                    raise HeaderCreationError(f"008 Failed to create header button: {e}")
 
-            logger.log(SUCCESS, "Header created successfully")
+            logger.log(SUCCESS, "009 Header created successfully")
             return header_frame
-        except FileNotFoundError as e:
-            logger.error(f"Icon file not found: {e}", exc_info=True)
-            raise UIElementError(f"Failed to load icon: {e}") from e
         except Exception as e:
-            logger.error(f"Error in create_an_header: {e}", exc_info=True)
-            raise UIElementError(f"Failed to create header: {e}") from e
+            logger.error(f"010 Unexpected error in _create_an_header: {e}", exc_info=True)
+            raise HeaderCreationError(f"011 Failed to create header: {e}") from e
 
     @log_method
     def _create_frame(self):
-        self._clear_current_frame()
-        self.current_frame = customtkinter.CTkFrame(self.main_frame, width=750, height=600,
-                                                    fg_color=DEFAULT_BG_COLOR,
-                                                    bg_color=DEFAULT_BG_COLOR)
-        self.current_frame.place(relx=0.250, rely=0.5, anchor='w')
+        try:
+            logger.info("001 Starting frame creation")
+            self._clear_current_frame()
+            logger.debug("002 Current frame cleared")
+
+            self.current_frame = customtkinter.CTkFrame(self.main_frame, width=750, height=600,
+                                                        fg_color=DEFAULT_BG_COLOR,
+                                                        bg_color=DEFAULT_BG_COLOR)
+            self.current_frame.place(relx=0.250, rely=0.5, anchor='w')
+            logger.log(SUCCESS, "003 New frame created and placed successfully")
+        except Exception as e:
+            logger.error(f"004 Error in _create_frame: {e}", exc_info=True)
+            raise FrameCreationError(f"005 Failed to create frame: {e}") from e
 
     @log_method
     def _clear_current_frame(self):
-        logger.debug("Clearing current frame")
-        if hasattr(self, 'current_frame') and self.current_frame:
-            for widget in self.current_frame.winfo_children():
-                widget.destroy()
-            self.current_frame.destroy()
-            self.current_frame = None
+        try:
+            logger.info("001 Starting current frame clearing process")
+            if hasattr(self, 'current_frame') and self.current_frame:
+                for widget in self.current_frame.winfo_children():
+                    widget.destroy()
+                    logger.debug("002 Widget destroyed")
+                self.current_frame.destroy()
+                logger.debug("003 Current frame destroyed")
+                self.current_frame = None
+                logger.debug("004 Current frame reference set to None")
 
-        # Nettoyage des attributs spécifiques
-        attributes_to_clear = ['header', 'canvas', 'background_photo', 'text_box', 'button', 'finish_button', 'menu']
-        for attr in attributes_to_clear:
-            if hasattr(self, attr):
-                attr_value = getattr(self, attr)
-                if attr_value:
-                    if isinstance(attr_value, (customtkinter.CTkBaseClass, tkinter.BaseWidget)):
-                        attr_value.destroy()
-                    elif isinstance(attr_value, ImageTk.PhotoImage):
-                        del attr_value
-                setattr(self, attr, None)
+            # Nettoyage des attributs spécifiques
+            attributes_to_clear = ['header', 'canvas', 'background_photo', 'text_box', 'button', 'finish_button',
+                                   'menu']
+            for attr in attributes_to_clear:
+                if hasattr(self, attr):
+                    attr_value = getattr(self, attr)
+                    if attr_value:
+                        if isinstance(attr_value, (customtkinter.CTkBaseClass, tkinter.BaseWidget)):
+                            attr_value.destroy()
+                            logger.debug(f"005 Attribute {attr} destroyed")
+                        elif isinstance(attr_value, ImageTk.PhotoImage):
+                            del attr_value
+                            logger.debug(f"006 ImageTk.PhotoImage {attr} deleted")
+                    setattr(self, attr, None)
+                    logger.debug(f"007 Attribute {attr} set to None")
 
-        # Réinitialisation des variables d'état si nécessaire
-        self.display_menu = False
-        self.counter = None
+            # Réinitialisation des variables d'état si nécessaire
+            self.display_menu = False
+            self.counter = None
+            logger.debug("008 State variables reset")
 
-        # Forcer le garbage collector
-        gc.collect()
+            # Forcer le garbage collector
+            gc.collect()
+            logger.debug("009 Garbage collection forced")
 
-        logger.debug("Current frame and associated objects cleared")
+            logger.log(SUCCESS, "010 Current frame and associated objects cleared successfully")
+        except Exception as e:
+            logger.error(f"011 Unexpected error in _clear_current_frame: {e}", exc_info=True)
+            raise FrameClearingError(f"012 Failed to clear current frame: {e}") from e
 
     @log_method
     def _clear_welcome_frame(self):
-        if hasattr(self, 'welcome_frame'):
-            try:
-                logger.info("Clearing welcome frame")
-                self.welcome_frame.destroy()
-                logger.log(SUCCESS, "Welcome frame cleared successfully")
-            except Exception as e:
-                logger.error(f"Error while clearing welcome frame: {e}", exc_info=True)
-                raise FrameError(f"Failed to clear welcome frame: {e}") from e
-        else:
-            logger.debug("No welcome frame to clear")
+        try:
+            logger.info("001 Starting welcome frame clearing process")
+            if hasattr(self, 'welcome_frame'):
+                try:
+                    self.welcome_frame.destroy()
+                    logger.debug("002 Welcome frame destroyed")
+                    delattr(self, 'welcome_frame')
+                    logger.debug("003 Welcome frame attribute removed")
+                    logger.log(SUCCESS, "004 Welcome frame cleared successfully")
+                except Exception as e:
+                    logger.error(f"005 Error while clearing welcome frame: {e}", exc_info=True)
+                    raise FrameClearingError(f"006 Failed to clear welcome frame: {e}") from e
+            else:
+                logger.debug("007 No welcome frame to clear")
+        except Exception as e:
+            logger.error(f"008 Unexpected error in _clear_welcome_frame: {e}", exc_info=True)
+            raise FrameClearingError(f"009 Unexpected error during welcome frame clearing: {e}") from e
 
     @staticmethod
+    @log_method
     def _create_background_photo(self, picture_path):
-        logger.info("UTILS: View.create_background_photo() | creating background photo")
         try:
-            logger.info(f"Entering create_background_photo method with path: {picture_path}")
+            logger.info(f"001 Starting background photo creation with path: {picture_path}")
 
             try:
                 if getattr(sys, 'frozen', False):
                     application_path = sys._MEIPASS
-                    logger.info(f"Running in a bundled application, application path: {application_path}")
+                    logger.debug(f"002 Running in a bundled application, application path: {application_path}")
                 else:
                     application_path = os.path.dirname(os.path.abspath(__file__))
-                    logger.info(f"Running in a regular script, application path: {application_path}")
+                    logger.debug(f"003 Running in a regular script, application path: {application_path}")
             except Exception as e:
-                logger.error(f"An error occurred while determining application path: {e}", exc_info=True)
-                return None
+                logger.error(f"004 Error determining application path: {e}", exc_info=True)
+                raise BackgroundPhotoError("005 Failed to determine application path") from e
 
             try:
                 pictures_path = os.path.join(application_path, picture_path)
-                logger.debug(f"Full path to background photo: {pictures_path}")
+                logger.debug(f"006 Full path to background photo: {pictures_path}")
             except Exception as e:
-                logger.error(f"An error occurred while constructing the full path: {e}", exc_info=True)
-                return None
+                logger.error(f"007 Error constructing full path: {e}", exc_info=True)
+                raise BackgroundPhotoError("008 Failed to construct full path to background photo") from e
 
             try:
                 background_image = Image.open(pictures_path)
-                logger.info("Background image opened successfully")
+                logger.debug("009 Background image opened successfully")
             except FileNotFoundError as e:
-                logger.error(f"File not found: {pictures_path}, {e}", exc_info=True)
-                return None
+                logger.error(f"010 File not found: {pictures_path}", exc_info=True)
+                raise BackgroundPhotoError(f"011 Background image file not found: {pictures_path}") from e
             except Exception as e:
-                logger.error(f"An error occurred while opening the background image: {e}", exc_info=True)
-                return None
+                logger.error(f"012 Error opening background image: {e}", exc_info=True)
+                raise BackgroundPhotoError("013 Failed to open background image") from e
 
             try:
                 photo_image = ImageTk.PhotoImage(background_image)
-                logger.info("Background photo converted to PhotoImage successfully")
+                logger.debug("014 Background photo converted to PhotoImage successfully")
             except Exception as e:
-                logger.error(f"An error occurred while converting the background image to PhotoImage: {e}",
-                             exc_info=True)
-                return None
+                logger.error(f"015 Error converting background image to PhotoImage: {e}", exc_info=True)
+                raise BackgroundPhotoError("016 Failed to convert background image to PhotoImage") from e
 
-            logger.info("Background photo created successfully")
+            logger.log(SUCCESS, "017 Background photo created successfully")
             return photo_image
         except Exception as e:
-            logger.error(f"An unexpected error occurred in create_background_photo: {e}", exc_info=True)
-            return None
+            logger.error(f"018 Unexpected error in _create_background_photo: {e}", exc_info=True)
+            raise BackgroundPhotoError(f"019 Unexpected error during background photo creation: {e}") from e
 
     @log_method
     def _create_canvas(self, frame=None) -> customtkinter.CTkCanvas:
         try:
-            logger.debug("UTILS: View.create_canvas() | creating canvas")
-            try:
-                canvas = customtkinter.CTkCanvas(self.current_frame, bg="whitesmoke", width=1000, height=600)
-                logger.debug("Canvas created successfully")
-            except Exception as e:
-                logger.error(f"An error occurred while creating the canvas: {e}", exc_info=True)
-                raise
-            logger.debug("Exiting create_canvas method successfully")
-            logger.debug("canvas create successfully")
+            logger.info("001 Starting canvas creation")
+            canvas = customtkinter.CTkCanvas(self.current_frame, bg="whitesmoke", width=1000, height=600)
+            logger.debug("002 Canvas created successfully")
+            logger.log(SUCCESS, "003 Canvas creation completed")
             return canvas
         except Exception as e:
-            logger.error(f"An unexpected error occurred in create_canvas: {e}", exc_info=True)
+            logger.error(f"004 Unexpected error in _create_canvas: {e}", exc_info=True)
+            raise CanvasCreationError(f"005 Failed to create canvas: {e}") from e
+
+    ########################################
+    # FOR CARD INFORMATION
+    ########################################
+
+    @log_method
+    def update_status(self, isConnected=None):
+        try:
+            if self.controller.cc.mode_factory_reset == True:
+                # we are in factory reset mode
+                if isConnected is True:
+                    logger.info(f"Card inserted for Reset Factory!")
+                    try:
+                        # Mettre à jour les labels et les boutons en fonction de l'insertion de la carte
+                        # self.reset_button.configure(text='Reset', state='normal')
+                        self.show_button.configure(text='Reset', state='normal')
+                        logger.debug("Labels and button updated for card insertion")
+                    except Exception as e:
+                        logger.error(f"An error occurred while updating labels and button for card insertion: {e}",
+                                     exc_info=True)
+
+                elif isConnected is False:
+                    logger.info(f"Card removed for Reset Factory!")
+                    try:
+                        # Mettre à jour les labels et les boutons en fonction du retrait de la carte
+                        self.show_button.configure(text='Insert card', state='disabled')
+                        logger.debug("Labels and button updated for card removal")
+                    except Exception as e:
+                        logger.error(f"An error occurred while updating labels and button for card removal: {e}",
+                                     exc_info=True)
+                else:  # None
+                    pass
+            else:
+                # normal mode
+                logger.info("CC UTILS: View.update_status | Entering update_status method")
+                if isConnected is True:
+                    try:
+                        logger.info("Getting card status")
+                        self.controller.get_card_status()
+                        self.lets_go_button.configure(text="Let's go", command=self.show_secrets, state='normal')
+                    except Exception as e:
+                        logger.error(f"An error occurred while getting card status: {e}", exc_info=True)
+
+                elif isConnected is False:
+                    try:
+                        logger.info("Card disconnected, resetting status")
+                        self.welcome()
+                        self.lets_go_button.configure(text="Insert card", command=None, state='disabled')
+                    except Exception as e:
+                        logger.error(f"An error occurred while resetting card status: {e}", exc_info=True)
+                    logger.info("Exiting update_status method successfully")
+
+                else:  # isConnected is None
+                    pass
+
+        except Exception as e:
+            logger.error(f"An unexpected error occurred in update_status method: {e}", exc_info=True)
+
+    @log_method
+    def get_passphrase(self, msg):
+        logger.info("Initiating passphrase entry")
+        try:
+            popup = customtkinter.CTkToplevel(self)
+            popup.title("PIN Required")
+            popup.configure(fg_color='whitesmoke')
+            popup.protocol("WM_DELETE_WINDOW", lambda: popup.destroy())
+
+            popup_width, popup_height = 400, 200
+            position_right = int(self.winfo_screenwidth() / 2 - popup_width / 2)
+            position_down = int(self.winfo_screenheight() / 2 - popup_height / 2)
+            popup.geometry(f"{popup_width}x{popup_height}+{position_right}+{position_down}")
+            logger.debug("Passphrase popup created and positioned")
+
+            icon_image = Image.open("./pictures_db/change_pin_popup_icon.jpg")
+            icon = customtkinter.CTkImage(light_image=icon_image, size=(20, 20))
+            icon_label = customtkinter.CTkLabel(popup, image=icon, text="\nEnter the PIN code of your card.",
+                                                compound='top',
+                                                font=customtkinter.CTkFont(family="Outfit", size=18, weight="normal"))
+            icon_label.pack(pady=(0, 10))
+            logger.debug("Icon and label added to popup")
+
+            passphrase_entry = customtkinter.CTkEntry(popup, show="*", corner_radius=10, border_width=0,
+                                                      width=229, height=37, bg_color='whitesmoke',
+                                                      fg_color=BG_BUTTON, text_color='grey')
+            popup.after(100, passphrase_entry.focus_force)
+            passphrase_entry.pack(pady=15)
+            logger.debug("Passphrase entry field added to popup")
+
+            pin = None
+
+            def submit_passphrase():
+                nonlocal pin
+                pin = passphrase_entry.get()
+                popup.destroy()
+                logger.debug("Passphrase submitted")
+                self.update_status()
+
+            submit_button = customtkinter.CTkButton(popup, bg_color='whitesmoke', fg_color=BG_MAIN_MENU,
+                                                    width=120, height=35, corner_radius=34,
+                                                    hover_color=BG_HOVER_BUTTON, text="Submit",
+                                                    command=submit_passphrase,
+                                                    font=customtkinter.CTkFont(family="Outfit", size=18,
+                                                                               weight="normal"))
+            submit_button.pack(pady=10)
+            logger.debug("Submit button added to popup")
+
+            popup.transient(self)
+            popup.bind('<Return>', lambda event: submit_passphrase())
+            self.wait_window(popup)
+
+            logger.log(SUCCESS, "Passphrase entry completed")
+            return pin
+
+        except Exception as e:
+            logger.error(f"Error in get_passphrase: {e}", exc_info=True)
             return None
 
     ####################################################################################################################
-    """ MAIN MENUS """
-
+    """ 
+    ############################################# MAIN MENUS ###########################################################
+    """
     ####################################################################################################################
     @log_method
     def _create_button_for_main_menu_item(
@@ -474,65 +718,84 @@ class View(customtkinter.CTk):
             text_color: str = 'white',
     ) -> Optional[customtkinter.CTkButton]:
         try:
+            logger.info(f"001 Starting main menu button creation for '{button_label}'")
+
             icon_path = f"{ICON_PATH}{icon_name}"
-            image = Image.open(icon_path)
-            image = image.resize((25, 25), Image.LANCZOS)
-            photo_image = customtkinter.CTkImage(image)
+            try:
+                image = Image.open(icon_path)
+                image = image.resize((25, 25), Image.LANCZOS)
+                photo_image = customtkinter.CTkImage(image)
+                logger.debug(f"002 Icon loaded and resized: {icon_path}")
+            except FileNotFoundError:
+                logger.error(f"003 Icon file not found: {icon_path}")
+                raise ButtonCreationError(f"004 Failed to load icon: {icon_path}")
+            except IOError as e:
+                logger.error(f"005 Error processing icon: {e}")
+                raise ButtonCreationError(f"006 Failed to process icon: {e}") from e
 
-            button = customtkinter.CTkButton(
-                frame,
-                text=button_label,
-                text_color=text_color if text_color is not "white" else "white",
-                font=customtkinter.CTkFont(family="Outfit", weight="normal", size=18),
-                image=photo_image,
-                bg_color=BG_MAIN_MENU,
-                fg_color=BG_MAIN_MENU,
-                hover_color=BG_MAIN_MENU,
-                compound="left",
-                cursor="hand2",
-                command=command,
-                state=state
-            )
-            button.image = photo_image  # keep a reference!
-            button.place(rely=rel_y, relx=rel_x, anchor="e")
+            try:
+                button = customtkinter.CTkButton(
+                    frame,
+                    text=button_label,
+                    text_color=text_color if text_color != "white" else "white",
+                    font=customtkinter.CTkFont(family="Outfit", weight="normal", size=18),
+                    image=photo_image,
+                    bg_color=BG_MAIN_MENU,
+                    fg_color=BG_MAIN_MENU,
+                    hover_color=BG_MAIN_MENU,
+                    compound="left",
+                    cursor="hand2",
+                    command=command,
+                    state=state
+                )
+                button.image = photo_image  # keep a reference!
+                button.place(rely=rel_y, relx=rel_x, anchor="e")
+                logger.debug(f"007 Button created and placed: {button_label}")
+            except Exception as e:
+                logger.error(f"008 Error while creating button: {e}")
+                raise ButtonCreationError(f"009 Failed to create button: {e}") from e
 
+            logger.log(SUCCESS, f"010 Main menu button '{button_label}' created successfully")
             return button
 
-        except FileNotFoundError as e:
-            logger.error(f"Icon file not found: {ICON_PATH}")
-            raise ButtonCreationError(f"Failed to load icon: {e}") from e
-
-        except (IOError, OSError) as e:
-            logger.error(f"Error processing icon: {e}")
-            raise ButtonCreationError(f"Failed to process icon: {e}") from e
-
         except Exception as e:
-            logger.error(f"Unexpected error creating button: {e}")
-            raise ButtonCreationError(f"Failed to create button: {e}") from e
+            logger.error(f"011 Unexpected error creating button: {e}")
+            raise ButtonCreationError(f"012 Failed to create button: {e}") from e
 
-    #############################################################
+    ########################################
     # FOR SEEDKEEPER
+    ########################################
+
     @log_method
     def create_seedkeeper_menu(self):
-        self.menu = self._seedkeeper_lateral_menu()
-        self.menu.place(relx=0.250, rely=0.5, anchor="e")
-        logger.debug("Seedkeeper menu created")
+        try:
+            logger.info("001 Starting Seedkeeper menu creation")
+            self.menu = self._seedkeeper_lateral_menu()
+            logger.debug("002 Seedkeeper lateral menu created")
+            self.menu.place(relx=0.250, rely=0.5, anchor="e")
+            logger.debug("003 Seedkeeper menu placed")
+            logger.log(SUCCESS, "004 Seedkeeper menu created and placed successfully")
+        except Exception as e:
+            logger.error(f"005 Error in create_seedkeeper_menu: {e}", exc_info=True)
+            raise MenuCreationError(f"006 Failed to create Seedkeeper menu: {e}") from e
 
     @log_method
     def _seedkeeper_lateral_menu(self, state=None, frame=None):
-        if self.menu:
-            self.menu.destroy()
         try:
-            logger.info("Creating main menu")
+            logger.info("001 Starting Seedkeeper lateral menu creation")
+            if self.menu:
+                self.menu.destroy()
+                logger.debug("002 Existing menu destroyed")
+
             if state is None:
                 state = "normal" if self.controller.cc.card_present else "disabled"
-                logger.info(f"Card {'detected' if state == 'normal' else 'undetected'}, setting state to {state}")
+                logger.info(f"003 Card {'detected' if state == 'normal' else 'undetected'}, setting state to {state}")
 
             menu_frame = customtkinter.CTkFrame(self.main_frame, width=250, height=600,
                                                 bg_color=BG_MAIN_MENU,
                                                 fg_color=BG_MAIN_MENU, corner_radius=0, border_color="black",
                                                 border_width=0)
-            logger.debug("Main menu frame created")
+            logger.debug("004 Main menu frame created")
 
             # Logo section
             image_frame = customtkinter.CTkFrame(menu_frame, bg_color=BG_MAIN_MENU, fg_color=BG_MAIN_MENU,
@@ -545,12 +808,12 @@ class View(customtkinter.CTk):
             canvas.pack(fill="both", expand=True)
             canvas.create_image(142, 63, image=logo_photo, anchor="center")
             canvas.image = logo_photo  # conserver une référence
-            logger.debug("Logo section created")
+            logger.debug("005 Logo section created")
 
             if self.controller.cc.card_present:
-                logger.log(SUCCESS, "Card Present")
+                logger.log(SUCCESS, "006 Card Present")
             else:
-                logger.error(f"Card not present")
+                logger.error(f"007 Card not present")
 
             # Menu items
             self._create_button_for_main_menu_item(menu_frame,
@@ -579,31 +842,45 @@ class View(customtkinter.CTk):
             self._create_button_for_main_menu_item(menu_frame, "Go to the webshop", "webshop_icon.png", 0.95, 0.82,
                                                    state='normal',
                                                    command=lambda: webbrowser.open("https://satochip.io/shop/", new=2))
-            logger.debug("Menu items created")
-            logger.log(SUCCESS, "Main menu created successfully")
+            logger.debug("008 Menu items created")
+            logger.log(SUCCESS, "009 Seedkeeper lateral menu created successfully")
             return menu_frame
-
         except Exception as e:
-            error_message = f"An error occurred in main_menu: {e}"
-            logger.error(error_message, exc_info=True)
-            raise MainMenuError(error_message) from e
+            logger.error(f"010 Unexpected error in _seedkeeper_lateral_menu: {e}", exc_info=True)
+            raise MenuCreationError(f"011 Failed to create Seedkeeper lateral menu: {e}") from e
 
     @log_method
     def _delete_seedkeeper_menu(self):
-        if hasattr(self, 'menu') and self.menu:
-            self.menu.destroy()
-            self.menu = None
-        logger.debug("Seedkeeper menu destroyed")
+        try:
+            logger.info("001 Starting Seedkeeper menu deletion")
+            if hasattr(self, 'menu') and self.menu:
+                self.menu.destroy()
+                logger.debug("002 Menu widget destroyed")
+                self.menu = None
+                logger.debug("003 Menu attribute set to None")
+            logger.log(SUCCESS, "004 Seedkeeper menu deleted successfully")
+        except Exception as e:
+            logger.error(f"005 Unexpected error in _delete_seedkeeper_menu: {e}", exc_info=True)
+            raise MenuDeletionError(f"006 Failed to delete Seedkeeper menu: {e}") from e
 
-    #############################################################
+    ########################################
     # FOR SATOCHIP-UTILS
+    ########################################
 
     @log_method
     def create_satochip_utils_menu(self):
-        self._delete_seedkeeper_menu()  # Ensure old menu is removed
-        self.menu = self._satochip_utils_lateral_menu()
-        self.menu.place(relx=0, rely=0, relwidth=0.25, relheight=1)
-        logger.debug("Satochip-utils menu created")
+        try:
+            logger.info("001 Starting Satochip-utils menu creation")
+            self._delete_seedkeeper_menu()  # Ensure old menu is removed
+            logger.debug("002 Old Seedkeeper menu deleted")
+            self.menu = self._satochip_utils_lateral_menu()
+            logger.debug("003 Satochip-utils lateral menu created")
+            self.menu.place(relx=0, rely=0, relwidth=0.25, relheight=1)
+            logger.debug("004 Satochip-utils menu placed")
+            logger.log(SUCCESS, "005 Satochip-utils menu created and placed successfully")
+        except Exception as e:
+            logger.error(f"006 Error in create_satochip_utils_menu: {e}", exc_info=True)
+            raise MenuCreationError(f"007 Failed to create Satochip-utils menu: {e}") from e
 
     @log_method
     def _satochip_utils_lateral_menu(self, state=None, frame=None):
@@ -726,121 +1003,10 @@ class View(customtkinter.CTk):
         self.menu.destroy()
         logger.debug("Satochip-utils menu destroyed")
 
-    # FOR CARD INFORMATION
+    ########################################
+    # MENU SELECTION
+    ########################################
 
-    @log_method
-    def update_status(self, isConnected=None):
-        try:
-            if self.controller.cc.mode_factory_reset == True:
-                # we are in factory reset mode
-                if isConnected is True:
-                    logger.info(f"Card inserted for Reset Factory!")
-                    try:
-                        # Mettre à jour les labels et les boutons en fonction de l'insertion de la carte
-                        # self.reset_button.configure(text='Reset', state='normal')
-                        self.show_button.configure(text='Reset', state='normal')
-                        logger.debug("Labels and button updated for card insertion")
-                    except Exception as e:
-                        logger.error(f"An error occurred while updating labels and button for card insertion: {e}",
-                                     exc_info=True)
-
-                elif isConnected is False:
-                    logger.info(f"Card removed for Reset Factory!")
-                    try:
-                        # Mettre à jour les labels et les boutons en fonction du retrait de la carte
-                        self.show_button.configure(text='Insert card', state='disabled')
-                        logger.debug("Labels and button updated for card removal")
-                    except Exception as e:
-                        logger.error(f"An error occurred while updating labels and button for card removal: {e}",
-                                     exc_info=True)
-                else:  # None
-                    pass
-            else:
-                # normal mode
-                logger.info("CC UTILS: View.update_status | Entering update_status method")
-                if isConnected is True:
-                    try:
-                        logger.info("Getting card status")
-                        self.controller.get_card_status()
-                        self.lets_go_button.configure(text="Let's go", command=self.show_secrets, state='normal')
-                    except Exception as e:
-                        logger.error(f"An error occurred while getting card status: {e}", exc_info=True)
-
-                elif isConnected is False:
-                    try:
-                        logger.info("Card disconnected, resetting status")
-                        self.welcome()
-                        self.lets_go_button.configure(text="Insert card", command=None, state='disabled')
-                    except Exception as e:
-                        logger.error(f"An error occurred while resetting card status: {e}", exc_info=True)
-                    logger.info("Exiting update_status method successfully")
-
-                else:  # isConnected is None
-                    pass
-
-        except Exception as e:
-            logger.error(f"An unexpected error occurred in update_status method: {e}", exc_info=True)
-
-    @log_method
-    def get_passphrase(self, msg):
-        logger.info("Initiating passphrase entry")
-        try:
-            popup = customtkinter.CTkToplevel(self)
-            popup.title("PIN Required")
-            popup.configure(fg_color='whitesmoke')
-            popup.protocol("WM_DELETE_WINDOW", lambda: popup.destroy())
-
-            popup_width, popup_height = 400, 200
-            position_right = int(self.winfo_screenwidth() / 2 - popup_width / 2)
-            position_down = int(self.winfo_screenheight() / 2 - popup_height / 2)
-            popup.geometry(f"{popup_width}x{popup_height}+{position_right}+{position_down}")
-            logger.debug("Passphrase popup created and positioned")
-
-            icon_image = Image.open("./pictures_db/change_pin_popup_icon.jpg")
-            icon = customtkinter.CTkImage(light_image=icon_image, size=(20, 20))
-            icon_label = customtkinter.CTkLabel(popup, image=icon, text="\nEnter the PIN code of your card.",
-                                                compound='top',
-                                                font=customtkinter.CTkFont(family="Outfit", size=18, weight="normal"))
-            icon_label.pack(pady=(0, 10))
-            logger.debug("Icon and label added to popup")
-
-            passphrase_entry = customtkinter.CTkEntry(popup, show="*", corner_radius=10, border_width=0,
-                                                      width=229, height=37, bg_color='whitesmoke',
-                                                      fg_color=BG_BUTTON, text_color='grey')
-            popup.after(100, passphrase_entry.focus_force)
-            passphrase_entry.pack(pady=15)
-            logger.debug("Passphrase entry field added to popup")
-
-            pin = None
-
-            def submit_passphrase():
-                nonlocal pin
-                pin = passphrase_entry.get()
-                popup.destroy()
-                logger.debug("Passphrase submitted")
-                self.update_status()
-
-            submit_button = customtkinter.CTkButton(popup, bg_color='whitesmoke', fg_color=BG_MAIN_MENU,
-                                                    width=120, height=35, corner_radius=34,
-                                                    hover_color=BG_HOVER_BUTTON, text="Submit",
-                                                    command=submit_passphrase,
-                                                    font=customtkinter.CTkFont(family="Outfit", size=18,
-                                                                               weight="normal"))
-            submit_button.pack(pady=10)
-            logger.debug("Submit button added to popup")
-
-            popup.transient(self)
-            popup.bind('<Return>', lambda event: submit_passphrase())
-            self.wait_window(popup)
-
-            logger.log(SUCCESS, "Passphrase entry completed")
-            return pin
-
-        except Exception as e:
-            logger.error(f"Error in get_passphrase: {e}", exc_info=True)
-            return None
-
-    # Revised show methods with basic implementation
     @log_method
     def show_secrets(self):
         try:
@@ -896,6 +1062,10 @@ class View(customtkinter.CTk):
             logger.error(f"Error in show_help: {e}", exc_info=True)
             self._handle_view_error(f"Failed to show help: {e}")
 
+    ########################################
+    # POPUP
+    ########################################
+
     @log_method
     def show(self, title, msg: str, button_txt="Ok", cmd=None, icon_path=None):
         try:
@@ -946,32 +1116,6 @@ class View(customtkinter.CTk):
                                          command=close_cmd)
         button.pack(pady=20)
 
-    # FOR BUILD FRAME
-    @log_method
-    def create_welcome_button(self, text: str, command: Optional[Callable] = None,
-                              frame: Optional[customtkinter.CTkFrame] = None) -> customtkinter.CTkButton:
-        try:
-            logger.info(f"Creating welcome button: {text}")
-            target_frame = frame or self.welcome_frame
-            button = customtkinter.CTkButton(
-                target_frame,
-                text=text,
-                command=command,
-                corner_radius=100,
-                font=customtkinter.CTkFont(family="Outfit", size=18, weight="normal"),
-                bg_color=DEFAULT_BG_COLOR,
-                fg_color=BG_MAIN_MENU,
-                hover_color=BG_HOVER_BUTTON,
-                cursor="hand2",
-                width=120,
-                height=35
-            )
-            logger.log(SUCCESS, f"Welcome button '{text}' created successfully")
-            return button
-        except Exception as e:
-            error_msg = f"Failed to create welcome button '{text}': {e}"
-            logger.error(error_msg, exc_info=True)
-            raise UIElementError(error_msg) from e
 
     """FOR ERRORS MANAGEMENT"""
 
@@ -993,7 +1137,11 @@ class View(customtkinter.CTk):
             logger.critical(f"Failed to display error message: {e}", exc_info=True)
             # Consider implementing a fallback error display method here
 
-    """WELCOME IN SEEDKEEPER TOOL"""
+    ####################################################################################################################
+    """ 
+    ##################################### WELCOME IN SEEDKEEPER TOOL ###################################################
+    """
+    ####################################################################################################################
 
     @log_method
     def welcome(self):
@@ -1119,15 +1267,16 @@ class View(customtkinter.CTk):
             logger.error(f"Unexpected error in welcome method: {e}", exc_info=True)
             self._handle_view_error("An unexpected error occurred. Please try again.")
 
-
     ####################################################################################################################
-    """
-    FRAMES
+    """ 
+    ################################################### FRAMES #########################################################
     """
     ####################################################################################################################
 
-    #############################################################
+    ########################################
     # START SETUP
+    ########################################
+
     @log_method
     def start_setup(self):
         def _create_start_setup_frame():
@@ -1218,14 +1367,16 @@ class View(customtkinter.CTk):
             logger.error(f"Error in _start_setup: {e}", exc_info=True)
             raise UIElementError(f"Failed to initialize start setup view: {e}")
 
-    #############################################################
+    ########################################
     # MY SECRETS
+    ########################################
     """
     # the first frame where the users fall after 'welcome in seedkeeper tool'
     # showing all the secrets that are stored on seedkeeper card into a table including three columns
     # allowing to select a secret and display its details
     # including V1/V2 seedkeeper
     """
+    ########################################
 
     @log_method
     def my_secrets(self, secrets_data: Dict[str, Any]):
@@ -1249,6 +1400,97 @@ class View(customtkinter.CTk):
                     button.configure(fg_color=button.default_color)
 
             def _show_secret_details(secret):
+                def _create_password_secret_frame(secret_details):
+                    # Create labels and entry fields
+                    labels = ['Label:', 'Login:', 'URL:']
+                    entries = {}
+
+                    for i, label_text in enumerate(labels):
+                        label = self._create_label(label_text)
+                        label.place(relx=0.1, rely=0.2 + i * 0.1, anchor="w")
+
+                        entry = customtkinter.CTkEntry(self.current_frame, width=300)
+                        entry.place(relx=0.3, rely=0.2 + i * 0.1, anchor="w")
+                        entries[label_text.lower()[:-1]] = entry
+
+                    # Set values (you'll need to fetch these from your data source)
+                    entries['label'].insert(0, secret_details['label'])
+                    entries['login'].insert(0, "Placeholder Login")  # Replace with actual data
+                    entries['url'].insert(0, "Placeholder URL")  # Replace with actual data
+
+                    # Create password field
+                    password_label = self._create_label("Password:")
+                    password_label.place(relx=0.1, rely=0.5, anchor="w")
+
+                    password_entry = customtkinter.CTkEntry(self.current_frame, width=300, show="*")
+                    password_entry.place(relx=0.3, rely=0.5, anchor="w")
+                    password_entry.insert(0, "********")  # Replace with actual password
+
+                    # Create action buttons
+                    delete_button = self._create_button(text="Delete",
+                                                        command=lambda: None)  # self._delete_secret(secret['id']))
+                    delete_button.place(relx=0.7, rely=0.9, anchor="se")
+
+                    show_button = self._create_button(text="Show",
+                                                      command=lambda: None)  # self._toggle_password_visibility(password_entry))
+                    show_button.place(relx=0.85, rely=0.9, anchor="se")
+
+                def _create_mnemonic_secret_frame(secret_details):
+                    # Create labels and entry fields
+                    labels = ['Label:', 'Mnemonic type:']
+                    entries = {}
+
+                    for i, label_text in enumerate(labels):
+                        label = self._create_label(label_text)
+                        label.place(relx=0.285, rely=0.2 + i * 0.15, anchor="w")
+
+                        entry = self._create_entry()
+                        entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
+                        entries[label_text.lower()[:-1]] = entry
+
+                    # Set values (you'll need to fetch these from your data source)
+                    entries['label'].insert(0, secret_details['label'])
+                    entries['mnemonic type'].insert(0, secret_details['type'])
+                    # entries['passphrase'].insert(0, "Placeholder Passphrase")  # Replace with actual data
+
+                    xpub_button = self._create_button(text="Xpub",
+                                                      command=lambda: None)  # self._show_xpub(secret['id']))
+                    xpub_button.place(relx=0.60, rely=0.53, anchor="se")
+
+                    seedqr_button = self._create_button(text="SeedQR",
+                                                        command=lambda: None)  # self._show_seedqr(secret['id']))
+                    seedqr_button.place(relx=0.78, rely=0.53, anchor="se")
+
+                    # Create passphrase field
+                    passphrase_label = self._create_label("Passphrase:")
+                    passphrase_label.place(relx=0.285, rely=0.58, anchor="w")
+
+                    passphrase_entry = self._create_entry()
+                    passphrase_entry.place(relx=0.2, rely=0.58, anchor="w", relwidth=0.585)
+                    passphrase_entry.insert(0, "Comment récupérer la passhprase ?")  # Replace with actual data
+
+                    # Create mnemonic field
+                    mnemonic_label = self._create_label("Mnemonic:")
+                    mnemonic_label.place(relx=0.285, rely=0.65, anchor="w")
+
+                    mnemonic_entry = self._create_entry(show_option='*')
+                    mnemonic_entry.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
+                    mnemonic_entry.insert(0, secret_details['secret'])  # Replace with actual mnemonic
+
+                    # Create action buttons
+                    delete_button = self._create_button(text="Delete",
+                                                        command=lambda: None)  # self._delete_secret(secret['id']))
+                    delete_button.place(relx=0.95, rely=0.3, anchor="se")
+
+                    show_button = self._create_button(text="Show",
+                                                      command=lambda: _toggle_mnemonic_visibility(mnemonic_entry))
+                    show_button.place(relx=0.95, rely=0.8, anchor="e")
+
+                    @log_method
+                    def _toggle_mnemonic_visibility(entry):
+                        current_state = entry.cget("show")
+                        entry.configure(show="" if current_state == "*" else "*")
+
                 try:
                     self._create_frame()
 
@@ -1261,9 +1503,9 @@ class View(customtkinter.CTk):
                     self.create_seedkeeper_menu()
 
                     if secret['type'] == 'Password':
-                        self._create_password_secret_frame(secret_details)
+                        _create_password_secret_frame(secret_details)
                     elif secret['type'] == 'Masterseed':
-                        self._create_mnemonic_secret_frame(secret_details)
+                        _create_mnemonic_secret_frame(secret_details)
                     else:
                         logger.warning(f"Unsupported secret type: {secret['type']}")
                         self._create_generic_secret_frame(secret_details)
@@ -1381,7 +1623,8 @@ class View(customtkinter.CTk):
         delete_button = self._create_button(text="Delete", command=lambda: None)  # self._delete_secret(secret['id']))
         delete_button.place(relx=0.7, rely=0.9, anchor="se")
 
-        show_button = self._create_button(text="Show", command=lambda: None)  # self._toggle_password_visibility(password_entry))
+        show_button = self._create_button(text="Show",
+                                          command=lambda: None)  # self._toggle_password_visibility(password_entry))
         show_button.place(relx=0.85, rely=0.9, anchor="se")
 
     @log_method
@@ -1437,7 +1680,6 @@ class View(customtkinter.CTk):
             current_state = entry.cget("show")
             entry.configure(show="" if current_state == "*" else "*")
 
-
     @log_method
     def _create_generic_secret_frame(self, secret_details):
         try:
@@ -1454,7 +1696,6 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"Error creating generic secret frame: {e}", exc_info=True)
             raise UIElementError(f"Failed to create generic secret frame: {e}")
-
 
 
 if __name__ == "__main__":

@@ -2,3 +2,7 @@
 .idea
 __pycache__/
 *.py[cod]
+build/
+seedkeeper_tool.exe.spec
+seedkeeper_tool.spec
+
