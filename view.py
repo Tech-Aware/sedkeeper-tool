@@ -1748,6 +1748,8 @@ class View(customtkinter.CTk):
             raise UIElementError(f"Failed to create generic secret frame: {e}")
 
 
+
+
 if __name__ == "__main__":
     setup_logging()
     try:

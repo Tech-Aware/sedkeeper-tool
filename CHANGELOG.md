@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - New picture for menu items
 - New `exceptions.py` file for centralized exception handling:
-  - Added specific exception classes: `ViewError`, `FrameError`, `UIElementError`, `InitializationError`, `ControllerError`, `CardError`, `ButtonCreationError`, `MainMenuError`
+  - Added specific exception classes: `ViewError`, `FrameError`, `UIElementError`, `InitializationError`, `ControllerError`, `CardError`, `ButtonCreationError`, `MainMenuError`, `AttributeInitializationError`, `ApplicationRestartError`, `FrameClearingError`, `MenuDeletionError`, `SecretRetrievalError`, `SecretProcessingError`, `WindowSetupError`, `CanvasCreationError`, `BackgroundPhotoError`, `LabelCreationError`, `EntryCreationError`, `HeaderCreationError`
 - Comprehensive logging system with colored output in `log_config.py`
 - Welcome screen with logo display in `View` class
 - Main menu implementation with icon buttons in the `View` class
@@ -21,9 +21,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `log_method` decorator for detailed function logging
 - Constants for UI colors and paths in `view.py`
 - New attributes in `View` class for tracking application state (e.g., `card_type`, `setup_done`, `is_seeded`, etc.)
+- Implemented `_create_mnemonic_secret_frame` and `_create_generic_secret_frame` methods in `View` class
+- Added `retrieve_details_about_secret_selected` method in `Controller` class with secret processing logic
 
 ### Changed
-- Refactor `menu item` to do well alignement and conditional comportement
+- Refactored `menu item` to do well alignment and conditional behavior
 - Refactored `View` class in `view.py` for improved structure and error handling:
   - Implemented `_initialize_attributes` method for better attribute management
   - Updated `__init__` method with more robust error handling
@@ -41,6 +43,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Removed `self._handle_view_error()` calls in favor of raising specific exceptions
   - Enhanced logging for better debugging and error tracking
   - Streamlined status updates for connected, disconnected, and current status scenarios
+- Improved error handling and logging in `Controller` class
+- Updated `my_secrets` method to handle different secret types
+- Refactored `_create_password_secret_frame` for better organization and error handling
 
 ### Fixed
 - Resolved issues with UI not displaying properly

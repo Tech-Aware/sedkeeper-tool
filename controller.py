@@ -2,6 +2,7 @@ import sys
 from typing import Optional, Dict, List, Callable, Any
 from functools import wraps
 import logging
+from mnemonic import Mnemonic
 
 from pysatochip.CardConnector import (CardConnector, CardNotPresentError, PinRequiredError, WrongPinError,
                                                  PinBlockedError, UnexpectedSW12Error, CardSetupNotDoneError,
@@ -9,9 +10,7 @@ from pysatochip.CardConnector import (CardConnector, CardNotPresentError, PinReq
 )
 
 from log_config import get_logger, SUCCESS, setup_logging
-from exceptions import (CardError, ControllerError, ViewError, FrameError, UIElementError, InitializationError,
-                        ButtonCreationError, MainMenuError)
-
+from exceptions import *
 logger = get_logger(__name__)
 
 
@@ -208,8 +207,8 @@ class Controller:
             'headers': formatted_headers
         }
 
+    @log_method
     def retrieve_details_about_secret_selected(self, secret_id):
-
         dic_type = {
             0x30: 'BIP39 mnemonic',
             0x40: 'Electrum mnemonic',
@@ -220,14 +219,44 @@ class Controller:
             0xB0: '2FA secret'
         }
 
-        secret_details = self.cc.seedkeeper_export_secret(secret_id)
-        logger.log(SUCCESS, f"Secret details: {secret_details}")
-        formatted_details = {
-            'label': secret_details['label'],
-            'type': dic_type.get(secret_details['type'], hex(secret_details['type'])),
-            'secret': secret_details['secret']
-        }
-        return formatted_details
+        def process_secret(secret_type, secret_value):
+            try:
+                logger.info("001 Processing secret")
+                if secret_type == 0x10:  # Masterseed
+                    logger.info("002 Processing Masterseed")
+                    return f"{secret_value}"
+                elif secret_type in [0x30, 0x40]:  # BIP39 or Electrum mnemonicexit
+                    logger.info("003 Processing mnemonic")
+                    return f"{secret_value}"
+                else:
+                    logger.info("004 Processing other type of secret")
+                    return f"{secret_value}"
+            except Exception as e:
+                logger.error(f"005 Error processing secret: {e}", exc_info=True)
+                raise SecretProcessingError(f"006 Failed to process secret: {e}") from e
+
+        try:
+            logger.info(f"007 Retrieving details for secret ID: {secret_id}")
+            secret_details = self.cc.seedkeeper_export_secret(secret_id)
+            logger.debug("008 Secret details exported from card")
+
+            processed_secret = process_secret(secret_details['type'], secret_details['secret'])
+
+            formatted_details = {
+                'label': secret_details['label'],
+                'type': dic_type.get(secret_details['type'], hex(secret_details['type'])),
+                'secret': processed_secret
+            }
+
+            logger.log(SUCCESS, f"009 Secret details retrieved and processed successfully")
+            return formatted_details
+
+        except SecretProcessingError as e:
+            logger.error(f"010 Error processing secret: {e}", exc_info=True)
+            raise SecretRetrievalError(f"011 Failed to process secret: {e}") from e
+        except Exception as e:
+            logger.error(f"012 Error retrieving secret details: {e}", exc_info=True)
+            raise SecretRetrievalError(f"013 Failed to retrieve secret details: {e}") from e
 
 
 if __name__ == "__main__":

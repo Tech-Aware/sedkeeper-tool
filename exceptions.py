@@ -40,6 +40,20 @@ class UIElementError(ViewError):
         super().__init__(message)
 
 
+class SecretRetrievalError(ViewError):
+    """Exception raised when there's an error retrieving secret details."""
+    def __init__(self, message="Error in secret retrieval"):
+        super().__init__(message)
+        logger.error("An error occurred during secret retrieval", exc_info=True)
+
+
+class SecretProcessingError(ViewError):
+    """Exception raised when there's an error processing a secret."""
+    def __init__(self, message="Error in secret processing"):
+        super().__init__(message)
+        logger.error("An error occurred during secret processing", exc_info=True)
+
+
 # EXCEPTIONS IN UI ELEMENT
 class WindowSetupError(UIElementError):
     """Exception raised when there's an error setting up the main window."""
