@@ -140,14 +140,14 @@ class Controller:
                     elif len(pin) < 4:
                         logger.warning("PIN length is less than 4 characters")
                         msg = "PIN must have at least 4 characters."
-                        self.request("show", "INFO", msg, 'Ok',
-                                     None, "./pictures_db/icon_change_pin_popup.jpg")
+                        self.view.show("INFO", msg, 'Ok',
+                                     None, "./pictures_db/change_pin_popup_icon.jpg")
 
                     elif len(pin) > 64:
                         logger.warning("PIN length is more than 64 characters")
                         msg = "PIN must have less than 64 characters."
-                        self.request("show", "INFO", msg, 'Ok',
-                                     None, "./pictures_db/icon_change_pin_popup.jpg")
+                        self.view.show("INFO", msg, 'Ok',
+                                     None, "./pictures_db/change_pin_popup_icon-icon.jpg")
 
                     else:
                         logger.info("PIN length is valid")
@@ -158,7 +158,7 @@ class Controller:
                         except Exception as e:
                             logger.info("exception from pin dialog")
                             self.request('show', 'ERROR', str(e), 'Ok', None,
-                                         "./pictures_db/icon_change_pin_popup.jpg")
+                                         "./pictures_db/change_pin_popup_icon.jpg")
 
                 except Exception as e:
                     logger.error(f"An error occurred while requesting passphrase: {e}", exc_info=True)
