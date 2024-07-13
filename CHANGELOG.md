@@ -2,11 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](git https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ### Added
+- New generate_secret functionality in the View class:
+  - Added `generate_secret` method to create a new secret generation frame
+  - Implemented radio buttons for selecting 12 or 24-word mnemonics
+  - Added a text box for displaying the generated mnemonic
+  - Created "Generate" and "Save to Card" buttons for mnemonic management
+- New methods in Controller class:
+  - `generate_random_seed`: Generates a random mnemonic of specified length
+  - `import_seed`: Imports a seed to the card after validation
+  - `card_setup_native_seed`: Sets up a native seed on the card
+- Enhanced error handling:
+  - Added new exception types in exceptions.py (e.g., SeedkeeperError as base exception)
+- Improved logging:
+  - Added more detailed logging throughout the application
 - New picture for menu items
 - New `exceptions.py` file for centralized exception handling:
   - Added specific exception classes: `ViewError`, `FrameError`, `UIElementError`, `InitializationError`, `ControllerError`, `CardError`, `ButtonCreationError`, `MainMenuError`, `AttributeInitializationError`, `ApplicationRestartError`, `FrameClearingError`, `MenuDeletionError`, `SecretRetrievalError`, `SecretProcessingError`, `WindowSetupError`, `CanvasCreationError`, `BackgroundPhotoError`, `LabelCreationError`, `EntryCreationError`, `HeaderCreationError`
@@ -25,6 +38,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Added `retrieve_details_about_secret_selected` method in `Controller` class with secret processing logic
 
 ### Changed
+- Refactored View class:
+  - Updated `show_generate_secret` method to use the new generate_secret functionality
+  - Modified `_clear_current_frame` to handle mnemonic text box clearing
+- Enhanced Controller class:
+  - Improved PIN dialog method with better error handling and user feedback
+- Updated error handling:
+  - Refactored exception hierarchy for better organization
+- Improved UI components:
+  - Enhanced popup handling with `_make_popup_as_priority` method
 - Refactored `menu item` to do well alignment and conditional behavior
 - Refactored `View` class in `view.py` for improved structure and error handling:
   - Implemented `_initialize_attributes` method for better attribute management
@@ -48,9 +70,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Refactored `_create_password_secret_frame` for better organization and error handling
 
 ### Fixed
+- Resolved issues with popup window focus and priority
+- Improved error messages and exception handling throughout the application
 - Resolved issues with UI not displaying properly
 - Corrected error handling in various UI element creation methods
-- Improved error messages and logging throughout the application
+
+### Security
+- Enhanced PIN entry process with improved validation and error messaging
 
 ### Removed
 - Removed outdated TODO comments
