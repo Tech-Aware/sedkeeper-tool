@@ -101,6 +101,7 @@ class View(customtkinter.CTk):
     """ 
     ################################################## UTILS ###########################################################
     """
+
     ####################################################################################################################
 
     ########################################
@@ -132,6 +133,8 @@ class View(customtkinter.CTk):
             self.welcome_in_display: bool = True
             self.spot_if_unlock: bool = False
             self.pin_left: Optional[int] = None
+            self.mnemonic_textbox_active: bool = False
+            self.mnemonic_textbox: Optional[customtkinter.CTkTextbox] = None
             logger.debug("004 Application state attributes initialized")
 
             logger.log(SUCCESS, "005 All attributes initialized successfully to their default values")
@@ -473,6 +476,10 @@ class View(customtkinter.CTk):
                 self.current_frame.destroy()
                 logger.debug("003 Current frame destroyed")
                 self.current_frame = None
+                if self.mnemonic_textbox_active is True and self.mnemonic_textbox is not None:
+                    self.mnemonic_textbox.destroy()
+                    self.mnemonic_textbox_active = False
+                    self.mnemonic_textbox = None
                 logger.debug("004 Current frame reference set to None")
 
             # Nettoyage des attributs spécifiques
@@ -707,6 +714,7 @@ class View(customtkinter.CTk):
     """ 
     ############################################# MAIN MENUS ###########################################################
     """
+
     ####################################################################################################################
     @log_method
     def _create_button_for_main_menu_item(
@@ -1037,11 +1045,14 @@ class View(customtkinter.CTk):
     def show_generate_secret(self):
         try:
             logger.info("001 Initiating secret generation process")
-            # TODO: Implement full functionality to generate a secret
-            logger.log(SUCCESS, "002 Secret generation process initiated")
+            self.welcome_in_display = False
+            self._clear_welcome_frame()
+            logger.debug("002 Welcome frame cleared")
+            self.generate_secret()
+            logger.log(SUCCESS, "003 Secret generation process initiated")
         except Exception as e:
-            logger.error(f"003 Error in generate_secret: {e}", exc_info=True)
-            raise ViewError(f"004 Failed to generate secret: {e}") from e
+            logger.error(f"004 Error in show_generate_secret: {e}", exc_info=True)
+            raise ViewError(f"005 Failed to show generate secret: {e}")
 
     @log_method
     def show_import_secret(self):
@@ -1168,7 +1179,6 @@ class View(customtkinter.CTk):
             logger.error(f"003 Error in _add_button_to_popup: {e}", exc_info=True)
             raise UIElementError(f"004 Failed to add button to popup: {e}") from e
 
-
     """FOR ERRORS MANAGEMENT"""
 
     # todo: replace handle view error for show_error
@@ -1193,6 +1203,7 @@ class View(customtkinter.CTk):
     """ 
     ##################################### WELCOME IN SEEDKEEPER TOOL ###################################################
     """
+
     ####################################################################################################################
 
     @log_method
@@ -1323,6 +1334,7 @@ class View(customtkinter.CTk):
     """ 
     ################################################### FRAMES #########################################################
     """
+
     ####################################################################################################################
 
     ########################################
@@ -1435,6 +1447,7 @@ class View(customtkinter.CTk):
     # allowing to select a secret and display its details
     # including V1/V2 seedkeeper
     """
+
     ########################################
 
     @log_method
@@ -1747,7 +1760,124 @@ class View(customtkinter.CTk):
             logger.error(f"Error creating generic secret frame: {e}", exc_info=True)
             raise UIElementError(f"Failed to create generic secret frame: {e}")
 
+    @log_method
+    def generate_secret(self):
+        def _create_generate_secret_frame():
+            try:
+                logger.info("001 Creating generate secret frame")
+                self._create_frame()
+                logger.log(SUCCESS, "002 Generate secret frame created successfully")
+            except Exception as e:
+                logger.error(f"003 Error creating generate secret frame: {e}", exc_info=True)
+                raise FrameCreationError(f"004 Failed to create generate secret frame: {e}") from e
 
+        def _create_generate_secret_header():
+            try:
+                logger.info("005 Creating generate secret header")
+                self.header = self._create_an_header("Generate Secret", "generate_icon_ws.png")
+                self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                logger.log(SUCCESS, "006 Generate secret header created successfully")
+            except Exception as e:
+                logger.error(f"007 Error creating generate secret header: {e}", exc_info=True)
+                raise UIElementError(f"008 Failed to create generate secret header: {e}") from e
+
+        def _create_generate_secret_content():
+            try:
+                logger.info("009 Creating generate secret content")
+
+                self.radio_value = customtkinter.StringVar(value="12")
+
+                radio_12 = customtkinter.CTkRadioButton(
+                    self.current_frame,
+                    text="12 words",
+                    variable=self.radio_value,
+                    value="12",
+                    command=_update_mnemonic
+                )
+                radio_12.place(relx=0.05, rely=0.25, anchor="w")
+
+                radio_24 = customtkinter.CTkRadioButton(
+                    self.current_frame,
+                    text="24 words",
+                    variable=self.radio_value,
+                    value="24",
+                    command=_update_mnemonic
+                )
+                radio_24.place(relx=0.2, rely=0.25, anchor="w")
+
+                self.mnemonic_textbox = customtkinter.CTkTextbox(self, corner_radius=20,
+                                                                 bg_color="whitesmoke", fg_color=BG_BUTTON,
+                                                                 border_color=BG_BUTTON, border_width=1,
+                                                                 width=557, height=83,
+                                                                 text_color="grey",
+                                                                 font=customtkinter.CTkFont(family="Outfit", size=13,
+                                                                                            weight="normal"))
+                self.mnemonic_textbox.place(relx=0.28, rely=0.37, anchor="w")
+
+                generate_button = self._create_button("Generate", command=_generate_new_mnemonic)
+                generate_button.place(relx=0.33, rely=0.5, anchor="w")
+
+                save_button = self._create_button("Save to Card", command=_save_mnemonic_to_card)
+                save_button.place(relx=0.5, rely=0.5, anchor="w")
+
+                logger.log(SUCCESS, "010 Generate secret content created successfully")
+            except Exception as e:
+                logger.error(f"011 Error creating generate secret content: {e}", exc_info=True)
+                raise UIElementError(f"012 Failed to create generate secret content: {e}") from e
+
+        def _update_mnemonic():
+            try:
+                logger.info("001 Updating mnemonic")
+                _generate_new_mnemonic()
+                logger.log(SUCCESS, "002 Mnemonic updated successfully")
+            except Exception as e:
+                logger.error(f"003 Error updating mnemonic: {e}", exc_info=True)
+                raise UIElementError(f"004 Failed to update mnemonic: {e}") from e
+
+        def _generate_new_mnemonic():
+            try:
+                logger.info("001 Generating new mnemonic")
+                mnemonic_length = int(self.radio_value.get())
+                mnemonic = self.controller.generate_random_seed(mnemonic_length)
+                self.mnemonic_textbox.delete("1.0", customtkinter.END)
+                self.mnemonic_textbox.insert("1.0", mnemonic)
+                logger.log(SUCCESS, "002 New mnemonic generated successfully")
+            except Exception as e:
+                logger.error(f"003 Error generating mnemonic: {e}", exc_info=True)
+                raise UIElementError(f"004 Failed to generate mnemonic: {e}") from e
+
+        def _save_mnemonic_to_card():
+            try:
+                logger.info("001 Saving mnemonic to card")
+                mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
+                if mnemonic:
+                    self.controller.import_seed(mnemonic)
+                    logger.log(SUCCESS, "002 Mnemonic saved to card successfully")
+                else:
+                    logger.warning("003 No mnemonic to save")
+                    raise ValueError("004 No mnemonic generated")
+            except ValueError as e:
+                logger.error(f"005 Error saving mnemonic to card: {e}", exc_info=True)
+                raise UIElementError(f"006 Failed to save mnemonic to card: {e}") from e
+            except Exception as e:
+                logger.error(f"007 Error saving mnemonic to card: {e}", exc_info=True)
+                raise UIElementError(f"008 Failed to save mnemonic to card: {e}") from e
+
+        try:
+            logger.info("013 Creating generate secret view")
+            self.mnemonic_textbox_active = True
+            _create_generate_secret_frame()
+            _create_generate_secret_header()
+            _create_generate_secret_content()
+            self.create_seedkeeper_menu()
+            _generate_new_mnemonic()  # Generate initial mnemonic
+            logger.log(SUCCESS, "014 Generate secret view created successfully")
+        except (FrameCreationError, UIElementError) as e:
+            logger.error(f"015 Error in generate_secret: {e}", exc_info=True)
+            raise ViewError(f"016 Failed to create generate secret view: {e}") from e
+        except Exception as e:
+            logger.error(f"017 Unexpected error in generate_secret: {e}", exc_info=True)
+            raise ViewError(f"018 Unexpected error during generate secret view creation: {e}")
 
 
 if __name__ == "__main__":

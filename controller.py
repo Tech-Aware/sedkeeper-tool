@@ -258,6 +258,62 @@ class Controller:
             logger.error(f"012 Error retrieving secret details: {e}", exc_info=True)
             raise SecretRetrievalError(f"013 Failed to retrieve secret details: {e}") from e
 
+    @log_method
+    def generate_random_seed(self, mnemonic_length):
+        try:
+            logger.info(f"001 Generating random seed of length {mnemonic_length}")
+            strength = 128 if mnemonic_length == 12 else 256
+            mnemonic = Mnemonic("english").generate(strength=strength)
+            logger.log(SUCCESS, f"002 Random seed of length {mnemonic_length} generated successfully")
+            return mnemonic
+        except Exception as e:
+            logger.error(f"003 Error generating random seed: {e}", exc_info=True)
+            raise ControllerError(f"004 Failed to generate random seed: {e}")
+
+    @log_method
+    def import_seed(self, mnemonic, passphrase=None):
+        try:
+            logger.info("001 Importing seed")
+            MNEMONIC = Mnemonic(language="english")
+            if MNEMONIC.check(mnemonic):
+                logger.info("002 Imported seed is valid")
+                seed = Mnemonic.to_seed(mnemonic, passphrase)
+                self.card_setup_native_seed(seed)
+                logger.log(SUCCESS, "003 Seed imported successfully")
+            else:
+                logger.warning("004 Imported seed is invalid")
+                self.view.show('WARNING', "Invalid BIP39 seedphrase, please retry.", 'Ok', None,
+                               "./pictures_db/icon_seed_popup.jpg")
+        except Exception as e:
+            logger.error(f"005 Error importing seed: {e}", exc_info=True)
+            self.view.show("ERROR", "Failed to import seed", "Ok", None, "./pictures_db/icon_seed_popup.jpg")
+
+    @log_method
+    def card_setup_native_seed(self, seed):
+        # get authentikey
+        try:
+            authentikey = self.cc.card_bip32_get_authentikey()
+        except UninitializedSeedError:
+            # seed dialog...
+            authentikey = self.cc.card_bip32_import_seed(seed)
+            logger.info(f"authentikey: {authentikey}")
+            if authentikey:
+                self.is_seeded = True
+                self.view.show('SUCCESS',
+                               'Your card is now seeded!',
+                               'Ok',
+                               lambda: None,
+                               "./pictures_db/icon_seed_popup.jpg")
+                self.view.update_status()
+                self.view.start_setup()
+
+                hex_authentikey = authentikey.get_public_key_hex()
+                logger.info(f"Authentikey={hex_authentikey}")
+            else:
+                self.view.show('ERROR', 'Error when importing seed to Satochip!', 'Ok', None,
+                               "./pictures_db/icon_seed_popup.jpg")
+
+
 
 if __name__ == "__main__":
     setup_logging()
