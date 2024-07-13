@@ -244,18 +244,20 @@ class View(customtkinter.CTk):
             logger.info("001 Starting application closure")
             self.app_open = False
             logger.debug("002 App open flag set to False")
+            self.controller.cc.card_disconnect()
+            logger.log(SUCCESS, "003 Card disconnected successfully")
             self.destroy()
-            logger.log(SUCCESS, "003 Application closed successfully")
+            logger.log(SUCCESS, "004 Application closed successfully")
         except tkinter.TclError as e:
-            logger.error(f"004 TclError while closing application: {e}", exc_info=True)
+            logger.error(f"005 TclError while closing application: {e}", exc_info=True)
             # Even if there's an error, we should try to force close the application
             self.quit()
-            logger.warning("005 Forced application quit due to error during normal closure")
+            logger.warning("006 Forced application quit due to error during normal closure")
         except Exception as e:
-            logger.error(f"006 Unexpected error while closing application: {e}", exc_info=True)
+            logger.error(f"007 Unexpected error while closing application: {e}", exc_info=True)
             # Even if there's an unexpected error, we should try to force close the application
             self.quit()
-            logger.warning("007 Forced application quit due to unexpected error during closure")
+            logger.warning("008 Forced application quit due to unexpected error during closure")
 
     @log_method
     def _restart_app(self):
@@ -351,7 +353,7 @@ class View(customtkinter.CTk):
             raise EntryCreationError(f"010 Unexpected error during entry creation: {e}") from e
 
     @log_method
-    def create_welcome_button(self, text: str, command: Optional[Callable] = None,
+    def _create_welcome_button(self, text: str, command: Optional[Callable] = None,
                               frame: Optional[customtkinter.CTkFrame] = None) -> customtkinter.CTkButton:
         try:
             logger.info(f"001 Creating welcome button: {text}")
@@ -468,19 +470,22 @@ class View(customtkinter.CTk):
     @log_method
     def _clear_current_frame(self):
         try:
-            logger.info("001 Starting current frame clearing process")
-            if hasattr(self, 'current_frame') and self.current_frame:
-                for widget in self.current_frame.winfo_children():
-                    widget.destroy()
-                    logger.debug("002 Widget destroyed")
-                self.current_frame.destroy()
-                logger.debug("003 Current frame destroyed")
-                self.current_frame = None
-                if self.mnemonic_textbox_active is True and self.mnemonic_textbox is not None:
-                    self.mnemonic_textbox.destroy()
-                    self.mnemonic_textbox_active = False
-                    self.mnemonic_textbox = None
-                logger.debug("004 Current frame reference set to None")
+            if self.app_open is True:
+                logger.info("001 Starting current frame clearing process")
+                if hasattr(self, 'current_frame') and self.current_frame:
+                    for widget in self.current_frame.winfo_children():
+                        widget.destroy()
+                        logger.debug("002 Widget destroyed")
+                    self.current_frame.destroy()
+                    logger.debug("003 Current frame destroyed")
+                    self.current_frame = None
+                    if self.mnemonic_textbox_active is True and self.mnemonic_textbox is not None:
+                        self.mnemonic_textbox.destroy()
+                        self.mnemonic_textbox_active = False
+                        self.mnemonic_textbox = None
+                    logger.debug("004 Current frame reference set to None")
+                else:
+                    pass
 
             # Nettoyage des attributs spécifiques
             attributes_to_clear = ['header', 'canvas', 'background_photo', 'text_box', 'button', 'finish_button',
@@ -627,7 +632,6 @@ class View(customtkinter.CTk):
                     try:
                         logger.info("012 Getting card status")
                         self.controller.get_card_status()
-                        self.lets_go_button.configure(text="Let's go", command=self.show_secrets, state='normal')
                         logger.debug("013 Card status updated and button configured")
                     except Exception as e:
                         logger.error(f"014 Error getting card status: {e}", exc_info=True)
@@ -637,7 +641,6 @@ class View(customtkinter.CTk):
                     try:
                         logger.info("016 Card disconnected, resetting status")
                         self.welcome()
-                        self.lets_go_button.configure(text="Insert card", command=None, state='disabled')
                         logger.debug("017 Status reset for card disconnection")
                     except Exception as e:
                         logger.error(f"018 Error resetting card status: {e}", exc_info=True)
@@ -658,7 +661,10 @@ class View(customtkinter.CTk):
             popup = customtkinter.CTkToplevel(self)
             popup.title("PIN Required")
             popup.configure(fg_color='whitesmoke')
-            popup.protocol("WM_DELETE_WINDOW", lambda: popup.destroy())
+            popup.protocol("WM_DELETE_WINDOW", lambda: [self.show(
+                "WARNING",
+                "You can't open app without password",
+                "Ok",  None, "./pictures_db/change_pin_popup_icon.jpg")])
 
             popup_width, popup_height = 400, 200
             position_right = int(self.winfo_screenwidth() / 2 - popup_width / 2)
@@ -667,18 +673,18 @@ class View(customtkinter.CTk):
             logger.debug("002 Passphrase popup created and positioned")
 
             icon_image = Image.open("./pictures_db/change_pin_popup_icon.jpg")
-            icon = customtkinter.CTkImage(light_image=icon_image, size=(20, 20))
+            icon = customtkinter.CTkImage(light_image=icon_image, size=(30, 30))
             icon_label = customtkinter.CTkLabel(popup, image=icon, text="\nEnter the PIN code of your card.",
                                                 compound='top',
                                                 font=customtkinter.CTkFont(family="Outfit", size=18, weight="normal"))
-            icon_label.pack(pady=(0, 10))
+            icon_label.pack(pady=(10, 5))
             logger.debug("003 Icon and label added to popup")
 
             passphrase_entry = customtkinter.CTkEntry(popup, show="*", corner_radius=10, border_width=0,
                                                       width=229, height=37, bg_color='whitesmoke',
                                                       fg_color=BG_BUTTON, text_color='grey')
             popup.after(100, passphrase_entry.focus_force)
-            passphrase_entry.pack(pady=15)
+            passphrase_entry.pack(pady=(5, 5))
             logger.debug("004 Passphrase entry field added to popup")
 
             pin = None
@@ -1103,10 +1109,12 @@ class View(customtkinter.CTk):
             logger.debug("003 Content added to popup")
             self._add_button_to_popup(popup, button_txt, cmd)
             logger.debug("004 Button added to popup")
-            logger.log(SUCCESS, f"005 Popup '{title}' displayed successfully")
+            self._make_popup_as_priority(popup)
+            logger.debug("005 Priority added to popup")
+            logger.log(SUCCESS, f"006 Popup '{title}' displayed successfully")
         except Exception as e:
-            logger.error(f"006 Error in show: {e}", exc_info=True)
-            raise UIElementError(f"007 Failed to show popup: {e}") from e
+            logger.error(f"007 Error in show: {e}", exc_info=True)
+            raise UIElementError(f"008 Failed to show popup: {e}") from e
 
     @log_method
     def _create_popup(self, title):
@@ -1162,6 +1170,12 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"005 Error in _add_content_to_popup: {e}", exc_info=True)
             raise UIElementError(f"006 Failed to add content to popup: {e}") from e
+
+    def _make_popup_as_priority(self, popup):
+        # Assurez-vous que le pop-up reste toujours devant
+        popup.transient(self)
+        popup.grab_set()
+        popup.attributes("-topmost", True)
 
     @log_method
     def _add_button_to_popup(self, popup, button_txt, cmd):
@@ -1300,7 +1314,7 @@ class View(customtkinter.CTk):
         def _create_welcome_button():
             try:
                 logger.info("017 Creating welcome button")
-                self.lets_go_button = self.create_welcome_button('', None)
+                self.lets_go_button = self._create_welcome_button("Let's go", self.show_secrets)
                 self.lets_go_button.place(relx=0.85, rely=0.93, anchor="center")
 
                 logger.log(SUCCESS, "018 Welcome button created successfully")
