@@ -196,7 +196,7 @@ class Controller:
         formatted_headers = []
         for header in headers:
             formatted_header = {
-                'id': header['id'],
+                'id': int(header['id']),  # Convertir l'ID en entier
                 'type': dic_type.get(header['type'], hex(header['type'])),
                 'label': header['label']
             }

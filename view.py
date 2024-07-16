@@ -1,7 +1,7 @@
 import logging
 import sys
 import os
-from typing import Optional, Dict, List, Callable, Any
+from typing import Optional, Dict, List, Callable, Any, Union
 from functools import wraps
 import gc
 import webbrowser
@@ -299,7 +299,7 @@ class View(customtkinter.CTk):
             if label is None:
                 try:
                     logger.debug("005 Creating label with default whitesmoke background")
-                    label = customtkinter.CTkLabel(self.main_frame, text=text, bg_color="whitesmoke",
+                    label = customtkinter.CTkLabel(self.current_frame, text=text, bg_color="whitesmoke",
                                                    fg_color="whitesmoke",
                                                    font=customtkinter.CTkFont(family="Outfit", size=18,
                                                                               weight="normal"))
@@ -351,6 +351,35 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"009 Unexpected error in _create_entry: {e}", exc_info=True)
             raise EntryCreationError(f"010 Unexpected error during entry creation: {e}") from e
+
+    @log_method
+    def create_option_list(self, options, default_value=None, width=300):
+        try:
+            logger.info(f"001 Creating option list with options: {options}")
+            variable = customtkinter.StringVar(value=default_value if default_value else options[0])
+
+            option_menu = customtkinter.CTkOptionMenu(
+                self.current_frame,
+                variable=variable,
+                values=options,
+                width=width,
+                fg_color=BG_BUTTON,  # Utilisez la même couleur que pour les entrées
+                button_color=BG_BUTTON,  # Couleur du bouton déroulant
+                button_hover_color=BG_HOVER_BUTTON,  # Couleur au survol du bouton
+                dropdown_fg_color=BG_BUTTON,  # Couleur de fond du menu déroulant
+                dropdown_hover_color=BG_HOVER_BUTTON,  # Couleur au survol des options
+                dropdown_text_color="grey",  # Couleur du texte des options
+                text_color="grey",  # Couleur du texte sélectionné
+                font=customtkinter.CTkFont(family="Outfit", size=13, weight="normal"),
+                dropdown_font=customtkinter.CTkFont(family="Outfit", size=13, weight="normal"),
+                corner_radius=10,  # Même rayon de coin que les entrées
+            )
+
+            logger.log(SUCCESS, f"002 Option list created successfully with {len(options)} options")
+            return variable, option_menu
+        except Exception as e:
+            logger.error(f"003 Error creating option list: {e}", exc_info=True)
+            raise UIElementError(f"004 Failed to create option list: {e}") from e
 
     @log_method
     def _create_welcome_button(self, text: str, command: Optional[Callable] = None,
@@ -1528,7 +1557,7 @@ class View(customtkinter.CTk):
 
                 # Introduce table
                 label_text = self._create_label(text="Click on a secret to manage it:")
-                label_text.place(relx=0.285, rely=0.25, anchor="w")
+                label_text.place(relx=0.05, rely=0.25, anchor="w")
 
                 # Define headers
                 headers = ["Id", "Type of secret", "Label"]
@@ -1776,6 +1805,54 @@ class View(customtkinter.CTk):
 
     @log_method
     def generate_secret(self):
+        def _create_initial_selection_frame():
+            try:
+                logger.info("001 Creating initial selection frame")
+                self._create_frame()
+
+                self.header = self._create_an_header("Generate", "generate_icon_ws.png")
+                self.header.place(relx=0.03, rely=0.08, anchor="nw")
+
+                info_text_line_01 = "Seedkeeper allows you to generate and import a BIP39 mnemonic phrase -aka "
+                info_label = self._create_label(info_text_line_01)
+                info_label.place(relx=0.05, rely=0.22, anchor="w")
+
+                info_text_line_02 = "seedphrase- or a login/password. Select the type of secret you want to generate."
+                info_label = self._create_label(info_text_line_02)
+                info_label.place(relx=0.05, rely=0.27, anchor="w")
+
+                type_label = self._create_label("Type of secret:")
+                type_label.place(relx=0.05, rely=0.35, anchor="w")
+
+                self.secret_type, secret_type_menu = self.create_option_list(
+                    ["Mnemonic seedphrase", "Couple login/password"],
+                    default_value="Mnemonic seedphrase",
+                    width=555
+                )
+                secret_type_menu.place(relx=0.05, rely=0.40, anchor="w")
+
+                next_button = self._create_button("Next", command=_on_next_clicked)
+                next_button.place(relx=0.95, rely=0.95, anchor="se")
+
+                logger.log(SUCCESS, "002 Initial selection frame created successfully")
+            except Exception as e:
+                logger.error(f"003 Error creating initial selection frame: {e}", exc_info=True)
+                raise FrameCreationError(f"004 Failed to create initial selection frame: {e}") from e
+
+        def _on_next_clicked():
+            selected_type = self.secret_type.get()
+            if selected_type == "Mnemonic seedphrase":
+                self._clear_current_frame()
+                _create_generate_secret_frame()
+                _create_generate_secret_header()
+                _create_generate_secret_content()
+                _generate_new_mnemonic()
+                self.create_seedkeeper_menu()
+            elif selected_type == "Couple login/password":
+                self.show("INFO", "Password generation not implemented yet", "Ok")
+            else:
+                self.show("ERROR", "Please select a secret type", "Ok")
+
         def _create_generate_secret_frame():
             try:
                 logger.info("001 Creating generate secret frame")
@@ -1788,7 +1865,8 @@ class View(customtkinter.CTk):
         def _create_generate_secret_header():
             try:
                 logger.info("005 Creating generate secret header")
-                self.header = self._create_an_header("Generate Secret", "generate_icon_ws.png")
+                header_text = "Generate seedphrase" if self.secret_type.get() == "Mnemonic seedphrase" else "Generate login/password"
+                self.header = self._create_an_header(header_text, "generate_icon_ws.png")
                 self.header.place(relx=0.03, rely=0.08, anchor="nw")
                 logger.log(SUCCESS, "006 Generate secret header created successfully")
             except Exception as e:
@@ -1799,7 +1877,14 @@ class View(customtkinter.CTk):
             try:
                 logger.info("009 Creating generate secret content")
 
+                label = self._create_label("Label:")
+                label.place(relx=0.05, rely=0.20, anchor="nw")
+
+                label_name = self._create_entry()
+                label_name.place(relx=0.04, rely=0.25, anchor="nw")
+
                 self.radio_value = customtkinter.StringVar(value="12")
+                self.use_passphrase = customtkinter.BooleanVar(value=False)
 
                 radio_12 = customtkinter.CTkRadioButton(
                     self.current_frame,
@@ -1808,7 +1893,7 @@ class View(customtkinter.CTk):
                     value="12",
                     command=_update_mnemonic
                 )
-                radio_12.place(relx=0.05, rely=0.25, anchor="w")
+                radio_12.place(relx=0.05, rely=0.35, anchor="w")
 
                 radio_24 = customtkinter.CTkRadioButton(
                     self.current_frame,
@@ -1817,22 +1902,42 @@ class View(customtkinter.CTk):
                     value="24",
                     command=_update_mnemonic
                 )
-                radio_24.place(relx=0.2, rely=0.25, anchor="w")
+                radio_24.place(relx=0.2, rely=0.35, anchor="w")
 
                 self.mnemonic_textbox = customtkinter.CTkTextbox(self, corner_radius=20,
                                                                  bg_color="whitesmoke", fg_color=BG_BUTTON,
                                                                  border_color=BG_BUTTON, border_width=1,
-                                                                 width=557, height=83,
+                                                                 width=500, height=83,
                                                                  text_color="grey",
                                                                  font=customtkinter.CTkFont(family="Outfit", size=13,
                                                                                             weight="normal"))
-                self.mnemonic_textbox.place(relx=0.28, rely=0.37, anchor="w")
+                self.mnemonic_textbox.place(relx=0.28, rely=0.45, anchor="w")
+
+                passphrase_checkbox = customtkinter.CTkCheckBox(
+                    self.current_frame,
+                    text="Use passphrase",
+                    variable=self.use_passphrase,
+                    command=_toggle_passphrase
+                )
+                passphrase_checkbox.place(relx=0.05, rely=0.57, anchor="w")
+
+                self.passphrase_entry = customtkinter.CTkEntry(
+                    self.current_frame,
+                    width=300,
+                    placeholder_text="Enter passphrase (optional)",
+                    show="*"
+                )
+                self.passphrase_entry.place(relx=0.28, rely=0.57, anchor="w")
+                self.passphrase_entry.configure(state="disabled")
 
                 generate_button = self._create_button("Generate", command=_generate_new_mnemonic)
-                generate_button.place(relx=0.33, rely=0.5, anchor="w")
+                generate_button.place(relx=0.75, rely=0.45, anchor="w")
 
                 save_button = self._create_button("Save to Card", command=_save_mnemonic_to_card)
-                save_button.place(relx=0.5, rely=0.5, anchor="w")
+                save_button.place(relx=0.85, rely=0.93, anchor="center")
+
+                cancel_button = self._create_button("Cancel", command=self.show_secrets)
+                cancel_button.place(relx=0.65, rely=0.93, anchor="center")
 
                 logger.log(SUCCESS, "010 Generate secret content created successfully")
             except Exception as e:
@@ -1852,6 +1957,14 @@ class View(customtkinter.CTk):
             try:
                 logger.info("001 Generating new mnemonic")
                 mnemonic_length = int(self.radio_value.get())
+                stype: int
+                subtype: int
+                size: int
+                export_rights: int
+                label: str
+                save_entropy: int
+                entropy: Union[str, bytes]
+
                 mnemonic = self.controller.generate_random_seed(mnemonic_length)
                 self.mnemonic_textbox.delete("1.0", customtkinter.END)
                 self.mnemonic_textbox.insert("1.0", mnemonic)
@@ -1860,12 +1973,19 @@ class View(customtkinter.CTk):
                 logger.error(f"003 Error generating mnemonic: {e}", exc_info=True)
                 raise UIElementError(f"004 Failed to generate mnemonic: {e}") from e
 
+        def _toggle_passphrase():
+            if self.use_passphrase.get():
+                self.passphrase_entry.configure(state="normal")
+            else:
+                self.passphrase_entry.configure(state="disabled")
+
         def _save_mnemonic_to_card():
             try:
                 logger.info("001 Saving mnemonic to card")
                 mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
+                passphrase = self.passphrase_entry.get() if self.use_passphrase.get() else None
                 if mnemonic:
-                    self.controller.import_seed(mnemonic)
+                    self.controller.import_seed(mnemonic, passphrase)
                     logger.log(SUCCESS, "002 Mnemonic saved to card successfully")
                 else:
                     logger.warning("003 No mnemonic to save")
@@ -1880,11 +2000,8 @@ class View(customtkinter.CTk):
         try:
             logger.info("013 Creating generate secret view")
             self.mnemonic_textbox_active = True
-            _create_generate_secret_frame()
-            _create_generate_secret_header()
-            _create_generate_secret_content()
+            _create_initial_selection_frame()
             self.create_seedkeeper_menu()
-            _generate_new_mnemonic()  # Generate initial mnemonic
             logger.log(SUCCESS, "014 Generate secret view created successfully")
         except (FrameCreationError, UIElementError) as e:
             logger.error(f"015 Error in generate_secret: {e}", exc_info=True)
