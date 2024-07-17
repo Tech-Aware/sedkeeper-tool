@@ -1,6 +1,7 @@
 import logging
 import sys
 from colorama import Fore, Back, Style, init
+import functools
 
 # Initialize colorama
 init(autoreset=True)
@@ -25,7 +26,7 @@ class ColoredFormatter(logging.Formatter):
         'SUCCESS': Fore.GREEN,
         'WARNING': Fore.YELLOW,
         'ERROR': Fore.RED,
-        'CRITICAL': Fore.RED + Back.BLACK
+        'CRITICAL': Fore.RED + Back.WHITE
     }
 
     SPECIAL_LOGS = [
@@ -48,6 +49,28 @@ class ColoredFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, datefmt='%Y-%m-%d %H:%M:%S')
         return formatter.format(record)
 
+
+def log_method(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        logger = logging.getLogger(func.__module__)
+
+        # Log entry with a distinct format
+        logger.debug(f"{Fore.CYAN}▼ Entering {func.__name__}{Style.RESET_ALL}")
+
+        try:
+            result = func(*args, **kwargs)
+
+            # Log exit with a different distinct format
+            logger.debug(f"{Fore.MAGENTA}▲ Exiting {func.__name__}{Style.RESET_ALL}")
+
+            return result
+        except Exception as e:
+            # Log exception with a different color
+            logger.exception(f"{Fore.RED + Back.YELLOW}! Exception in {func.__name__}: {e}{Style.RESET_ALL}")
+            raise
+
+    return wrapper
 
 def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
