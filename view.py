@@ -12,7 +12,7 @@ from PIL import Image, ImageTk
 
 from controller import Controller
 
-from log_config import get_logger, SUCCESS, setup_logging
+from log_config import get_logger, SUCCESS, setup_logging, log_method
 from exceptions import *
 
 from pysatochip.version import PYSATOCHIP_VERSION
@@ -30,21 +30,6 @@ DEFAULT_BG_COLOR = "whitesmoke"
 ICON_PATH = "./pictures_db/"
 APP_VERSION = "0.1.0"
 HIGHLIGHT_COLOR = "#D3D3D3"
-
-
-def log_method(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        logger.debug(f"Entering {func.__name__}")
-        try:
-            result = func(*args, **kwargs)
-            logger.debug(f"Exiting {func.__name__}")
-            return result
-        except Exception as e:
-            logger.exception(f"Exception in {func.__name__}: {e}")
-            raise
-
-    return wrapper
 
 
 class View(customtkinter.CTk):
@@ -324,6 +309,7 @@ class View(customtkinter.CTk):
             logger.error(f"011 Unexpected error in _create_label: {e}", exc_info=True)
             raise LabelCreationError(f"012 Failed to create label: {e}") from e
 
+    @log_method
     def _make_text_bold(self, size=None):
         try:
             logger.debug("Entering make_text_bold method")
@@ -696,7 +682,7 @@ class View(customtkinter.CTk):
                 elif isConnected is False:
                     try:
                         logger.info("016 Card disconnected, resetting status")
-                        self.welcome()
+                        self.view_welcome()
                         logger.debug("017 Status reset for card disconnection")
                     except Exception as e:
                         logger.error(f"018 Error resetting card status: {e}", exc_info=True)
@@ -1098,7 +1084,7 @@ class View(customtkinter.CTk):
             logger.debug("002 Welcome frame cleared")
             secrets_data = self.controller.retrieve_secrets_stored_into_the_card()
             logger.debug("003 Secrets data retrieved from card")
-            self.my_secrets(secrets_data)
+            self.view_my_secrets(secrets_data)
             logger.log(SUCCESS, "004 Secrets displayed successfully")
         except Exception as e:
             logger.error(f"005 Error in show_secrets: {e}", exc_info=True)
@@ -1111,7 +1097,7 @@ class View(customtkinter.CTk):
             self.welcome_in_display = False
             self._clear_current_frame()
             logger.debug("002 Welcome frame cleared")
-            self.generate_secret()
+            self.view_generate_secret()
             logger.log(SUCCESS, "003 Secret generation process initiated")
         except Exception as e:
             logger.error(f"004 Error in show_generate_secret: {e}", exc_info=True)
@@ -1133,7 +1119,7 @@ class View(customtkinter.CTk):
             logger.info("001 Displaying settings")
             self._delete_seedkeeper_menu()
             logger.debug("002 Seedkeeper menu deleted")
-            self.start_setup()
+            self.view_start_setup()
             logger.debug("003 Setup started")
             self.create_satochip_utils_menu()
             logger.debug("004 Satochip utils menu created")
@@ -1228,6 +1214,7 @@ class View(customtkinter.CTk):
             logger.error(f"005 Error in _add_content_to_popup: {e}", exc_info=True)
             raise UIElementError(f"006 Failed to add content to popup: {e}") from e
 
+    @log_method
     def _make_popup_as_priority(self, popup):
         # Assurez-vous que le pop-up reste toujours devant
         popup.transient(self)
@@ -1250,37 +1237,18 @@ class View(customtkinter.CTk):
             logger.error(f"003 Error in _add_button_to_popup: {e}", exc_info=True)
             raise UIElementError(f"004 Failed to add button to popup: {e}") from e
 
-    """FOR ERRORS MANAGEMENT"""
-
-    # todo: replace handle view error for show_error
-    @log_method
-    def _handle_view_error(self, message: str):
-        logger.error(f"View Error: {message}")
-        try:
-            error_label = customtkinter.CTkLabel(
-                self.current_frame,
-                text=message,
-                fg_color="red",
-                text_color="white",
-                corner_radius=8
-            )
-            error_label.place(relx=0.5, rely=0.9, anchor="center")
-            self.after(5000, error_label.destroy)
-        except Exception as e:
-            logger.critical(f"Failed to display error message: {e}", exc_info=True)
-            # Consider implementing a fallback error display method here
-
     ####################################################################################################################
     """ 
-    ##################################### WELCOME IN SEEDKEEPER TOOL ###################################################
+    ################################################### VIEWS #########################################################
     """
 
     ####################################################################################################################
 
     @log_method
-    def welcome(self):
+    def view_welcome(self):
         self.welcome_in_display = True
 
+        @log_method
         def _setup_welcome_frame():
             try:
                 logger.info("001 Setting up welcome frame")
@@ -1292,6 +1260,7 @@ class View(customtkinter.CTk):
                 logger.error(error_msg, exc_info=True)
                 raise FrameError(error_msg) from e
 
+        @log_method
         def _create_welcome_background():
             try:
                 logger.info("004 Creating welcome background")
@@ -1308,6 +1277,7 @@ class View(customtkinter.CTk):
                 logger.error(f"008 Failed to create welcome background: {e}", exc_info=True)
                 raise UIElementError(f"009 Failed to create welcome background: {e}")
 
+        @log_method
         def _create_welcome_header():
             try:
                 logger.info("010 Creating welcome header")
@@ -1341,6 +1311,7 @@ class View(customtkinter.CTk):
                 logger.error(error_msg, exc_info=True)
                 raise UIElementError(error_msg) from e
 
+        @log_method
         def _create_welcome_labels():
             try:
                 logger.info("014 Creating welcome labels")
@@ -1368,6 +1339,7 @@ class View(customtkinter.CTk):
                 logger.error(error_msg, exc_info=True)
                 raise UIElementError(error_msg) from e
 
+        @log_method
         def _create_welcome_button():
             try:
                 logger.info("017 Creating welcome button")
@@ -1402,19 +1374,10 @@ class View(customtkinter.CTk):
             logger.error(f"026 Unexpected error in welcome method: {e}", exc_info=True)
             raise ViewError(f"027 Unexpected error while initializing welcome view: {e}") from e
 
-    ####################################################################################################################
-    """ 
-    ################################################### FRAMES #########################################################
-    """
-
-    ####################################################################################################################
-
-    ########################################
-    # START SETUP
-    ########################################
-
     @log_method
-    def start_setup(self):
+    def view_start_setup(self):
+
+        @log_method
         def _create_start_setup_frame():
             try:
                 logger.info("001 Creating start setup frame")
@@ -1424,6 +1387,7 @@ class View(customtkinter.CTk):
                 logger.error(f"003 Error creating start setup frame: {e}", exc_info=True)
                 raise FrameCreationError(f"004 Failed to create start setup frame: {e}") from e
 
+        @log_method
         def _create_return_button():
             try:
                 logger.info("005 Creating return button")
@@ -1435,6 +1399,7 @@ class View(customtkinter.CTk):
                 logger.error(f"007 Error creating return button: {e}", exc_info=True)
                 raise UIElementError(f"008 Failed to create return button: {e}") from e
 
+        @log_method
         def _create_start_setup_header():
             try:
                 logger.info("009 Creating start setup header")
@@ -1445,6 +1410,7 @@ class View(customtkinter.CTk):
                 logger.error(f"011 Error creating start setup header: {e}", exc_info=True)
                 raise UIElementError(f"012 Failed to create start setup header: {e}") from e
 
+        @log_method
         def _load_background_image():
             try:
                 logger.info("013 Loading background image")
@@ -1464,6 +1430,7 @@ class View(customtkinter.CTk):
                 logger.error(f"015 Error loading background image: {e}", exc_info=True)
                 raise UIElementError(f"016 Failed to load background image: {e}") from e
 
+        @log_method
         def _create_start_setup_labels():
             try:
                 logger.info("017 Creating start setup labels")
@@ -1477,6 +1444,7 @@ class View(customtkinter.CTk):
                 logger.error(f"019 Error creating start setup labels: {e}", exc_info=True)
                 raise UIElementError(f"020 Failed to create start setup labels: {e}") from e
 
+        @log_method
         def _destroy_start_setup():
             try:
                 logger.info("021 Destroying start setup view")
@@ -1510,20 +1478,9 @@ class View(customtkinter.CTk):
             logger.error(f"029 Unexpected error in start_setup: {e}", exc_info=True)
             raise ViewError(f"030 Unexpected error during start setup initialization: {e}") from e
 
-    ########################################
-    # MY SECRETS
-    ########################################
-    """
-    # the first frame where the users fall after 'welcome in seedkeeper tool'
-    # showing all the secrets that are stored on seedkeeper card into a table including three columns
-    # allowing to select a secret and display its details
-    # including V1/V2 seedkeeper
-    """
-
-    ########################################
-
     @log_method
-    def my_secrets(self, secrets_data: Dict[str, Any]):
+    def view_my_secrets(self, secrets_data: Dict[str, Any]):
+        @log_method
         def _create_secrets_frame():
             try:
                 logger.info("001 Creating secrets frame")
@@ -1533,6 +1490,7 @@ class View(customtkinter.CTk):
                 logger.error(f"003 Error creating secrets frame: {e}", exc_info=True)
                 raise FrameCreationError(f"004 Failed to create secrets frame: {e}") from e
 
+        @log_method
         def _create_secrets_header():
             try:
                 logger.info("005 Creating secrets header")
@@ -1543,6 +1501,7 @@ class View(customtkinter.CTk):
                 logger.error(f"007 Error creating secrets header: {e}", exc_info=True)
                 raise UIElementError(f"008 Failed to create secrets header: {e}") from e
 
+        @log_method
         def _create_secrets_table(secrets_data):
             def _on_mouse_on_secret(event, buttons):
                 for button in buttons:
@@ -1566,12 +1525,12 @@ class View(customtkinter.CTk):
                     self.create_seedkeeper_menu()
 
                     if secret['type'] == 'Password':
-                        self._create_password_secret_frame(secret_details)
+                        _create_password_secret_frame(secret_details)
                     elif secret['type'] == 'Masterseed':
-                        self._create_mnemonic_secret_frame(secret_details)
+                        _create_mnemonic_secret_frame(secret_details)
                     else:
                         logger.warning(f"011 Unsupported secret type: {secret['type']}")
-                        self._create_generic_secret_frame(secret_details)
+                        _create_generic_secret_frame(secret_details)
 
                     back_button = self._create_button(text="Back", command=self.show_secrets)
                     back_button.place(relx=0.95, rely=0.98, anchor="se")
@@ -1579,7 +1538,7 @@ class View(customtkinter.CTk):
                     logger.log(SUCCESS, f"012 Secret details displayed for ID: {secret['id']}")
                 except Exception as e:
                     logger.error(f"013 Error displaying secret details: {e}", exc_info=True)
-                    self._handle_view_error(f"Failed to display secret details: {e}")
+                    raise SecretFrameCreationError("Error displaying secret details") from e
 
             try:
                 logger.info("014 Creating secrets table")
@@ -1647,6 +1606,181 @@ class View(customtkinter.CTk):
                 logger.error(f"020 Error in _create_secrets_table: {e}", exc_info=True)
                 raise UIElementError(f"021 Failed to create secrets table: {e}") from e
 
+        @log_method
+        def _create_password_secret_frame(secret_details):
+            try:
+                delete_button = self._create_button(text="Delete secret",
+                                                    command=lambda: None)  # self._delete_secret(secret['id']))
+                delete_button.place(relx=0.7, rely=0.15, anchor="se")
+
+                logger.info("001 Creating password secret frame")
+                # Create labels and entry fields
+                labels = ['Label:', 'Login:', 'URL:']
+                entries = {}
+
+                for i, label_text in enumerate(labels):
+                    try:
+                        label = self._create_label(label_text)
+                        label.place(relx=0.045, rely=0.2 + i * 0.15, anchor="w")
+                        logger.debug(f"002 Created label: {label_text}")
+
+                        entry = self._create_entry()
+                        entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
+                        entries[label_text.lower()[:-1]] = entry
+                        logger.debug(f"003 Created entry for: {label_text}")
+                    except Exception as e:
+                        logger.error(f"004 Error creating label or entry for {label_text}: {e}", exc_info=True)
+                        raise UIElementError(f"005 Failed to create label or entry for {label_text}: {e}") from e
+
+                # Set values
+                entries['label'].insert(0, secret_details['label'])
+                entries['login'].insert(0, "Placeholder Login")  # Replace with actual data
+                entries['url'].insert(0, "Placeholder URL")  # Replace with actual data
+                logger.debug("006 Entry values set")
+
+                # Create password field
+                try:
+                    password_label = self._create_label("Password:")
+                    password_label.place(relx=0.045, rely=0.7, anchor="w")
+
+                    password_entry = self._create_entry()
+                    password_entry.configure(width=500)
+                    password_entry.place(relx=0.04, rely=0.77, anchor="w")
+                    password_entry.insert(0, "********")  # TODO implement method to retrieve password into controller
+                    logger.debug("007 Password field created")
+                except Exception as e:
+                    logger.error(f"008 Error creating password field: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to create password field: {e}") from e
+
+                # Create action buttons
+                try:
+                    show_button = self._create_button(text="Show",
+                                                      command=lambda: None)  # self._toggle_password_visibility(password_entry))
+                    show_button.place(relx=0.9, rely=0.8, anchor="se")
+                    logger.debug("010 Action buttons created")
+                except Exception as e:
+                    logger.error(f"011 Error creating action buttons: {e}", exc_info=True)
+                    raise UIElementError(f"012 Failed to create action buttons: {e}") from e
+
+                logger.log(SUCCESS, "013 Password secret frame created successfully")
+            except Exception as e:
+                logger.error(f"014 Unexpected error in _create_password_secret_frame: {e}", exc_info=True)
+                raise ViewError(f"015 Failed to create password secret frame: {e}") from e
+
+        @log_method
+        def _create_mnemonic_secret_frame(secret_details):
+            try:
+                logger.info("001 Creating mnemonic secret frame")
+                # Create labels and entry fields
+                labels = ['Label:', 'Mnemonic type:']
+                entries = {}
+
+                for i, label_text in enumerate(labels):
+                    try:
+                        label = self._create_label(label_text)
+                        label.place(relx=0.045, rely=0.2 + i * 0.15, anchor="w")
+                        logger.debug(f"002 Created label: {label_text}")
+
+                        entry = self._create_entry()
+                        entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
+                        entries[label_text.lower()[:-1]] = entry
+                        logger.debug(f"003 Created entry for: {label_text}")
+                    except Exception as e:
+                        logger.error(f"004 Error creating label or entry for {label_text}: {e}", exc_info=True)
+                        raise UIElementError(f"005 Failed to create label or entry for {label_text}: {e}") from e
+
+                # Set values
+                entries['label'].insert(0, secret_details['label'])
+                entries['mnemonic type'].insert(0, secret_details['type'])
+                logger.debug("006 Entry values set")
+
+                try:
+                    xpub_button = self._create_button(text="Xpub",
+                                                      command=lambda: None)  # self._show_xpub(secret['id']))
+                    xpub_button.place(relx=0.60, rely=0.53, anchor="se")
+
+                    seedqr_button = self._create_button(text="SeedQR",
+                                                        command=lambda: None)  # self._show_seedqr(secret['id']))
+                    seedqr_button.place(relx=0.78, rely=0.53, anchor="se")
+                    logger.debug("007 Xpub and SeedQR buttons created")
+                except Exception as e:
+                    logger.error(f"008 Error creating Xpub and SeedQR buttons: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to create Xpub and SeedQR buttons: {e}") from e
+
+                # Create passphrase field
+                try:
+                    passphrase_label = self._create_label("Passphrase:")
+                    passphrase_label.place(relx=0.045, rely=0.58, anchor="w")
+
+                    passphrase_entry = self._create_entry()
+                    passphrase_entry.place(relx=0.2, rely=0.58, anchor="w", relwidth=0.585)
+                    passphrase_entry.insert(0, "Comment récupérer la passhprase ?")  # Replace with actual data
+                    logger.debug("010 Passphrase field created")
+                except Exception as e:
+                    logger.error(f"011 Error creating passphrase field: {e}", exc_info=True)
+                    raise UIElementError(f"012 Failed to create passphrase field: {e}") from e
+
+                # Create mnemonic field
+                try:
+                    mnemonic_label = self._create_label("Mnemonic:")
+                    mnemonic_label.place(relx=0.045, rely=0.65, anchor="w")
+
+                    mnemonic_entry = self._create_entry(show_option='*')
+                    mnemonic_entry.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
+                    mnemonic_entry.insert(0, secret_details['secret'])  # Replace with actual mnemonic
+                    logger.debug("013 Mnemonic field created")
+                except Exception as e:
+                    logger.error(f"014 Error creating mnemonic field: {e}", exc_info=True)
+                    raise UIElementError(f"015 Failed to create mnemonic field: {e}") from e
+
+                def _toggle_mnemonic_visibility(entry):
+                    try:
+                        logger.info("016 Toggling mnemonic visibility")
+                        current_state = entry.cget("show")
+                        new_state = "" if current_state == "*" else "*"
+                        entry.configure(show=new_state)
+                        logger.log(SUCCESS,
+                                   f"017 Mnemonic visibility toggled to {'hidden' if new_state == '*' else 'visible'}")
+                    except Exception as e:
+                        logger.error(f"018 Error toggling mnemonic visibility: {e}", exc_info=True)
+                        raise UIElementError(f"019 Failed to toggle mnemonic visibility: {e}") from e
+
+                # Create action buttons
+                try:
+                    delete_button = self._create_button(text="Delete secret",
+                                                        command=lambda: None)  # self._delete_secret(secret['id']))
+                    delete_button.place(relx=0.7, rely=0.15, anchor="se")
+
+                    show_button = self._create_button(text="Show",
+                                                      command=lambda: _toggle_mnemonic_visibility(mnemonic_entry))
+                    show_button.place(relx=0.95, rely=0.8, anchor="e")
+                    logger.debug("020 Action buttons created")
+                except Exception as e:
+                    logger.error(f"021 Error creating action buttons: {e}", exc_info=True)
+                    raise UIElementError(f"022 Failed to create action buttons: {e}") from e
+
+                logger.log(SUCCESS, "023 Mnemonic secret frame created successfully")
+            except Exception as e:
+                logger.error(f"024 Unexpected error in _create_mnemonic_secret_frame: {e}", exc_info=True)
+                raise ViewError(f"025 Failed to create mnemonic secret frame: {e}") from e
+
+        @log_method
+        def _create_generic_secret_frame(secret_details):
+            try:
+                for key, value in secret_details.items():
+                    label = self._create_label(f"{key}:")
+                    label.place(relx=0.1, rely=0.2 + len(secret_details) * 0.05, anchor="w")
+
+                    entry = self._create_entry(show="*" if key.lower() == "value" else None)
+                    entry.insert(0, value)
+                    entry.configure(state="readonly")
+                    entry.place(relx=0.3, rely=0.2 + len(secret_details) * 0.05, anchor="w")
+
+                logger.log(SUCCESS, "Generic secret frame created")
+            except Exception as e:
+                logger.error(f"Error creating generic secret frame: {e}", exc_info=True)
+                raise UIElementError(f"Failed to create generic secret frame: {e}")
+
         try:
             logger.info("022 Creating secrets frame")
             _create_secrets_frame()
@@ -1660,184 +1794,11 @@ class View(customtkinter.CTk):
             raise SecretFrameCreationError(error_msg) from e
 
     @log_method
-    def _create_password_secret_frame(self, secret_details):
-        try:
-            delete_button = self._create_button(text="Delete secret",
-                                                command=lambda: None)  # self._delete_secret(secret['id']))
-            delete_button.place(relx=0.7, rely=0.15, anchor="se")
-
-            logger.info("001 Creating password secret frame")
-            # Create labels and entry fields
-            labels = ['Label:', 'Login:', 'URL:']
-            entries = {}
-
-            for i, label_text in enumerate(labels):
-                try:
-                    label = self._create_label(label_text)
-                    label.place(relx=0.045, rely=0.2 + i * 0.15, anchor="w")
-                    logger.debug(f"002 Created label: {label_text}")
-
-                    entry = self._create_entry()
-                    entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
-                    entries[label_text.lower()[:-1]] = entry
-                    logger.debug(f"003 Created entry for: {label_text}")
-                except Exception as e:
-                    logger.error(f"004 Error creating label or entry for {label_text}: {e}", exc_info=True)
-                    raise UIElementError(f"005 Failed to create label or entry for {label_text}: {e}") from e
-
-            # Set values
-            entries['label'].insert(0, secret_details['label'])
-            entries['login'].insert(0, "Placeholder Login")  # Replace with actual data
-            entries['url'].insert(0, "Placeholder URL")  # Replace with actual data
-            logger.debug("006 Entry values set")
-
-            # Create password field
-            try:
-                password_label = self._create_label("Password:")
-                password_label.place(relx=0.045, rely=0.7, anchor="w")
-
-                password_entry = self._create_entry()
-                password_entry.configure(width=500)
-                password_entry.place(relx=0.04, rely=0.77, anchor="w")
-                password_entry.insert(0, "********")  # TODO implement method to retrieve password into controller
-                logger.debug("007 Password field created")
-            except Exception as e:
-                logger.error(f"008 Error creating password field: {e}", exc_info=True)
-                raise UIElementError(f"009 Failed to create password field: {e}") from e
-
-            # Create action buttons
-            try:
-                show_button = self._create_button(text="Show",
-                                                  command=lambda: None)  # self._toggle_password_visibility(password_entry))
-                show_button.place(relx=0.9, rely=0.8, anchor="se")
-                logger.debug("010 Action buttons created")
-            except Exception as e:
-                logger.error(f"011 Error creating action buttons: {e}", exc_info=True)
-                raise UIElementError(f"012 Failed to create action buttons: {e}") from e
-
-            logger.log(SUCCESS, "013 Password secret frame created successfully")
-        except Exception as e:
-            logger.error(f"014 Unexpected error in _create_password_secret_frame: {e}", exc_info=True)
-            raise ViewError(f"015 Failed to create password secret frame: {e}") from e
-
-    @log_method
-    def _create_mnemonic_secret_frame(self, secret_details):
-        try:
-            logger.info("001 Creating mnemonic secret frame")
-            # Create labels and entry fields
-            labels = ['Label:', 'Mnemonic type:']
-            entries = {}
-
-            for i, label_text in enumerate(labels):
-                try:
-                    label = self._create_label(label_text)
-                    label.place(relx=0.045, rely=0.2 + i * 0.15, anchor="w")
-                    logger.debug(f"002 Created label: {label_text}")
-
-                    entry = self._create_entry()
-                    entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
-                    entries[label_text.lower()[:-1]] = entry
-                    logger.debug(f"003 Created entry for: {label_text}")
-                except Exception as e:
-                    logger.error(f"004 Error creating label or entry for {label_text}: {e}", exc_info=True)
-                    raise UIElementError(f"005 Failed to create label or entry for {label_text}: {e}") from e
-
-            # Set values
-            entries['label'].insert(0, secret_details['label'])
-            entries['mnemonic type'].insert(0, secret_details['type'])
-            logger.debug("006 Entry values set")
-
-            try:
-                xpub_button = self._create_button(text="Xpub", command=lambda: None)  # self._show_xpub(secret['id']))
-                xpub_button.place(relx=0.60, rely=0.53, anchor="se")
-
-                seedqr_button = self._create_button(text="SeedQR",
-                                                    command=lambda: None)  # self._show_seedqr(secret['id']))
-                seedqr_button.place(relx=0.78, rely=0.53, anchor="se")
-                logger.debug("007 Xpub and SeedQR buttons created")
-            except Exception as e:
-                logger.error(f"008 Error creating Xpub and SeedQR buttons: {e}", exc_info=True)
-                raise UIElementError(f"009 Failed to create Xpub and SeedQR buttons: {e}") from e
-
-            # Create passphrase field
-            try:
-                passphrase_label = self._create_label("Passphrase:")
-                passphrase_label.place(relx=0.045, rely=0.58, anchor="w")
-
-                passphrase_entry = self._create_entry()
-                passphrase_entry.place(relx=0.2, rely=0.58, anchor="w", relwidth=0.585)
-                passphrase_entry.insert(0, "Comment récupérer la passhprase ?")  # Replace with actual data
-                logger.debug("010 Passphrase field created")
-            except Exception as e:
-                logger.error(f"011 Error creating passphrase field: {e}", exc_info=True)
-                raise UIElementError(f"012 Failed to create passphrase field: {e}") from e
-
-            # Create mnemonic field
-            try:
-                mnemonic_label = self._create_label("Mnemonic:")
-                mnemonic_label.place(relx=0.045, rely=0.65, anchor="w")
-
-                mnemonic_entry = self._create_entry(show_option='*')
-                mnemonic_entry.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
-                mnemonic_entry.insert(0, secret_details['secret'])  # Replace with actual mnemonic
-                logger.debug("013 Mnemonic field created")
-            except Exception as e:
-                logger.error(f"014 Error creating mnemonic field: {e}", exc_info=True)
-                raise UIElementError(f"015 Failed to create mnemonic field: {e}") from e
-
-            def _toggle_mnemonic_visibility(entry):
-                try:
-                    logger.info("016 Toggling mnemonic visibility")
-                    current_state = entry.cget("show")
-                    new_state = "" if current_state == "*" else "*"
-                    entry.configure(show=new_state)
-                    logger.log(SUCCESS,
-                               f"017 Mnemonic visibility toggled to {'hidden' if new_state == '*' else 'visible'}")
-                except Exception as e:
-                    logger.error(f"018 Error toggling mnemonic visibility: {e}", exc_info=True)
-                    raise UIElementError(f"019 Failed to toggle mnemonic visibility: {e}") from e
-
-            # Create action buttons
-            try:
-                delete_button = self._create_button(text="Delete secret",
-                                                    command=lambda: None)  # self._delete_secret(secret['id']))
-                delete_button.place(relx=0.7, rely=0.15, anchor="se")
-
-                show_button = self._create_button(text="Show",
-                                                  command=lambda: _toggle_mnemonic_visibility(mnemonic_entry))
-                show_button.place(relx=0.95, rely=0.8, anchor="e")
-                logger.debug("020 Action buttons created")
-            except Exception as e:
-                logger.error(f"021 Error creating action buttons: {e}", exc_info=True)
-                raise UIElementError(f"022 Failed to create action buttons: {e}") from e
-
-            logger.log(SUCCESS, "023 Mnemonic secret frame created successfully")
-        except Exception as e:
-            logger.error(f"024 Unexpected error in _create_mnemonic_secret_frame: {e}", exc_info=True)
-            raise ViewError(f"025 Failed to create mnemonic secret frame: {e}") from e
-
-    @log_method
-    def _create_generic_secret_frame(self, secret_details):
-        try:
-            for key, value in secret_details.items():
-                label = self._create_label(f"{key}:")
-                label.place(relx=0.1, rely=0.2 + len(secret_details) * 0.05, anchor="w")
-
-                entry = self._create_entry(show="*" if key.lower() == "value" else None)
-                entry.insert(0, value)
-                entry.configure(state="readonly")
-                entry.place(relx=0.3, rely=0.2 + len(secret_details) * 0.05, anchor="w")
-
-            logger.log(SUCCESS, "Generic secret frame created")
-        except Exception as e:
-            logger.error(f"Error creating generic secret frame: {e}", exc_info=True)
-            raise UIElementError(f"Failed to create generic secret frame: {e}")
-
-    @log_method
-    def generate_secret(self):
+    def view_generate_secret(self):
         try:
             logger.info("001 Starting generate_secret method")
 
+            @log_method
             def _create_secret_selection_frame():
                 @log_method
                 def _on_next_clicked():
@@ -1895,7 +1856,8 @@ class View(customtkinter.CTk):
                 try:
                     logger.info("020 Starting _show_generate_mnemonic")
 
-                    def _create_generate_mnemonic_frame():
+                    @log_method
+                    def _generate_mnemonic_frame():
                         try:
                             logger.info("021 Creating generate mnemonic frame")
                             self._create_frame()
@@ -1904,7 +1866,8 @@ class View(customtkinter.CTk):
                             logger.error(f"023 Error creating generate mnemonic frame: {e}", exc_info=True)
                             raise FrameCreationError(f"024 Failed to create generate mnemonic frame: {e}") from e
 
-                    def _create_generate_mnemonic_header():
+                    @log_method
+                    def _generate_mnemonic_header():
                         try:
                             logger.info("025 Creating generate mnemonic header")
                             header_text = "Generate seedphrase"
@@ -1915,7 +1878,8 @@ class View(customtkinter.CTk):
                             logger.error(f"027 Error creating generate mnemonic header: {e}", exc_info=True)
                             raise UIElementError(f"028 Failed to create generate mnemonic header: {e}") from e
 
-                    def _create_generate_mnemonic_content():
+                    @log_method
+                    def _generate_mnemonic_widgets():
                         try:
                             logger.info("029 Creating generate mnemonic content")
 
@@ -1973,14 +1937,14 @@ class View(customtkinter.CTk):
                             self.passphrase_entry.place(relx=0.28, rely=0.57, anchor="w")
                             self.passphrase_entry.configure(state="disabled")
 
-                            generate_button = self._create_button("Generate", command=_generate_new_mnemonic)
-                            generate_button.place(relx=0.75, rely=0.45, anchor="w")
+                            generate_mnemonic_button = self._create_button("Generate", command=_generate_new_mnemonic)
+                            generate_mnemonic_button.place(relx=0.75, rely=0.45, anchor="w")
 
-                            save_button = self._create_button("Import", command=_save_mnemonic_to_card)
+                            save_button = self._create_button("Save on card", command=_save_mnemonic_to_card)
                             save_button.place(relx=0.85, rely=0.93, anchor="center")
 
-                            cancel_button = self._create_button("Cancel", command=self.show_secrets)
-                            cancel_button.place(relx=0.65, rely=0.93, anchor="center")
+                            back_button = self._create_button("Back", command=self.show_generate_secret)
+                            back_button.place(relx=0.65, rely=0.93, anchor="center")
 
                             logger.log(SUCCESS, "030 Generate mnemonic content created successfully")
                         except Exception as e:
@@ -2044,9 +2008,9 @@ class View(customtkinter.CTk):
                             raise UIElementError(f"053 Failed to save mnemonic to card: {e}") from e
 
                     self._clear_current_frame()
-                    _create_generate_mnemonic_frame()
-                    _create_generate_mnemonic_header()
-                    _create_generate_mnemonic_content()
+                    _generate_mnemonic_frame()
+                    _generate_mnemonic_header()
+                    _generate_mnemonic_widgets()
                     self.create_seedkeeper_menu()
                     self.mnemonic_textbox_active = True
                     logger.log(SUCCESS, "054 _show_generate_mnemonic completed successfully")
@@ -2059,6 +2023,7 @@ class View(customtkinter.CTk):
                 try:
                     logger.info("057 Starting _show_generate_password method")
 
+                    @log_method
                     def _create_generate_password_frame():
                         try:
                             logger.info("058 Creating generate login/password frame")
@@ -2068,6 +2033,7 @@ class View(customtkinter.CTk):
                             logger.error(f"060 Error creating generate login/password frame: {e}", exc_info=True)
                             raise FrameCreationError(f"061 Failed to create generate login/password frame: {e}") from e
 
+                    @log_method
                     def _create_generate_password_header():
                         try:
                             logger.info("062 Creating generate login/password header")
@@ -2106,6 +2072,7 @@ class View(customtkinter.CTk):
                             logger.error(f"072 Error updating password: {e}", exc_info=True)
                             raise UIElementError(f"073 Failed to update password: {e}") from e
 
+                    @log_method
                     def _create_generate_password_content():
                         try:
                             logger.info("074 Creating generate login/password content")
@@ -2221,9 +2188,6 @@ class View(customtkinter.CTk):
 
                             logger.debug("083 Checkboxes created successfully")
 
-                            generate_button = self._create_button("Generate", command=_generate_new_password)
-                            generate_button.place(relx=0.75, rely=0.45, anchor="w")
-
                             password_label = self._create_label("Generated Password:")
                             password_label.place(relx=0.04, rely=0.67, anchor="nw")
 
@@ -2239,16 +2203,15 @@ class View(customtkinter.CTk):
                             self.password_text_box.place(relx=0.28, rely=0.8, anchor="w")
                             self.password_text_box.configure(state='disabled')
 
-                            generate_button = self._create_button("Generate", command=_update_password)
-                            generate_button.place(relx=0.75, rely=0.45, anchor="w")
+                            generate_password_button = self._create_button("Generate", command=_update_password)
+                            generate_password_button.place(relx=0.75, rely=0.8, anchor="w")
 
-                            save_button = self._create_button("Import", command=_save_password_to_card)
+                            save_button = self._create_button("Save on card", command=_save_password_to_card)
                             save_button.place(relx=0.85, rely=0.93, anchor="center")
 
-                            cancel_button = self._create_button("Cancel",
-                                                                command=lambda: [self.password_text_box.destroy(),
-                                                                                 self.show_secrets()])
-                            cancel_button.place(relx=0.65, rely=0.93, anchor="center")
+                            back_button = self._create_button("Back",
+                                                              command=self.show_generate_secret)
+                            back_button.place(relx=0.65, rely=0.93, anchor="center")
 
                             logger.log(SUCCESS, "084 Generate login/password content created successfully")
                         except Exception as e:
@@ -2285,7 +2248,6 @@ class View(customtkinter.CTk):
                     logger.error(f"096 Unexpected error in _show_generate_password: {e}", exc_info=True)
                     raise ViewError(f"097 Failed to show generate login/password view: {e}") from e
 
-
             logger.info("099 Creating generate secret view")
 
             _create_secret_selection_frame()
@@ -2311,7 +2273,7 @@ if __name__ == "__main__":
     setup_logging()
     try:
         app = View(loglevel=logging.DEBUG)  # ou le niveau que vous préférez
-        app.welcome()
+        app.view_welcome()
         app.mainloop()
     except Exception as e:
         logger.critical(f"Application failed to start: {e}", exc_info=True)
