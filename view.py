@@ -135,6 +135,8 @@ class View(customtkinter.CTk):
             self.pin_left: Optional[int] = None
             self.mnemonic_textbox_active: bool = False
             self.mnemonic_textbox: Optional[customtkinter.CTkTextbox] = None
+            self.password_text_box_active: bool = False
+            self.password_text_box: Optional[customtkinter.CTkTextbox] = None
             logger.debug("004 Application state attributes initialized")
 
             logger.log(SUCCESS, "005 All attributes initialized successfully to their default values")
@@ -322,6 +324,27 @@ class View(customtkinter.CTk):
             logger.error(f"011 Unexpected error in _create_label: {e}", exc_info=True)
             raise LabelCreationError(f"012 Failed to create label: {e}") from e
 
+    def _make_text_bold(self, size=None):
+        try:
+            logger.debug("Entering make_text_bold method")
+            logger.debug("Configuring bold font")
+
+            try:
+                if size is not None:
+                    logger.debug(f"Setting bold font with size: {size}")
+                    result = customtkinter.CTkFont(weight="bold", size=size)
+                else:
+                    logger.debug("Setting bold font with default size")
+                    result = customtkinter.CTkFont(weight="bold", size=18)
+            except Exception as e:
+                logger.error(f"An error occurred while setting the bold font: {e}", exc_info=True)
+                raise
+
+            logger.debug("make_text_bold method completed successfully")
+            return result
+        except Exception as e:
+            logger.error(f"An unexpected error occurred in make_text_bold: {e}", exc_info=True)
+
     @log_method
     def _create_entry(self, show_option: str = None) -> customtkinter.CTkEntry:
         try:
@@ -383,7 +406,7 @@ class View(customtkinter.CTk):
 
     @log_method
     def _create_welcome_button(self, text: str, command: Optional[Callable] = None,
-                              frame: Optional[customtkinter.CTkFrame] = None) -> customtkinter.CTkButton:
+                               frame: Optional[customtkinter.CTkFrame] = None) -> customtkinter.CTkButton:
         try:
             logger.info(f"001 Creating welcome button: {text}")
             target_frame = frame or self.welcome_frame
@@ -499,7 +522,7 @@ class View(customtkinter.CTk):
     @log_method
     def _clear_current_frame(self):
         try:
-            if self.app_open is True:
+            if self.app_open is True and self.current_frame is not None:
                 logger.info("001 Starting current frame clearing process")
                 if hasattr(self, 'current_frame') and self.current_frame:
                     for widget in self.current_frame.winfo_children():
@@ -512,6 +535,10 @@ class View(customtkinter.CTk):
                         self.mnemonic_textbox.destroy()
                         self.mnemonic_textbox_active = False
                         self.mnemonic_textbox = None
+                    elif self.password_text_box_active is True and self.password_text_box is not None:
+                        self.password_text_box.destroy()
+                        self.password_text_box_active = False
+                        self.password_text_box = None
                     logger.debug("004 Current frame reference set to None")
                 else:
                     pass
@@ -693,7 +720,7 @@ class View(customtkinter.CTk):
             popup.protocol("WM_DELETE_WINDOW", lambda: [self.show(
                 "WARNING",
                 "You can't open app without password",
-                "Ok",  None, "./pictures_db/change_pin_popup_icon.jpg")])
+                "Ok", None, "./pictures_db/change_pin_popup_icon.jpg")])
 
             popup_width, popup_height = 400, 200
             position_right = int(self.winfo_screenwidth() / 2 - popup_width / 2)
@@ -1067,6 +1094,7 @@ class View(customtkinter.CTk):
             logger.info("001 Initiating show secrets process")
             self.welcome_in_display = False
             self._clear_welcome_frame()
+            self._clear_current_frame()
             logger.debug("002 Welcome frame cleared")
             secrets_data = self.controller.retrieve_secrets_stored_into_the_card()
             logger.debug("003 Secrets data retrieved from card")
@@ -1081,7 +1109,7 @@ class View(customtkinter.CTk):
         try:
             logger.info("001 Initiating secret generation process")
             self.welcome_in_display = False
-            self._clear_welcome_frame()
+            self._clear_current_frame()
             logger.debug("002 Welcome frame cleared")
             self.generate_secret()
             logger.log(SUCCESS, "003 Secret generation process initiated")
@@ -1353,6 +1381,7 @@ class View(customtkinter.CTk):
                 raise UIElementError(error_msg) from e
 
         logger.info("020 Initializing welcome view")
+
         try:
             self._clear_current_frame()
             _setup_welcome_frame()
@@ -1399,7 +1428,7 @@ class View(customtkinter.CTk):
             try:
                 logger.info("005 Creating return button")
                 return_button = self._create_button(text="Back",
-                                                    command=lambda: [_destroy_start_setup(), self.show_secrets()])
+                                                    command=lambda: [self.show_secrets()])
                 return_button.place(relx=0.95, rely=0.95, anchor="se")
                 logger.log(SUCCESS, "006 Return button created successfully")
             except Exception as e:
@@ -1701,7 +1730,7 @@ class View(customtkinter.CTk):
             for i, label_text in enumerate(labels):
                 try:
                     label = self._create_label(label_text)
-                    label.place(relx=0.285, rely=0.2 + i * 0.15, anchor="w")
+                    label.place(relx=0.045, rely=0.2 + i * 0.15, anchor="w")
                     logger.debug(f"002 Created label: {label_text}")
 
                     entry = self._create_entry()
@@ -1732,7 +1761,7 @@ class View(customtkinter.CTk):
             # Create passphrase field
             try:
                 passphrase_label = self._create_label("Passphrase:")
-                passphrase_label.place(relx=0.285, rely=0.58, anchor="w")
+                passphrase_label.place(relx=0.045, rely=0.58, anchor="w")
 
                 passphrase_entry = self._create_entry()
                 passphrase_entry.place(relx=0.2, rely=0.58, anchor="w", relwidth=0.585)
@@ -1745,7 +1774,7 @@ class View(customtkinter.CTk):
             # Create mnemonic field
             try:
                 mnemonic_label = self._create_label("Mnemonic:")
-                mnemonic_label.place(relx=0.285, rely=0.65, anchor="w")
+                mnemonic_label.place(relx=0.045, rely=0.65, anchor="w")
 
                 mnemonic_entry = self._create_entry(show_option='*')
                 mnemonic_entry.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
@@ -1805,210 +1834,476 @@ class View(customtkinter.CTk):
 
     @log_method
     def generate_secret(self):
-        def _create_initial_selection_frame():
-            try:
-                logger.info("001 Creating initial selection frame")
-                self._create_frame()
-
-                self.header = self._create_an_header("Generate", "generate_icon_ws.png")
-                self.header.place(relx=0.03, rely=0.08, anchor="nw")
-
-                info_text_line_01 = "Seedkeeper allows you to generate and import a BIP39 mnemonic phrase -aka "
-                info_label = self._create_label(info_text_line_01)
-                info_label.place(relx=0.05, rely=0.22, anchor="w")
-
-                info_text_line_02 = "seedphrase- or a login/password. Select the type of secret you want to generate."
-                info_label = self._create_label(info_text_line_02)
-                info_label.place(relx=0.05, rely=0.27, anchor="w")
-
-                type_label = self._create_label("Type of secret:")
-                type_label.place(relx=0.05, rely=0.35, anchor="w")
-
-                self.secret_type, secret_type_menu = self.create_option_list(
-                    ["Mnemonic seedphrase", "Couple login/password"],
-                    default_value="Mnemonic seedphrase",
-                    width=555
-                )
-                secret_type_menu.place(relx=0.05, rely=0.40, anchor="w")
-
-                next_button = self._create_button("Next", command=_on_next_clicked)
-                next_button.place(relx=0.95, rely=0.95, anchor="se")
-
-                logger.log(SUCCESS, "002 Initial selection frame created successfully")
-            except Exception as e:
-                logger.error(f"003 Error creating initial selection frame: {e}", exc_info=True)
-                raise FrameCreationError(f"004 Failed to create initial selection frame: {e}") from e
-
-        def _on_next_clicked():
-            selected_type = self.secret_type.get()
-            if selected_type == "Mnemonic seedphrase":
-                self._clear_current_frame()
-                _create_generate_secret_frame()
-                _create_generate_secret_header()
-                _create_generate_secret_content()
-                _generate_new_mnemonic()
-                self.create_seedkeeper_menu()
-            elif selected_type == "Couple login/password":
-                self.show("INFO", "Password generation not implemented yet", "Ok")
-            else:
-                self.show("ERROR", "Please select a secret type", "Ok")
-
-        def _create_generate_secret_frame():
-            try:
-                logger.info("001 Creating generate secret frame")
-                self._create_frame()
-                logger.log(SUCCESS, "002 Generate secret frame created successfully")
-            except Exception as e:
-                logger.error(f"003 Error creating generate secret frame: {e}", exc_info=True)
-                raise FrameCreationError(f"004 Failed to create generate secret frame: {e}") from e
-
-        def _create_generate_secret_header():
-            try:
-                logger.info("005 Creating generate secret header")
-                header_text = "Generate seedphrase" if self.secret_type.get() == "Mnemonic seedphrase" else "Generate login/password"
-                self.header = self._create_an_header(header_text, "generate_icon_ws.png")
-                self.header.place(relx=0.03, rely=0.08, anchor="nw")
-                logger.log(SUCCESS, "006 Generate secret header created successfully")
-            except Exception as e:
-                logger.error(f"007 Error creating generate secret header: {e}", exc_info=True)
-                raise UIElementError(f"008 Failed to create generate secret header: {e}") from e
-
-        def _create_generate_secret_content():
-            try:
-                logger.info("009 Creating generate secret content")
-
-                label = self._create_label("Label:")
-                label.place(relx=0.05, rely=0.20, anchor="nw")
-
-                label_name = self._create_entry()
-                label_name.place(relx=0.04, rely=0.25, anchor="nw")
-
-                self.radio_value = customtkinter.StringVar(value="12")
-                self.use_passphrase = customtkinter.BooleanVar(value=False)
-
-                radio_12 = customtkinter.CTkRadioButton(
-                    self.current_frame,
-                    text="12 words",
-                    variable=self.radio_value,
-                    value="12",
-                    command=_update_mnemonic
-                )
-                radio_12.place(relx=0.05, rely=0.35, anchor="w")
-
-                radio_24 = customtkinter.CTkRadioButton(
-                    self.current_frame,
-                    text="24 words",
-                    variable=self.radio_value,
-                    value="24",
-                    command=_update_mnemonic
-                )
-                radio_24.place(relx=0.2, rely=0.35, anchor="w")
-
-                self.mnemonic_textbox = customtkinter.CTkTextbox(self, corner_radius=20,
-                                                                 bg_color="whitesmoke", fg_color=BG_BUTTON,
-                                                                 border_color=BG_BUTTON, border_width=1,
-                                                                 width=500, height=83,
-                                                                 text_color="grey",
-                                                                 font=customtkinter.CTkFont(family="Outfit", size=13,
-                                                                                            weight="normal"))
-                self.mnemonic_textbox.place(relx=0.28, rely=0.45, anchor="w")
-
-                passphrase_checkbox = customtkinter.CTkCheckBox(
-                    self.current_frame,
-                    text="Use passphrase",
-                    variable=self.use_passphrase,
-                    command=_toggle_passphrase
-                )
-                passphrase_checkbox.place(relx=0.05, rely=0.57, anchor="w")
-
-                self.passphrase_entry = customtkinter.CTkEntry(
-                    self.current_frame,
-                    width=300,
-                    placeholder_text="Enter passphrase (optional)",
-                    show="*"
-                )
-                self.passphrase_entry.place(relx=0.28, rely=0.57, anchor="w")
-                self.passphrase_entry.configure(state="disabled")
-
-                generate_button = self._create_button("Generate", command=_generate_new_mnemonic)
-                generate_button.place(relx=0.75, rely=0.45, anchor="w")
-
-                save_button = self._create_button("Save to Card", command=_save_mnemonic_to_card)
-                save_button.place(relx=0.85, rely=0.93, anchor="center")
-
-                cancel_button = self._create_button("Cancel", command=self.show_secrets)
-                cancel_button.place(relx=0.65, rely=0.93, anchor="center")
-
-                logger.log(SUCCESS, "010 Generate secret content created successfully")
-            except Exception as e:
-                logger.error(f"011 Error creating generate secret content: {e}", exc_info=True)
-                raise UIElementError(f"012 Failed to create generate secret content: {e}") from e
-
-        def _update_mnemonic():
-            try:
-                logger.info("001 Updating mnemonic")
-                _generate_new_mnemonic()
-                logger.log(SUCCESS, "002 Mnemonic updated successfully")
-            except Exception as e:
-                logger.error(f"003 Error updating mnemonic: {e}", exc_info=True)
-                raise UIElementError(f"004 Failed to update mnemonic: {e}") from e
-
-        def _generate_new_mnemonic():
-            try:
-                logger.info("001 Generating new mnemonic")
-                mnemonic_length = int(self.radio_value.get())
-                stype: int
-                subtype: int
-                size: int
-                export_rights: int
-                label: str
-                save_entropy: int
-                entropy: Union[str, bytes]
-
-                mnemonic = self.controller.generate_random_seed(mnemonic_length)
-                self.mnemonic_textbox.delete("1.0", customtkinter.END)
-                self.mnemonic_textbox.insert("1.0", mnemonic)
-                logger.log(SUCCESS, "002 New mnemonic generated successfully")
-            except Exception as e:
-                logger.error(f"003 Error generating mnemonic: {e}", exc_info=True)
-                raise UIElementError(f"004 Failed to generate mnemonic: {e}") from e
-
-        def _toggle_passphrase():
-            if self.use_passphrase.get():
-                self.passphrase_entry.configure(state="normal")
-            else:
-                self.passphrase_entry.configure(state="disabled")
-
-        def _save_mnemonic_to_card():
-            try:
-                logger.info("001 Saving mnemonic to card")
-                mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
-                passphrase = self.passphrase_entry.get() if self.use_passphrase.get() else None
-                if mnemonic:
-                    self.controller.import_seed(mnemonic, passphrase)
-                    logger.log(SUCCESS, "002 Mnemonic saved to card successfully")
-                else:
-                    logger.warning("003 No mnemonic to save")
-                    raise ValueError("004 No mnemonic generated")
-            except ValueError as e:
-                logger.error(f"005 Error saving mnemonic to card: {e}", exc_info=True)
-                raise UIElementError(f"006 Failed to save mnemonic to card: {e}") from e
-            except Exception as e:
-                logger.error(f"007 Error saving mnemonic to card: {e}", exc_info=True)
-                raise UIElementError(f"008 Failed to save mnemonic to card: {e}") from e
-
         try:
-            logger.info("013 Creating generate secret view")
-            self.mnemonic_textbox_active = True
-            _create_initial_selection_frame()
+            logger.info("001 Starting generate_secret method")
+
+            def _create_secret_selection_frame():
+                @log_method
+                def _on_next_clicked():
+                    try:
+                        logger.info("010 Next button clicked")
+                        selected_type = self.secret_type.get()
+                        if selected_type == "Mnemonic seedphrase":
+                            logger.debug("011 Mnemonic seedphrase selected")
+                            _show_generate_mnemonic()
+                        elif selected_type == "Couple login/password":
+                            logger.debug("012 Couple login/password selected")
+                            _show_generate_password()
+                        else:
+                            logger.warning("013 No secret type selected")
+                            self.show("ERROR", "Please select a secret type", "Ok")
+                    except Exception as e:
+                        logger.error(f"014 Error in _on_next_clicked: {e}", exc_info=True)
+                        raise UIElementError(f"015 Failed to process next button click: {e}") from e
+
+                try:
+                    logger.info("016 Creating initial selection frame")
+                    self._create_frame()
+
+                    self.header = self._create_an_header("Generate", "generate_icon_ws.png")
+                    self.header.place(relx=0.03, rely=0.08, anchor="nw")
+
+                    info_text_line_01 = "Seedkeeper allows you to generate and import a BIP39 mnemonic phrase -aka "
+                    info_label = self._create_label(info_text_line_01)
+                    info_label.place(relx=0.05, rely=0.22, anchor="w")
+
+                    info_text_line_02 = "seedphrase- or a login/password. Select the type of secret you want to generate."
+                    info_label = self._create_label(info_text_line_02)
+                    info_label.place(relx=0.05, rely=0.27, anchor="w")
+
+                    type_label = self._create_label("Type of secret:")
+                    type_label.place(relx=0.05, rely=0.35, anchor="w")
+
+                    self.secret_type, secret_type_menu = self.create_option_list(
+                        ["Mnemonic seedphrase", "Couple login/password"],
+                        default_value="Mnemonic seedphrase",
+                        width=555
+                    )
+                    secret_type_menu.place(relx=0.05, rely=0.40, anchor="w")
+
+                    next_button = self._create_button("Next", command=_on_next_clicked)
+                    next_button.place(relx=0.95, rely=0.95, anchor="se")
+
+                    logger.log(SUCCESS, "017 Initial selection frame created successfully")
+                except Exception as e:
+                    logger.error(f"018 Error creating initial selection frame: {e}", exc_info=True)
+                    raise FrameCreationError(f"019 Failed to create initial selection frame: {e}") from e
+
+            @log_method
+            def _show_generate_mnemonic():
+                try:
+                    logger.info("020 Starting _show_generate_mnemonic")
+
+                    def _create_generate_mnemonic_frame():
+                        try:
+                            logger.info("021 Creating generate mnemonic frame")
+                            self._create_frame()
+                            logger.log(SUCCESS, "022 Generate mnemonic frame created successfully")
+                        except Exception as e:
+                            logger.error(f"023 Error creating generate mnemonic frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"024 Failed to create generate mnemonic frame: {e}") from e
+
+                    def _create_generate_mnemonic_header():
+                        try:
+                            logger.info("025 Creating generate mnemonic header")
+                            header_text = "Generate seedphrase"
+                            self.header = self._create_an_header(header_text, "generate_icon_ws.png")
+                            self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                            logger.log(SUCCESS, "026 Generate mnemonic header created successfully")
+                        except Exception as e:
+                            logger.error(f"027 Error creating generate mnemonic header: {e}", exc_info=True)
+                            raise UIElementError(f"028 Failed to create generate mnemonic header: {e}") from e
+
+                    def _create_generate_mnemonic_content():
+                        try:
+                            logger.info("029 Creating generate mnemonic content")
+
+                            label = self._create_label("Label:")
+                            label.place(relx=0.05, rely=0.20, anchor="nw")
+
+                            label_name = self._create_entry()
+                            label_name.place(relx=0.04, rely=0.25, anchor="nw")
+
+                            self.radio_value = customtkinter.StringVar(value="12")
+                            self.use_passphrase = customtkinter.BooleanVar(value=False)
+
+                            radio_12 = customtkinter.CTkRadioButton(
+                                self.current_frame,
+                                text="12 words",
+                                variable=self.radio_value,
+                                value="12",
+                                command=_update_mnemonic
+                            )
+                            radio_12.place(relx=0.05, rely=0.35, anchor="w")
+
+                            radio_24 = customtkinter.CTkRadioButton(
+                                self.current_frame,
+                                text="24 words",
+                                variable=self.radio_value,
+                                value="24",
+                                command=_update_mnemonic
+                            )
+                            radio_24.place(relx=0.2, rely=0.35, anchor="w")
+
+                            self.mnemonic_textbox = customtkinter.CTkTextbox(self, corner_radius=20,
+                                                                             bg_color="whitesmoke", fg_color=BG_BUTTON,
+                                                                             border_color=BG_BUTTON, border_width=1,
+                                                                             width=500, height=83,
+                                                                             text_color="grey",
+                                                                             font=customtkinter.CTkFont(family="Outfit",
+                                                                                                        size=13,
+                                                                                                        weight="normal"))
+                            self.mnemonic_textbox.place(relx=0.28, rely=0.45, anchor="w")
+
+                            passphrase_checkbox = customtkinter.CTkCheckBox(
+                                self.current_frame,
+                                text="Use passphrase",
+                                variable=self.use_passphrase,
+                                command=_toggle_passphrase
+                            )
+                            passphrase_checkbox.place(relx=0.05, rely=0.57, anchor="w")
+
+                            self.passphrase_entry = customtkinter.CTkEntry(
+                                self.current_frame,
+                                width=300,
+                                placeholder_text="Enter passphrase (optional)",
+                                show="*"
+                            )
+                            self.passphrase_entry.place(relx=0.28, rely=0.57, anchor="w")
+                            self.passphrase_entry.configure(state="disabled")
+
+                            generate_button = self._create_button("Generate", command=_generate_new_mnemonic)
+                            generate_button.place(relx=0.75, rely=0.45, anchor="w")
+
+                            save_button = self._create_button("Import", command=_save_mnemonic_to_card)
+                            save_button.place(relx=0.85, rely=0.93, anchor="center")
+
+                            cancel_button = self._create_button("Cancel", command=self.show_secrets)
+                            cancel_button.place(relx=0.65, rely=0.93, anchor="center")
+
+                            logger.log(SUCCESS, "030 Generate mnemonic content created successfully")
+                        except Exception as e:
+                            logger.error(f"031 Error creating generate mnemonic content: {e}", exc_info=True)
+                            raise UIElementError(f"032 Failed to create generate mnemonic content: {e}") from e
+
+                    @log_method
+                    def _update_mnemonic():
+                        try:
+                            logger.info("033 Updating mnemonic")
+                            _generate_new_mnemonic()
+                            logger.log(SUCCESS, "034 Mnemonic updated successfully")
+                        except Exception as e:
+                            logger.error(f"035 Error updating mnemonic: {e}", exc_info=True)
+                            raise UIElementError(f"036 Failed to update mnemonic: {e}") from e
+
+                    @log_method
+                    def _generate_new_mnemonic():
+                        try:
+                            logger.info("037 Generating new mnemonic")
+                            mnemonic_length = int(self.radio_value.get())
+                            mnemonic = self.controller.generate_random_seed(mnemonic_length)
+                            self.mnemonic_textbox.delete("1.0", customtkinter.END)
+                            self.mnemonic_textbox.insert("1.0", mnemonic)
+                            logger.log(SUCCESS, "038 New mnemonic generated successfully")
+                        except Exception as e:
+                            logger.error(f"039 Error generating mnemonic: {e}", exc_info=True)
+                            raise UIElementError(f"040 Failed to generate mnemonic: {e}") from e
+
+                    @log_method
+                    def _toggle_passphrase():
+                        try:
+                            logger.info("041 Toggling passphrase")
+                            if self.use_passphrase.get():
+                                self.passphrase_entry.configure(state="normal")
+                                logger.debug("042 Passphrase entry enabled")
+                            else:
+                                self.passphrase_entry.configure(state="disabled")
+                                logger.debug("043 Passphrase entry disabled")
+                        except Exception as e:
+                            logger.error(f"044 Error toggling passphrase: {e}", exc_info=True)
+                            raise UIElementError(f"045 Failed to toggle passphrase: {e}") from e
+
+                    @log_method
+                    def _save_mnemonic_to_card():
+                        try:
+                            logger.info("046 Saving mnemonic to card")
+                            mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
+                            passphrase = self.passphrase_entry.get() if self.use_passphrase.get() else None
+                            if mnemonic:
+                                self.controller.import_seed(mnemonic, passphrase)
+                                logger.log(SUCCESS, "047 Mnemonic saved to card successfully")
+                            else:
+                                logger.warning("048 No mnemonic to save")
+                                raise ValueError("049 No mnemonic generated")
+                        except ValueError as e:
+                            logger.error(f"050 Error saving mnemonic to card: {e}", exc_info=True)
+                            raise UIElementError(f"051 Failed to save mnemonic to card: {e}") from e
+                        except Exception as e:
+                            logger.error(f"052 Error saving mnemonic to card: {e}", exc_info=True)
+                            raise UIElementError(f"053 Failed to save mnemonic to card: {e}") from e
+
+                    self._clear_current_frame()
+                    _create_generate_mnemonic_frame()
+                    _create_generate_mnemonic_header()
+                    _create_generate_mnemonic_content()
+                    self.create_seedkeeper_menu()
+                    self.mnemonic_textbox_active = True
+                    logger.log(SUCCESS, "054 _show_generate_mnemonic completed successfully")
+                except Exception as e:
+                    logger.error(f"055 Unexpected error in _show_generate_mnemonic: {e}", exc_info=True)
+                    raise ViewError(f"056 Failed to show generate mnemonic view: {e}") from e
+
+            @log_method
+            def _show_generate_password():
+                try:
+                    logger.info("057 Starting _show_generate_password method")
+
+                    def _create_generate_password_frame():
+                        try:
+                            logger.info("058 Creating generate login/password frame")
+                            self._create_frame()
+                            logger.log(SUCCESS, "059 Generate login/password frame created successfully")
+                        except Exception as e:
+                            logger.error(f"060 Error creating generate login/password frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"061 Failed to create generate login/password frame: {e}") from e
+
+                    def _create_generate_password_header():
+                        try:
+                            logger.info("062 Creating generate login/password header")
+                            header_text = "Generate couple login/password"
+                            self.header = self._create_an_header(header_text, "generate_icon_ws.png")
+                            self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                            logger.log(SUCCESS, "063 Generate login/password header created successfully")
+                        except Exception as e:
+                            logger.error(f"064 Error creating generate login/password header: {e}", exc_info=True)
+                            raise UIElementError(f"065 Failed to create generate login/password header: {e}") from e
+
+                    @log_method
+                    def _generate_new_password():
+                        try:
+                            logger.info("066 Generating new login/password")
+                            generated_password = "example_password"  # TODO: implement the password generation into controller
+                            textbox_width = 100
+                            centered_text = generated_password.center(textbox_width)
+
+                            self.password_text_box.configure(state='normal')
+                            self.password_text_box.delete("1.0", customtkinter.END)
+                            self.password_text_box.insert("1.0", centered_text)
+                            self.password_text_box.configure(state='disabled')
+                            logger.log(SUCCESS, "067 New login/password generated successfully")
+                        except Exception as e:
+                            logger.error(f"068 Error generating login/password: {e}", exc_info=True)
+                            raise UIElementError(f"069 Failed to generate login/password: {e}") from e
+
+                    @log_method
+                    def _update_password():
+                        try:
+                            logger.info("070 Updating password")
+                            _generate_new_password()
+                            logger.log(SUCCESS, "071 Password updated successfully")
+                        except Exception as e:
+                            logger.error(f"072 Error updating password: {e}", exc_info=True)
+                            raise UIElementError(f"073 Failed to update password: {e}") from e
+
+                    def _create_generate_password_content():
+                        try:
+                            logger.info("074 Creating generate login/password content")
+
+                            # Label and entry creation
+                            label = self._create_label("Label:")
+                            label.place(relx=0.04, rely=0.20, anchor="nw")
+
+                            label_name = self._create_entry()
+                            label_name.place(relx=0.12, rely=0.195, anchor="nw")
+                            label_name.configure(width=400)
+
+                            login = self._create_label("Login:")
+                            login.place(relx=0.04, rely=0.32, anchor="nw")
+
+                            login_name = self._create_entry()
+                            login_name.place(relx=0.12, rely=0.318, anchor="nw")
+                            login_name.configure(width=400)
+
+                            url = self._create_label("Url:")
+                            url.place(relx=0.04, rely=0.44, anchor="nw")
+
+                            url_name = self._create_entry()
+                            url_name.place(relx=0.12, rely=0.438, anchor="nw")
+                            url_name.configure(width=400)
+
+                            logger.debug("075 Labels and entries created successfully")
+
+                            # Slide bar creation
+                            @log_method
+                            def _length_slider_event(value):
+                                try:
+                                    int_value = int(value)
+                                    length_value_label.configure(text=f"{int_value}")
+                                    length_value_label.place(x=length_slider.get() * 3.5 + 250, y=324)
+
+                                    if int_value < 8:
+                                        length_slider.configure(button_color="red", progress_color="red")
+                                    elif int_value == 8:
+                                        length_slider.configure(button_color="orange", progress_color="orange")
+                                    elif int_value > 8:
+                                        length_slider.configure(button_color="green", progress_color="green")
+
+                                    logger.debug(f"076 Slider value updated to {int_value}")
+                                except Exception as e:
+                                    logger.error(f"077 Error updating slider value: {e}", exc_info=True)
+                                    raise UIElementError(f"078 Failed to update slider value: {e}") from e
+
+                            length_slider = customtkinter.CTkSlider(self.current_frame,
+                                                                    from_=4, to=16,
+                                                                    command=_length_slider_event,
+                                                                    width=600,
+                                                                    progress_color=BG_HOVER_BUTTON,
+                                                                    button_color=BG_MAIN_MENU)
+                            length_slider.place(relx=0.15, rely=0.55)
+
+                            length = self._create_label("Length: ")
+                            length.place(relx=0.04, rely=0.535)
+
+                            length_value_label = self._create_label("6")
+                            length_value_label.configure(font=self._make_text_bold(20))
+                            length_value_label.place(x=250, y=324)
+
+                            logger.debug("079 Slider and length labels created successfully")
+
+                            # Checkbox creation
+                            characters_used = self._create_label("Characters used: ")
+                            characters_used.place(relx=0.04, rely=0.6)
+
+                            self.var_abc = customtkinter.StringVar()
+                            self.var_ABC = customtkinter.StringVar()
+                            self.var_numeric = customtkinter.StringVar()
+                            self.var_symbolic = customtkinter.StringVar()
+
+                            @log_method
+                            def checkbox_event():
+                                try:
+                                    selected_values = [self.var_abc.get(), self.var_ABC.get(), self.var_numeric.get(),
+                                                       self.var_symbolic.get()]
+                                    logger.debug(
+                                        f"080 Checkbox selection updated: {', '.join(filter(None, selected_values))}")
+                                except Exception as e:
+                                    logger.error(f"081 Error in checkbox event: {e}", exc_info=True)
+                                    raise UIElementError(f"082 Failed to handle checkbox event: {e}") from e
+
+                            minus_abc = customtkinter.CTkCheckBox(self.current_frame, text="abc", variable=self.var_abc,
+                                                                  onvalue="abc", offvalue="", command=checkbox_event,
+                                                                  checkmark_color=BG_MAIN_MENU,
+                                                                  fg_color=BG_HOVER_BUTTON)
+                            minus_abc.place(relx=0.3, rely=0.6)
+
+                            major_abc = customtkinter.CTkCheckBox(self.current_frame, text="ABC", variable=self.var_ABC,
+                                                                  onvalue="ABC", offvalue="", command=checkbox_event,
+                                                                  checkmark_color=BG_MAIN_MENU,
+                                                                  fg_color=BG_HOVER_BUTTON)
+                            major_abc.place(relx=0.4, rely=0.6)
+
+                            numeric_value = customtkinter.CTkCheckBox(self.current_frame, text="123",
+                                                                      variable=self.var_numeric,
+                                                                      onvalue="123", offvalue="",
+                                                                      command=checkbox_event,
+                                                                      checkmark_color=BG_MAIN_MENU,
+                                                                      fg_color=BG_HOVER_BUTTON)
+                            numeric_value.place(relx=0.5, rely=0.6)
+
+                            symbolic_value = customtkinter.CTkCheckBox(self.current_frame, text="#$&",
+                                                                       variable=self.var_symbolic,
+                                                                       onvalue="#$&", offvalue="",
+                                                                       command=checkbox_event,
+                                                                       checkmark_color=BG_MAIN_MENU,
+                                                                       fg_color=BG_HOVER_BUTTON)
+                            symbolic_value.place(relx=0.6, rely=0.6)
+
+                            logger.debug("083 Checkboxes created successfully")
+
+                            generate_button = self._create_button("Generate", command=_generate_new_password)
+                            generate_button.place(relx=0.75, rely=0.45, anchor="w")
+
+                            password_label = self._create_label("Generated Password:")
+                            password_label.place(relx=0.04, rely=0.67, anchor="nw")
+
+                            self.password_text_box = customtkinter.CTkTextbox(self, corner_radius=20,
+                                                                              bg_color="whitesmoke", fg_color=BG_BUTTON,
+                                                                              border_color=BG_BUTTON, border_width=1,
+                                                                              width=500, height=83,
+                                                                              text_color="grey",
+                                                                              font=customtkinter.CTkFont(
+                                                                                  family="Outfit",
+                                                                                  size=13,
+                                                                                  weight="normal"))
+                            self.password_text_box.place(relx=0.28, rely=0.8, anchor="w")
+                            self.password_text_box.configure(state='disabled')
+
+                            generate_button = self._create_button("Generate", command=_update_password)
+                            generate_button.place(relx=0.75, rely=0.45, anchor="w")
+
+                            save_button = self._create_button("Import", command=_save_password_to_card)
+                            save_button.place(relx=0.85, rely=0.93, anchor="center")
+
+                            cancel_button = self._create_button("Cancel",
+                                                                command=lambda: [self.password_text_box.destroy(),
+                                                                                 self.show_secrets()])
+                            cancel_button.place(relx=0.65, rely=0.93, anchor="center")
+
+                            logger.log(SUCCESS, "084 Generate login/password content created successfully")
+                        except Exception as e:
+                            logger.error(f"085 Error creating generate login/password content: {e}", exc_info=True)
+                            raise UIElementError(f"086 Failed to create generate login/password content: {e}") from e
+
+                    @log_method
+                    def _save_password_to_card():
+                        try:
+                            logger.info("087 Saving login/password to card")
+                            password = self.password_text_box.get("1.0", customtkinter.END).strip()
+                            if password:
+                                # TODO: Implement actual saving logic
+                                logger.log(SUCCESS, "088 Login/password saved to card successfully")
+                            else:
+                                logger.warning("089 No password to save")
+                                raise ValueError("090 No password generated")
+                        except ValueError as e:
+                            logger.error(f"091 Error saving login/password to card: {e}", exc_info=True)
+                            raise UIElementError(f"092 Failed to save login/password to card: {e}") from e
+                        except Exception as e:
+                            logger.error(f"093 Unexpected error saving login/password to card: {e}", exc_info=True)
+                            raise UIElementError(f"094 Unexpected error saving login/password to card: {e}") from e
+
+                    self._clear_current_frame()
+                    _create_generate_password_frame()
+                    _create_generate_password_header()
+                    _create_generate_password_content()
+                    self.create_seedkeeper_menu()
+                    self.password_text_box_active = True
+
+                    logger.log(SUCCESS, "095 _show_generate_password completed successfully")
+                except Exception as e:
+                    logger.error(f"096 Unexpected error in _show_generate_password: {e}", exc_info=True)
+                    raise ViewError(f"097 Failed to show generate login/password view: {e}") from e
+
+
+            logger.info("099 Creating generate secret view")
+
+            _create_secret_selection_frame()
             self.create_seedkeeper_menu()
-            logger.log(SUCCESS, "014 Generate secret view created successfully")
+            logger.log(SUCCESS, "100 Generate secret view created successfully")
         except (FrameCreationError, UIElementError) as e:
-            logger.error(f"015 Error in generate_secret: {e}", exc_info=True)
-            raise ViewError(f"016 Failed to create generate secret view: {e}") from e
+            logger.error(f"101 Error in generate_secret: {e}", exc_info=True)
+            raise ViewError(f"102 Failed to create generate secret view: {e}") from e
         except Exception as e:
-            logger.error(f"017 Unexpected error in generate_secret: {e}", exc_info=True)
-            raise ViewError(f"018 Unexpected error during generate secret view creation: {e}")
+            logger.error(f"103 Unexpected error in generate_secret: {e}", exc_info=True)
+            raise ViewError(f"104 Unexpected error during generate secret view creation: {e}")
+        except ViewError as ve:
+            logger.error(f"105 View error in generate_secret: {ve}", exc_info=True)
+            self.show("ERROR", str(ve), "Ok")
+        except Exception as e:
+            logger.critical(f"106 Unhandled exception in generate_secret: {e}", exc_info=True)
+            self.show("CRITICAL ERROR", "An unexpected error occurred. Please contact support.", "Ok")
+        finally:
+            logger.info("107 Exiting generate_secret method")
 
 
 if __name__ == "__main__":
