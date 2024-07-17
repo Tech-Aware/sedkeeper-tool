@@ -2,9 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](git https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+- New utility method `_make_text_bold` in View class for creating bold text with optional size
+
+### Changed
+- Significantly refactored and expanded `generate_secret` method in View class:
+  - Implemented initial selection frame for choosing between mnemonic and login/password generation
+  - Added separate methods for generating mnemonic seedphrases and login/password pairs
+  - Improved UI with sliders, checkboxes, and radio buttons for secret customization
+  - Enhanced error handling and logging for new functionality
+
+## [0.2.0] - 2024-07-16
 
 ### Added
 - New generate_secret functionality in the View class:
