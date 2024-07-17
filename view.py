@@ -1662,6 +1662,10 @@ class View(customtkinter.CTk):
     @log_method
     def _create_password_secret_frame(self, secret_details):
         try:
+            delete_button = self._create_button(text="Delete secret",
+                                                command=lambda: None)  # self._delete_secret(secret['id']))
+            delete_button.place(relx=0.7, rely=0.15, anchor="se")
+
             logger.info("001 Creating password secret frame")
             # Create labels and entry fields
             labels = ['Label:', 'Login:', 'URL:']
@@ -1670,11 +1674,11 @@ class View(customtkinter.CTk):
             for i, label_text in enumerate(labels):
                 try:
                     label = self._create_label(label_text)
-                    label.place(relx=0.1, rely=0.2 + i * 0.1, anchor="w")
+                    label.place(relx=0.045, rely=0.2 + i * 0.15, anchor="w")
                     logger.debug(f"002 Created label: {label_text}")
 
-                    entry = customtkinter.CTkEntry(self.current_frame, width=300)
-                    entry.place(relx=0.3, rely=0.2 + i * 0.1, anchor="w")
+                    entry = self._create_entry()
+                    entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
                     entries[label_text.lower()[:-1]] = entry
                     logger.debug(f"003 Created entry for: {label_text}")
                 except Exception as e:
@@ -1690,11 +1694,12 @@ class View(customtkinter.CTk):
             # Create password field
             try:
                 password_label = self._create_label("Password:")
-                password_label.place(relx=0.1, rely=0.5, anchor="w")
+                password_label.place(relx=0.045, rely=0.7, anchor="w")
 
-                password_entry = customtkinter.CTkEntry(self.current_frame, width=300, show="*")
-                password_entry.place(relx=0.3, rely=0.5, anchor="w")
-                password_entry.insert(0, "********")  # Replace with actual password
+                password_entry = self._create_entry()
+                password_entry.configure(width=500)
+                password_entry.place(relx=0.04, rely=0.77, anchor="w")
+                password_entry.insert(0, "********")  # TODO implement method to retrieve password into controller
                 logger.debug("007 Password field created")
             except Exception as e:
                 logger.error(f"008 Error creating password field: {e}", exc_info=True)
@@ -1702,13 +1707,9 @@ class View(customtkinter.CTk):
 
             # Create action buttons
             try:
-                delete_button = self._create_button(text="Delete",
-                                                    command=lambda: None)  # self._delete_secret(secret['id']))
-                delete_button.place(relx=0.7, rely=0.9, anchor="se")
-
                 show_button = self._create_button(text="Show",
                                                   command=lambda: None)  # self._toggle_password_visibility(password_entry))
-                show_button.place(relx=0.85, rely=0.9, anchor="se")
+                show_button.place(relx=0.9, rely=0.8, anchor="se")
                 logger.debug("010 Action buttons created")
             except Exception as e:
                 logger.error(f"011 Error creating action buttons: {e}", exc_info=True)
@@ -1798,9 +1799,9 @@ class View(customtkinter.CTk):
 
             # Create action buttons
             try:
-                delete_button = self._create_button(text="Delete",
+                delete_button = self._create_button(text="Delete secret",
                                                     command=lambda: None)  # self._delete_secret(secret['id']))
-                delete_button.place(relx=0.95, rely=0.3, anchor="se")
+                delete_button.place(relx=0.7, rely=0.15, anchor="se")
 
                 show_button = self._create_button(text="Show",
                                                   command=lambda: _toggle_mnemonic_visibility(mnemonic_entry))
