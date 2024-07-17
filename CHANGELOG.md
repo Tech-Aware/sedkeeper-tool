@@ -4,17 +4,37 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [Unreleased]
 
-### Added
-- New utility method `_make_text_bold` in View class for creating bold text with optional size
-
 ### Changed
+- Restructured `View` class in `view.py`:
+  - Renamed methods for consistency (e.g., `welcome` to `view_welcome`)
+  - Enhanced error handling and logging throughout the class
+  - Refactored `generate_secret` method for improved modularity and readability
+  - Added `@log_method` decorator to all methods for comprehensive logging
+  - Updated method signatures and docstrings for better clarity and documentation
+- Improved overall code organization and maintainability in `view.py`
+- Enhanced `log_method` decorator in `log_config.py`:
+  - Added distinct entry and exit log formats for improved readability
+  - Improved exception logging with colored output for better visibility
+- Updated `ColoredFormatter` in `log_config.py`:
+  - Changed EXCEPTION level to CRITICAL for consistency
+  - Adjusted color scheme: CRITICAL now uses white background for better contrast
+- Refactored logging implementation for improved debugging and error tracking
 - Significantly refactored and expanded `generate_secret` method in View class:
   - Implemented initial selection frame for choosing between mnemonic and login/password generation
   - Added separate methods for generating mnemonic seedphrases and login/password pairs
   - Improved UI with sliders, checkboxes, and radio buttons for secret customization
   - Enhanced error handling and logging for new functionality
+
+### Added
+- New utility method `_make_text_bold` in View class for creating bold text with optional size
+- New error handling mechanisms in `view.py` for robustness
+- Detailed logging for all View class methods using `@log_method` decorator
+
+### Fixed
+- Various minor bugs and inconsistencies in the View class implementation
 
 ## [0.2.0] - 2024-07-16
 
