@@ -332,7 +332,10 @@ class View(customtkinter.CTk):
             logger.error(f"An unexpected error occurred in make_text_bold: {e}", exc_info=True)
 
     @log_method
-    def _create_entry(self, show_option: str = None) -> customtkinter.CTkEntry:
+    def _create_entry(
+            self,
+            show_option: Optional[str] = None
+    ) -> customtkinter.CTkEntry:
         try:
             logger.info("001 Starting entry creation")
             entry = None
@@ -362,7 +365,12 @@ class View(customtkinter.CTk):
             raise EntryCreationError(f"010 Unexpected error during entry creation: {e}") from e
 
     @log_method
-    def create_option_list(self, options, default_value=None, width=300):
+    def create_option_list(
+            self,
+            options,
+            default_value: Optional[str] = None,
+            width: int = 300
+    ) -> customtkinter.CTkOptionMenu:
         try:
             logger.info(f"001 Creating option list with options: {options}")
             variable = customtkinter.StringVar(value=default_value if default_value else options[0])
@@ -391,8 +399,12 @@ class View(customtkinter.CTk):
             raise UIElementError(f"004 Failed to create option list: {e}") from e
 
     @log_method
-    def _create_welcome_button(self, text: str, command: Optional[Callable] = None,
-                               frame: Optional[customtkinter.CTkFrame] = None) -> customtkinter.CTkButton:
+    def _create_welcome_button(
+            self,
+            text: str,
+            command: Optional[Callable] = None,
+            frame: Optional[customtkinter.CTkFrame] = None
+    ) -> customtkinter.CTkButton:
         try:
             logger.info(f"001 Creating welcome button: {text}")
             target_frame = frame or self.welcome_frame
@@ -417,7 +429,12 @@ class View(customtkinter.CTk):
             raise UIElementError(error_msg) from e
 
     @log_method
-    def _create_button(self, text: str = None, command=None, frame=None) -> customtkinter.CTkButton:
+    def _create_button(
+            self,
+            text: Optional[str] = None,
+            command: Optional[Callable] = None,
+            frame: Optional[customtkinter.CTkFrame] = None
+) -> customtkinter.CTkButton:
         try:
             logger.info(f"001 Starting button creation with text: '{text}'")
             button = None
@@ -452,7 +469,11 @@ class View(customtkinter.CTk):
             raise ButtonCreationError(f"010 Unexpected error during button creation: {e}") from e
 
     @log_method
-    def _create_an_header(self, title_text: str = None, icon_name: str = None):
+    def _create_an_header(
+            self,
+            title_text: Optional[str] = None,
+            icon_name: Optional[str] = None
+    ) -> customtkinter.CTkFrame:
         try:
             logger.info(f"001 Starting header creation with title: '{title_text}' and icon: '{icon_name}'")
 
@@ -763,7 +784,6 @@ class View(customtkinter.CTk):
     ############################################# MAIN MENUS ###########################################################
     """
 
-    ####################################################################################################################
     @log_method
     def _create_button_for_main_menu_item(
             self,
@@ -942,7 +962,11 @@ class View(customtkinter.CTk):
             raise MenuCreationError(f"007 Failed to create Satochip-utils menu: {e}") from e
 
     @log_method
-    def _satochip_utils_lateral_menu(self, state=None, frame=None):
+    def _satochip_utils_lateral_menu(
+            self,
+            state=None,
+            frame=None
+    ):
         try:
             logger.info("001 Starting Satochip-utils lateral menu creation")
             if state is None:
@@ -1095,8 +1119,8 @@ class View(customtkinter.CTk):
         try:
             logger.info("001 Initiating secret generation process")
             self.welcome_in_display = False
-            self._clear_current_frame()
             logger.debug("002 Welcome frame cleared")
+            self._clear_current_frame()
             self.view_generate_secret()
             logger.log(SUCCESS, "003 Secret generation process initiated")
         except Exception as e:
@@ -1107,7 +1131,10 @@ class View(customtkinter.CTk):
     def show_import_secret(self):
         try:
             logger.info("001 Initiating secret import process")
-            # TODO: Implement full functionality to import a secret
+            self.welcome_in_display = False
+            self._clear_current_frame()
+            logger.debug("002 Welcome frame cleared")
+            self.view_import_secret()
             logger.log(SUCCESS, "002 Secret import process initiated")
         except Exception as e:
             logger.error(f"003 Error in import_secret: {e}", exc_info=True)
@@ -1143,106 +1170,105 @@ class View(customtkinter.CTk):
     ########################################
 
     @log_method
-    def show(self, title, msg: str, button_txt="Ok", cmd=None, icon_path=None):
+    def show(
+            self,
+            title: str,
+            msg: str,
+            button_txt: str = "Ok",
+            cmd: Optional[Callable] = None,
+            icon_path: Optional[str] = None
+    ):
         try:
             logger.info(f"001 Showing popup: {title}")
-            popup = self._create_popup(title)
-            logger.debug("002 Popup created")
-            self._add_content_to_popup(popup, msg, icon_path)
-            logger.debug("003 Content added to popup")
-            self._add_button_to_popup(popup, button_txt, cmd)
-            logger.debug("004 Button added to popup")
-            self._make_popup_as_priority(popup)
-            logger.debug("005 Priority added to popup")
-            logger.log(SUCCESS, f"006 Popup '{title}' displayed successfully")
-        except Exception as e:
-            logger.error(f"007 Error in show: {e}", exc_info=True)
-            raise UIElementError(f"008 Failed to show popup: {e}") from e
 
-    @log_method
-    def _create_popup(self, title):
-        try:
-            logger.info(f"001 Creating popup with title: {title}")
-            popup = customtkinter.CTkToplevel(self)
-            popup.title(title)
-            popup.configure(fg_color='whitesmoke')
-            popup.protocol("WM_DELETE_WINDOW", popup.destroy)
-            logger.debug("002 Popup window created")
-            self._center_popup(popup)
-            logger.debug("003 Popup window centered")
-            logger.log(SUCCESS, f"004 Popup '{title}' created successfully")
-            return popup
-        except Exception as e:
-            logger.error(f"005 Error in _create_popup: {e}", exc_info=True)
-            raise UIElementError(f"006 Failed to create popup: {e}") from e
-
-    @log_method
-    def _center_popup(self, popup):
-        try:
-            logger.info("001 Centering popup window")
-            popup_width, popup_height = 400, 200
-            position_right = int(self.winfo_screenwidth() / 2 - popup_width / 2)
-            position_down = int(self.winfo_screenheight() / 2 - popup_height / 2)
-            popup.geometry(f"{popup_width}x{popup_height}+{position_right}+{position_down}")
-            logger.log(SUCCESS, "002 Popup window centered successfully")
-        except Exception as e:
-            logger.error(f"003 Error in _center_popup: {e}", exc_info=True)
-            raise UIElementError(f"004 Failed to center popup: {e}") from e
-
-    @log_method
-    def _add_content_to_popup(self, popup, msg, icon_path):
-        try:
-            logger.info("001 Adding content to popup")
-            if icon_path:
+            @log_method
+            def create_popup(title):
                 try:
-                    icon_image = Image.open(icon_path)
-                    icon = customtkinter.CTkImage(light_image=icon_image, size=(30, 30))
-                    logger.debug(f"002 Icon loaded from path: {icon_path}")
-                    label = customtkinter.CTkLabel(popup, image=icon, text=f"\n{msg}", compound='top',
-                                                   font=customtkinter.CTkFont(family="Outfit", size=18,
-                                                                              weight="normal"))
-                except FileNotFoundError:
-                    logger.warning(f"003 Icon file not found: {icon_path}")
-                    label = customtkinter.CTkLabel(popup, text=msg,
-                                                   font=customtkinter.CTkFont(family="Outfit", size=14, weight="bold"))
-            else:
-                label = customtkinter.CTkLabel(popup, text=msg,
-                                               font=customtkinter.CTkFont(family="Outfit", size=14, weight="bold"))
-            label.pack(pady=20)
-            logger.log(SUCCESS, "004 Content added to popup successfully")
-        except Exception as e:
-            logger.error(f"005 Error in _add_content_to_popup: {e}", exc_info=True)
-            raise UIElementError(f"006 Failed to add content to popup: {e}") from e
+                    popup = customtkinter.CTkToplevel(self)
+                    popup.title(title)
+                    popup.configure(fg_color='whitesmoke')
+                    popup.protocol("WM_DELETE_WINDOW", popup.destroy)
+                    logger.debug("002 Popup window created")
+                    return popup
+                except Exception as e:
+                    logger.error(f"003 Error in create_popup: {e}", exc_info=True)
+                    raise UIElementError(f"004 Failed to create popup: {e}") from e
 
-    @log_method
-    def _make_popup_as_priority(self, popup):
-        # Assurez-vous que le pop-up reste toujours devant
-        popup.transient(self)
-        popup.grab_set()
-        popup.attributes("-topmost", True)
+            @log_method
+            def center_popup(popup):
+                try:
+                    popup_width, popup_height = 400, 200
+                    position_right = int(self.winfo_screenwidth() / 2 - popup_width / 2)
+                    position_down = int(self.winfo_screenheight() / 2 - popup_height / 2)
+                    popup.geometry(f"{popup_width}x{popup_height}+{position_right}+{position_down}")
+                    logger.debug("005 Popup window centered")
+                except Exception as e:
+                    logger.error(f"006 Error in center_popup: {e}", exc_info=True)
+                    raise UIElementError(f"007 Failed to center popup: {e}") from e
 
-    @log_method
-    def _add_button_to_popup(self, popup, button_txt, cmd):
-        try:
-            logger.info(f"001 Adding button to popup with text: {button_txt}")
-            close_cmd = lambda: [cmd() if cmd else None, popup.destroy()]
-            button = customtkinter.CTkButton(popup, text=button_txt, fg_color=BG_MAIN_MENU,
-                                             hover_color=BG_HOVER_BUTTON, bg_color='whitesmoke',
-                                             width=120, height=35, corner_radius=34,
-                                             font=customtkinter.CTkFont(family="Outfit", size=18, weight="normal"),
-                                             command=close_cmd)
-            button.pack(pady=20)
-            logger.log(SUCCESS, "002 Button added to popup successfully")
+            @log_method
+            def add_content(popup, msg, icon_path):
+                try:
+                    if icon_path:
+                        try:
+                            icon_image = Image.open(icon_path)
+                            icon = customtkinter.CTkImage(light_image=icon_image, size=(30, 30))
+                            label = customtkinter.CTkLabel(popup, image=icon, text=f"\n{msg}", compound='top',
+                                                           font=customtkinter.CTkFont(family="Outfit", size=18,
+                                                                                      weight="normal"))
+                        except FileNotFoundError:
+                            logger.warning(f"008 Icon file not found: {icon_path}")
+                            label = customtkinter.CTkLabel(popup, text=msg,
+                                                           font=customtkinter.CTkFont(family="Outfit", size=14,
+                                                                                      weight="bold"))
+                    else:
+                        label = customtkinter.CTkLabel(popup, text=msg,
+                                                       font=customtkinter.CTkFont(family="Outfit", size=14,
+                                                                                  weight="bold"))
+                    label.pack(pady=20)
+                    logger.debug("009 Content added to popup")
+                except Exception as e:
+                    logger.error(f"010 Error in add_content: {e}", exc_info=True)
+                    raise UIElementError(f"011 Failed to add content to popup: {e}") from e
+
+            @log_method
+            def add_button(popup, button_txt, cmd):
+                try:
+                    close_cmd = lambda: [cmd() if cmd else None, popup.destroy()]
+                    button = customtkinter.CTkButton(popup, text=button_txt, fg_color=BG_MAIN_MENU,
+                                                     hover_color=BG_HOVER_BUTTON, bg_color='whitesmoke',
+                                                     width=120, height=35, corner_radius=34,
+                                                     font=customtkinter.CTkFont(family="Outfit", size=18,
+                                                                                weight="normal"),
+                                                     command=close_cmd)
+                    button.pack(pady=20)
+                    logger.debug("012 Button added to popup")
+                except Exception as e:
+                    logger.error(f"013 Error in add_button: {e}", exc_info=True)
+                    raise UIElementError(f"014 Failed to add button to popup: {e}") from e
+
+            @log_method
+            def make_popup_priority(popup):
+                popup.transient(self)
+                popup.grab_set()
+                popup.attributes("-topmost", True)
+                logger.debug("015 Priority added to popup")
+
+            popup = create_popup(title)
+            center_popup(popup)
+            add_content(popup, msg, icon_path)
+            add_button(popup, button_txt, cmd)
+            make_popup_priority(popup)
+
+            logger.log(SUCCESS, f"016 Popup '{title}' displayed successfully")
         except Exception as e:
-            logger.error(f"003 Error in _add_button_to_popup: {e}", exc_info=True)
-            raise UIElementError(f"004 Failed to add button to popup: {e}") from e
+            logger.error(f"017 Error in show: {e}", exc_info=True)
+            raise UIElementError(f"018 Failed to show popup: {e}") from e
 
     ####################################################################################################################
     """ 
     ################################################### VIEWS #########################################################
     """
-
-    ####################################################################################################################
 
     @log_method
     def view_welcome(self):
@@ -1733,6 +1759,7 @@ class View(customtkinter.CTk):
                     logger.error(f"014 Error creating mnemonic field: {e}", exc_info=True)
                     raise UIElementError(f"015 Failed to create mnemonic field: {e}") from e
 
+                @log_method
                 def _toggle_mnemonic_visibility(entry):
                     try:
                         logger.info("016 Toggling mnemonic visibility")
@@ -1799,7 +1826,7 @@ class View(customtkinter.CTk):
             logger.info("001 Starting generate_secret method")
 
             @log_method
-            def _create_secret_selection_frame():
+            def _create_generate_secret_selection_frame():
                 @log_method
                 def _on_next_clicked():
                     try:
@@ -1822,7 +1849,7 @@ class View(customtkinter.CTk):
                     logger.info("016 Creating initial selection frame")
                     self._create_frame()
 
-                    self.header = self._create_an_header("Generate", "generate_icon_ws.png")
+                    self.header = self._create_an_header("Generate secret", "generate_icon_ws.png")
                     self.header.place(relx=0.03, rely=0.08, anchor="nw")
 
                     info_text_line_01 = "Seedkeeper allows you to generate and import a BIP39 mnemonic phrase -aka "
@@ -2250,31 +2277,345 @@ class View(customtkinter.CTk):
 
             logger.info("099 Creating generate secret view")
 
-            _create_secret_selection_frame()
+            _create_generate_secret_selection_frame()
             self.create_seedkeeper_menu()
             logger.log(SUCCESS, "100 Generate secret view created successfully")
         except (FrameCreationError, UIElementError) as e:
             logger.error(f"101 Error in generate_secret: {e}", exc_info=True)
             raise ViewError(f"102 Failed to create generate secret view: {e}") from e
-        except Exception as e:
-            logger.error(f"103 Unexpected error in generate_secret: {e}", exc_info=True)
-            raise ViewError(f"104 Unexpected error during generate secret view creation: {e}")
         except ViewError as ve:
             logger.error(f"105 View error in generate_secret: {ve}", exc_info=True)
             self.show("ERROR", str(ve), "Ok")
         except Exception as e:
-            logger.critical(f"106 Unhandled exception in generate_secret: {e}", exc_info=True)
-            self.show("CRITICAL ERROR", "An unexpected error occurred. Please contact support.", "Ok")
+            logger.error(f"103 Unexpected error in generate_secret: {e}", exc_info=True)
+            raise ViewError(f"104 Unexpected error during generate secret view creation: {e}")
         finally:
             logger.info("107 Exiting generate_secret method")
 
 
-if __name__ == "__main__":
-    setup_logging()
-    try:
-        app = View(loglevel=logging.DEBUG)  # ou le niveau que vous préférez
-        app.view_welcome()
-        app.mainloop()
-    except Exception as e:
-        logger.critical(f"Application failed to start: {e}", exc_info=True)
-        sys.exit(1)
+    @log_method
+    def view_import_secret(self):
+        try:
+            @log_method
+            def _create_import_secret_selection_frame():
+                @log_method
+                def _on_next_clicked():
+                    try:
+                        logger.info("010 Next button clicked")
+                        selected_type = self.secret_type.get()
+                        if selected_type == "Mnemonic seedphrase":
+                            logger.debug("011 Mnemonic seedphrase selected")
+                            _show_import_mnemonic()
+                        elif selected_type == "Couple login/password":
+                            logger.debug("012 Couple login/password selected")
+                            _show_import_password()
+                        else:
+                            logger.warning("013 No secret type selected")
+                            self.show("ERROR", "Please select a secret type", "Ok")
+                    except Exception as e:
+                        logger.error(f"014 Error in _on_next_clicked: {e}", exc_info=True)
+                        raise UIElementError(f"015 Failed to process next button click: {e}") from e
+
+                try:
+                    logger.info("016 Creating initial selection frame for import secret")
+                    self._create_frame()
+
+                    self.header = self._create_an_header("Import secret", "import_icon_ws.png")
+                    self.header.place(relx=0.03, rely=0.08, anchor="nw")
+
+                    info_text_line_01 = "Seedkeeper allows you to import a BIP39 mnemonic phrase -aka seedphrase- or a "
+                    info_label = self._create_label(info_text_line_01)
+                    info_label.place(relx=0.05, rely=0.22, anchor="w")
+
+                    info_text_line_02 = "login/password. Select the type of secret you want to import."
+                    info_label = self._create_label(info_text_line_02)
+                    info_label.place(relx=0.05, rely=0.27, anchor="w")
+
+                    type_label = self._create_label("Type of secret:")
+                    type_label.place(relx=0.05, rely=0.35, anchor="w")
+
+                    self.secret_type, secret_type_menu = self.create_option_list(
+                        ["Mnemonic seedphrase", "Couple login/password"],
+                        default_value="Mnemonic seedphrase",
+                        width=555
+                    )
+                    secret_type_menu.place(relx=0.05, rely=0.40, anchor="w")
+
+                    next_button = self._create_button("Next", command=_on_next_clicked)
+                    next_button.place(relx=0.95, rely=0.95, anchor="se")
+
+                    logger.log(SUCCESS, "017 Initial selection frame created successfully")
+                except Exception as e:
+                    logger.error(f"018 Error creating initial selection frame: {e}", exc_info=True)
+                    raise FrameCreationError(f"019 Failed to create initial selection frame: {e}") from e
+
+            @log_method
+            def _show_import_mnemonic():
+                try:
+                    logger.info("020 Starting _show_import_mnemonic")
+
+                    @log_method
+                    def _generate_import_mnemonic_frame():
+                        try:
+                            logger.info("021 Creating import mnemonic frame")
+                            self._create_frame()
+                            logger.log(SUCCESS, "022 Import mnemonic frame created successfully")
+                        except Exception as e:
+                            logger.error(f"023 Error creating import mnemonic frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"024 Failed to create import mnemonic frame: {e}") from e
+
+                    @log_method
+                    def _generate_import_mnemonic_header():
+                        try:
+                            logger.info("025 Creating import mnemonic header")
+                            header_text = "Import seedphrase"
+                            self.header = self._create_an_header(header_text, "import_icon_ws.png")
+                            self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                            logger.log(SUCCESS, "026 Import mnemonic header created successfully")
+                        except Exception as e:
+                            logger.error(f"027 Error creating import mnemonic header: {e}", exc_info=True)
+                            raise UIElementError(f"028 Failed to create import mnemonic header: {e}") from e
+
+                    @log_method
+                    def _generate_import_mnemonic_widgets():
+                        try:
+                            logger.info("029 Creating import mnemonic content")
+
+                            label = self._create_label("Label:")
+                            label.place(relx=0.05, rely=0.20, anchor="nw")
+
+                            label_name = self._create_entry()
+                            label_name.place(relx=0.04, rely=0.25, anchor="nw")
+
+                            self.radio_value = customtkinter.StringVar(value="12")
+                            self.use_passphrase = customtkinter.BooleanVar(value=False)
+
+                            radio_12 = customtkinter.CTkRadioButton(
+                                self.current_frame,
+                                text="12 words",
+                                variable=self.radio_value,
+                                value="12",
+                                command=None
+                            )
+                            radio_12.place(relx=0.05, rely=0.35, anchor="w")
+
+                            radio_24 = customtkinter.CTkRadioButton(
+                                self.current_frame,
+                                text="24 words",
+                                variable=self.radio_value,
+                                value="24",
+                                command=None
+                            )
+                            radio_24.place(relx=0.2, rely=0.35, anchor="w")
+
+                            self.mnemonic_textbox = customtkinter.CTkTextbox(self, corner_radius=20,
+                                                                             bg_color="whitesmoke", fg_color=BG_BUTTON,
+                                                                             border_color=BG_BUTTON, border_width=1,
+                                                                             width=500, height=83,
+                                                                             text_color="grey",
+                                                                             font=customtkinter.CTkFont(family="Outfit",
+                                                                                                        size=13,
+                                                                                                        weight="normal"))
+                            self.mnemonic_textbox.place(relx=0.28, rely=0.45, anchor="w")
+
+                            passphrase_checkbox = customtkinter.CTkCheckBox(
+                                self.current_frame,
+                                text="Use passphrase",
+                                variable=self.use_passphrase,
+                                command=_toggle_passphrase_to_import
+                            )
+                            passphrase_checkbox.place(relx=0.05, rely=0.57, anchor="w")
+
+                            self.passphrase_entry = customtkinter.CTkEntry(
+                                self.current_frame,
+                                width=300,
+                                placeholder_text="Enter passphrase (optional)",
+                                show="*"
+                            )
+                            self.passphrase_entry.place(relx=0.28, rely=0.57, anchor="w")
+                            self.passphrase_entry.configure(state="disabled")
+
+                            save_button = self._create_button("Save on card", command=_save_mnemonic_to_import_on_card)
+                            save_button.place(relx=0.85, rely=0.93, anchor="center")
+
+                            back_button = self._create_button("Back", command=self.show_import_secret)
+                            back_button.place(relx=0.65, rely=0.93, anchor="center")
+
+                            logger.log(SUCCESS, "030 Import mnemonic content created successfully")
+                        except Exception as e:
+                            logger.error(f"031 Error creating import mnemonic content: {e}", exc_info=True)
+                            raise UIElementError(f"032 Failed to create import mnemonic content: {e}") from e
+
+                    @log_method
+                    def _toggle_passphrase_to_import():
+                        try:
+                            logger.info("041 Toggling passphrase")
+                            if self.use_passphrase.get():
+                                self.passphrase_entry.configure(state="normal")
+                                logger.debug("042 Passphrase entry enabled")
+                            else:
+                                self.passphrase_entry.configure(state="disabled")
+                                logger.debug("043 Passphrase entry disabled")
+                        except Exception as e:
+                            logger.error(f"044 Error toggling passphrase: {e}", exc_info=True)
+                            raise UIElementError(f"045 Failed to toggle passphrase: {e}") from e
+
+                    @log_method
+                    def _save_mnemonic_to_import_on_card():
+                        try:
+                            logger.info("046 Saving mnemonic to card")
+                            mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
+                            passphrase = self.passphrase_entry.get() if self.use_passphrase.get() else None
+                            if mnemonic and passphrase:
+                                self.controller.import_seed(mnemonic, passphrase)
+                                logger.log(SUCCESS, "047 Mnemonic with passphrase saved to card successfully")
+                            elif mnemonic and not passphrase:
+                                self.controller.import_seed(mnemonic)
+                                logger.log(SUCCESS, "048 Mnemonic without passphrase saved to card successfully")
+                            else:
+                                logger.warning("049 No mnemonic to save")
+                                raise ValueError("050 No mnemonic generated")
+                        except ValueError as e:
+                            logger.error(f"051 Error saving mnemonic to card: {e}", exc_info=True)
+                            raise UIElementError(f"052 Failed to save mnemonic to card: {e}") from e
+                        except Exception as e:
+                            logger.error(f"053 Error saving mnemonic to card: {e}", exc_info=True)
+                            raise UIElementError(f"054 Failed to save mnemonic to card: {e}") from e
+
+                    self._clear_current_frame()
+                    _generate_import_mnemonic_frame()
+                    _generate_import_mnemonic_header()
+                    _generate_import_mnemonic_widgets()
+                    self.create_seedkeeper_menu()
+                    self.mnemonic_textbox_active = True
+                    logger.log(SUCCESS, "055 _show_import_mnemonic completed successfully")
+                except Exception as e:
+                    logger.error(f"056 Unexpected error in _show_import_mnemonic: {e}", exc_info=True)
+                    raise ViewError(f"057 Failed to show import mnemonic view: {e}") from e
+
+            @log_method
+            def _show_import_password():
+                try:
+                    logger.info("057 Starting _show_generate_password method")
+
+                    @log_method
+                    def _generate_import_password_frame():
+                        try:
+                            logger.info("058 Creating generate login/password frame")
+                            self._create_frame()
+                            logger.log(SUCCESS, "059 Generate login/password frame created successfully")
+                        except Exception as e:
+                            logger.error(f"060 Error creating generate login/password frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"061 Failed to create generate login/password frame: {e}") from e
+
+                    @log_method
+                    def _generate_import_password_header():
+                        try:
+                            logger.info("062 Creating import login/password header")
+                            header_text = "Import couple login/password"
+                            self.header = self._create_an_header(header_text, "import_icon_ws.png")
+                            self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                            logger.log(SUCCESS, "063 Import login/password header created successfully")
+                        except Exception as e:
+                            logger.error(f"064 Error creating import login/password header: {e}", exc_info=True)
+                            raise UIElementError(f"065 Failed to create import login/password header: {e}") from e
+
+                    @log_method
+                    def _generate_import_password_widgets():
+                        try:
+                            logger.info("074 Creating import login/password widgets")
+                            # Label and entry creation
+                            label = self._create_label("Label:")
+                            label.place(relx=0.04, rely=0.20, anchor="nw")
+
+                            label_name = self._create_entry()
+                            label_name.place(relx=0.12, rely=0.195, anchor="nw")
+                            label_name.configure(width=400)
+
+                            login = self._create_label("Login:")
+                            login.place(relx=0.04, rely=0.32, anchor="nw")
+
+                            login_name = self._create_entry()
+                            login_name.place(relx=0.12, rely=0.318, anchor="nw")
+                            login_name.configure(width=400)
+
+                            url = self._create_label("Url:")
+                            url.place(relx=0.04, rely=0.44, anchor="nw")
+
+                            url_name = self._create_entry()
+                            url_name.place(relx=0.12, rely=0.438, anchor="nw")
+                            url_name.configure(width=400)
+
+                            logger.debug("075 Labels and entries created successfully")
+
+                            password_label = self._create_label("Password to import:")
+                            password_label.place(relx=0.04, rely=0.57, anchor="nw")
+
+                            self.password_text_box = customtkinter.CTkTextbox(self, corner_radius=20,
+                                                                              bg_color="whitesmoke", fg_color=BG_BUTTON,
+                                                                              border_color=BG_BUTTON, border_width=1,
+                                                                              width=500, height=83,
+                                                                              text_color="grey",
+                                                                              font=customtkinter.CTkFont(
+                                                                                  family="Outfit",
+                                                                                  size=13,
+                                                                                  weight="normal"))
+                            self.password_text_box.place(relx=0.28, rely=0.7, anchor="w")
+
+                            save_button = self._create_button("Save on card", command=_save_password_to_import_on_card)
+                            save_button.place(relx=0.85, rely=0.93, anchor="center")
+
+                            back_button = self._create_button("Back",
+                                                              command=self.show_import_secret)
+                            back_button.place(relx=0.65, rely=0.93, anchor="center")
+
+                            logger.log(SUCCESS, "076 Import login/password widgets created successfully")
+                        except Exception as e:
+                            logger.error(f"077 Error creating import login/password widgets: {e}", exc_info=True)
+                            raise UIElementError(f"078 Failed to create import login/password widgets: {e}") from e
+
+                    @log_method
+                    def _save_password_to_import_on_card():
+                        try:
+                            logger.info("079 Saving login/password to card")
+                            password = self.password_text_box.get("1.0", customtkinter.END).strip()
+                            if password:
+                                # TODO: Implement actual saving logic
+                                logger.log(SUCCESS, "080 Login/password saved to card successfully")
+                            else:
+                                logger.warning("081 No password to save")
+                                raise ValueError("082 No password generated")
+                        except ValueError as e:
+                            logger.error(f"083 Error saving login/password to card: {e}", exc_info=True)
+                            raise UIElementError(f"084 Failed to save login/password to card: {e}") from e
+                        except Exception as e:
+                            logger.error(f"085 Unexpected error saving login/password to card: {e}", exc_info=True)
+                            raise UIElementError(f"086 Unexpected error saving login/password to card: {e}") from e
+
+                    self._clear_current_frame()
+                    _generate_import_password_frame()
+                    _generate_import_password_header()
+                    _generate_import_password_widgets()
+                    self.create_seedkeeper_menu()
+                    self.password_text_box_active = True
+
+                    logger.log(SUCCESS, "095 _show_import_password completed successfully")
+                except Exception as e:
+                    logger.error(f"096 Unexpected error in _show_generate_password: {e}", exc_info=True)
+                    raise ViewError(f"097 Failed to show import login/password view: {e}") from e
+
+            _create_import_secret_selection_frame()
+            self.create_seedkeeper_menu()
+
+            logger.log(SUCCESS, "100 Import secret view created successfully")
+        except (FrameCreationError, UIElementError) as e:
+            logger.error(f"101 Error in import_secret: {e}", exc_info=True)
+            raise ViewError(f"102 Failed to create import secret view: {e}") from e
+        except ViewError as ve:
+            logger.error(f"105 View error in import_secret: {ve}", exc_info=True)
+            self.show("ERROR", str(ve), "Ok")
+        except Exception as e:
+            logger.error(f"103 Unexpected error in import_secret: {e}", exc_info=True)
+            raise ViewError(f"104 Unexpected error during import secret view creation: {e}")
+        finally:
+            logger.info("107 Exiting import_secret method")
