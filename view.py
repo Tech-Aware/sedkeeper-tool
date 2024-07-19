@@ -473,7 +473,7 @@ class View(customtkinter.CTk):
     def _create_an_header(
             self,
             title_text: Optional[str] = None,
-            icon_name: Optional[str] = None
+            icon_name: Optional[str] = None,
     ) -> customtkinter.CTkFrame:
         try:
             logger.info(f"001 Starting header creation with title: '{title_text}' and icon: '{icon_name}'")
@@ -528,8 +528,79 @@ class View(customtkinter.CTk):
             raise FrameCreationError(f"005 Failed to create frame: {e}") from e
 
     @log_method
+    def _create_scrollable_frame(self, parent_frame, width, height, x, y):
+        try:
+            logger.info("001 Starting scrollable frame creation")
+
+            # Create a frame to hold the canvas and scrollbar
+            container = customtkinter.CTkFrame(parent_frame, width=width, height=height, fg_color=DEFAULT_BG_COLOR)
+            container.place(x=x, y=y)
+            container.pack_propagate(False)  # Prevent the frame from shrinking to fit its contents
+
+            # Create a canvas with specific dimensions
+            canvas = customtkinter.CTkCanvas(container, bg=DEFAULT_BG_COLOR, highlightthickness=0)
+            canvas.pack(side="left", fill="both", expand=True)
+
+            # Add a scrollbar to the canvas
+            scrollbar = customtkinter.CTkScrollbar(container, orientation="vertical", command=canvas.yview)
+            scrollbar.pack(side="right", fill="y")
+
+            # Configure scrollbar colors
+            scrollbar.configure(fg_color=DEFAULT_BG_COLOR, button_color=DEFAULT_BG_COLOR,
+                                button_hover_color=BG_HOVER_BUTTON)
+
+            # Configure the canvas
+            canvas.configure(yscrollcommand=scrollbar.set)
+
+            # Create a frame inside the canvas
+            inner_frame = customtkinter.CTkFrame(canvas, fg_color=DEFAULT_BG_COLOR)
+
+            # Add that frame to a window in the canvas
+            canvas_window = canvas.create_window((0, 0), window=inner_frame, anchor="nw")
+
+            def _configure_inner_frame(event):
+                # Update the scrollregion to encompass the inner frame
+                canvas.configure(scrollregion=canvas.bbox("all"))
+
+                # Resize the inner frame to fit the canvas width
+                canvas.itemconfig(canvas_window, width=canvas.winfo_width())
+
+            inner_frame.bind("<Configure>", _configure_inner_frame)
+
+            def _configure_canvas(event):
+                # Resize the inner frame to fit the canvas width
+                canvas.itemconfig(canvas_window, width=event.width)
+
+            canvas.bind("<Configure>", _configure_canvas)
+
+            def _on_mousewheel(event):
+                # Check if there's actually something to scroll
+                if canvas.bbox("all")[3] <= canvas.winfo_height():
+                    return  # No scrolling needed, so do nothing
+
+                if event.delta > 0:
+                    canvas.yview_scroll(-1, "units")
+                elif event.delta < 0:
+                    canvas.yview_scroll(1, "units")
+
+            # Bind mouse wheel to the canvas
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+            logger.log(SUCCESS, "002 Scrollable frame created successfully")
+            return inner_frame
+        except Exception as e:
+            logger.error(f"003 Error in _create_scrollable_frame: {e}", exc_info=True)
+            raise FrameCreationError(f"004 Failed to create scrollable frame: {e}") from e
+
+    @log_method
     def _clear_current_frame(self):
         try:
+            def _unbind_mousewheel():
+                self.unbind_all("<MouseWheel>")
+                self.unbind_all("<Button-4>")
+                self.unbind_all("<Button-5>")
+
+            _unbind_mousewheel()
             if self.app_open is True and self.current_frame is not None:
                 logger.info("001 Starting current frame clearing process")
                 if hasattr(self, 'current_frame') and self.current_frame:
@@ -652,7 +723,7 @@ class View(customtkinter.CTk):
     def _create_canvas(self, frame=None) -> customtkinter.CTkCanvas:
         try:
             logger.info("001 Starting canvas creation")
-            canvas = customtkinter.CTkCanvas(self.current_frame, bg="whitesmoke", width=1000, height=600)
+            canvas = customtkinter.CTkCanvas(self.current_frame, bg="whitesmoke", width=750, height=600)
             logger.debug("002 Canvas created successfully")
             logger.log(SUCCESS, "003 Canvas creation completed")
             return canvas
@@ -1592,7 +1663,7 @@ class View(customtkinter.CTk):
                                                       corner_radius=0, fg_color=DEFAULT_BG_COLOR)
                 header_frame.place(relx=0.05, rely=rely, relwidth=0.9, anchor="w")
 
-                header_widths = [50, 250, 300]  # Define specific widths for each header
+                header_widths = [100, 250, 350]  # Define specific widths for each header
                 for col, width in zip(headers, header_widths):
                     header_button = customtkinter.CTkButton(header_frame, text=col,
                                                             font=customtkinter.CTkFont(size=14, family='Outfit',
@@ -1603,13 +1674,15 @@ class View(customtkinter.CTk):
 
                 logger.debug("015 Table headers created")
 
+                table_frame = self._create_scrollable_frame(self.current_frame, width=700, height=400, x=33.5, y=200)
+
                 # Create rows of labels with alternating colors
                 for i, secret in enumerate(secrets_data['headers']):
                     try:
                         rely += 0.06
-                        row_frame = customtkinter.CTkFrame(self.current_frame, width=750, bg_color=DEFAULT_BG_COLOR,
+                        row_frame = customtkinter.CTkFrame(table_frame, width=750, bg_color=DEFAULT_BG_COLOR,
                                                            fg_color=DEFAULT_BG_COLOR)
-                        row_frame.place(relx=0.05, rely=rely, relwidth=0.9, anchor="w")
+                        row_frame.pack(pady=2, fill="x")
 
                         fg_color = DEFAULT_BG_COLOR if i % 2 == 0 else BG_HOVER_BUTTON
                         text_color = TEXT_COLOR if i % 2 == 0 else BUTTON_TEXT_COLOR
@@ -1625,6 +1698,7 @@ class View(customtkinter.CTk):
                             cell_button.default_color = fg_color  # Store the default color
                             cell_button.pack(side='left', expand=True, fill="both")
                             buttons.append(cell_button)
+
 
                         # Bind hover events to change color for all buttons in the row
                         for button in buttons:
@@ -2635,6 +2709,7 @@ class View(customtkinter.CTk):
             try:
                 logger.info("001 Creating logs frame")
                 self._create_frame()
+                self._create_canvas()
                 logger.log(SUCCESS, "002 Logs frame created successfully")
             except Exception as e:
                 logger.error(f"003 Error creating logs frame: {e}", exc_info=True)
@@ -2688,13 +2763,15 @@ class View(customtkinter.CTk):
 
                 logger.debug("015 Table headers created")
 
+                table_frame = self._create_scrollable_frame(self.current_frame, width=700, height=400, x=26, y=200)
+
                 # Create rows of labels with alternating colors
                 for i, log in enumerate(logs_details):
                     try:
                         rely += 0.06
-                        row_frame = customtkinter.CTkFrame(self.current_frame, width=750, bg_color=DEFAULT_BG_COLOR,
+                        row_frame = customtkinter.CTkFrame(table_frame, width=750, bg_color=DEFAULT_BG_COLOR,
                                                            fg_color=DEFAULT_BG_COLOR)
-                        row_frame.place(relx=0.04, rely=rely, relwidth=0.9, anchor="w")
+                        row_frame.pack(pady=2, fill="x")
 
                         fg_color = DEFAULT_BG_COLOR if i % 2 == 0 else BG_HOVER_BUTTON
                         text_color = TEXT_COLOR if i % 2 == 0 else BUTTON_TEXT_COLOR
