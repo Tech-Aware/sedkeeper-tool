@@ -2,6 +2,7 @@ import sys
 from typing import Optional, Dict, List, Callable, Any
 from functools import wraps
 import logging
+import json
 from mnemonic import Mnemonic
 
 from pysatochip.CardConnector import (CardConnector, CardNotPresentError, PinRequiredError, WrongPinError,
@@ -9,24 +10,9 @@ from pysatochip.CardConnector import (CardConnector, CardNotPresentError, PinReq
                                                  UninitializedSeedError, ApduError, SeedKeeperError,
 )
 
-from log_config import get_logger, SUCCESS, setup_logging
+from log_config import get_logger, SUCCESS, setup_logging, log_method
 from exceptions import *
 logger = get_logger(__name__)
-
-
-def log_method(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        logger.debug(f"Entering {func.__name__}")
-        try:
-            result = func(*args, **kwargs)
-            logger.debug(f"Exiting {func.__name__}")
-            return result
-        except Exception as e:
-            logger.exception(f"Exception in {func.__name__}: {e}")
-            raise
-
-    return wrapper
 
 
 class Controller:
@@ -115,7 +101,6 @@ class Controller:
             logger.error(f"Unexpected error during PIN verification: {e}")
             raise
 
-
     def PIN_dialog(self, msg):
         try:
             logger.info("Entering PIN_dialog method")
@@ -168,6 +153,9 @@ class Controller:
             logger.critical(f"An unexpected error occurred in PIN_dialog: {e}", exc_info=True)
             return (False, None)
 
+    ####################################################################################################################
+    """MY SECRETS MANAGEMENT"""
+    ####################################################################################################################
     @log_method
     def retrieve_secrets_stored_into_the_card(self) -> Dict[str, Any]:
         try:
@@ -258,6 +246,9 @@ class Controller:
             logger.error(f"012 Error retrieving secret details: {e}", exc_info=True)
             raise SecretRetrievalError(f"013 Failed to retrieve secret details: {e}") from e
 
+    ####################################################################################################################
+    """ GENERATE SECRETS """
+    ####################################################################################################################
     @log_method
     def generate_random_seed(self, mnemonic_length):
         try:
@@ -305,7 +296,7 @@ class Controller:
                                lambda: None,
                                "./pictures_db/icon_seed_popup.jpg")
                 self.view.update_status()
-                self.view.start_setup()
+                self.view.view_start_setup()
 
                 hex_authentikey = authentikey.get_public_key_hex()
                 logger.info(f"Authentikey={hex_authentikey}")
@@ -313,16 +304,61 @@ class Controller:
                 self.view.show('ERROR', 'Error when importing seed to Satochip!', 'Ok', None,
                                "./pictures_db/icon_seed_popup.jpg")
 
+    import json
 
+    def get_logs(self):
+        logger.debug('In get_logs')
+        ins_dic = {0x40: 'Create PIN', 0x42: 'Verify PIN', 0x44: 'Change PIN', 0x46: 'Unblock PIN',
+                   0xA0: 'Generate masterseed', 0xA5: 'Reset secret', 0xAE: 'Generate 2FA Secret',
+                   0xA1: 'Import secret', 0xA1A: 'Import plain secret', 0xA1B: 'Import encrypted secret',
+                   0xA2: 'Export secret', 0xA2A: 'Export plain secret', 0xA2B: 'Export encrypted secret',
+                   0xFF: 'RESET TO FACTORY'}
+        res_dic = {0x9000: 'OK', 0x63C0: 'PIN failed', 0x9C03: 'Operation not allowed', 0x9C04: 'Setup not done',
+                   0x9C05: 'Feature unsupported',
+                   0x9C01: 'No memory left', 0x9C08: 'Secret not found', 0x9C10: 'Incorrect P1', 0x9C11: 'Incorrect P2',
+                   0x9C0F: 'Invalid parameter',
+                   0x9C0B: 'Invalid signature', 0x9C0C: 'Identity blocked', 0x9CFF: 'Internal error',
+                   0x9C30: 'Lock error', 0x9C31: 'Export not allowed',
+                   0x9C32: 'Import data too long', 0x9C33: 'Wrong MAC during import', 0x0000: 'Unexpected error'}
 
-if __name__ == "__main__":
-    setup_logging()
-    try:
-        # Ici, vous devriez initialiser votre vue et passer la vue au contrôleur
-        # view = View()
-        # controller = Controller(view)
-        # Ensuite, vous pouvez exécuter votre application
-        pass
-    except Exception as e:
-        logger.critical(f"Application failed to start: {e}", exc_info=True)
-        sys.exit(1)
+        logs, nbtotal_logs, nbavail_logs = self.cc.seedkeeper_print_logs()
+
+        logs = logs[0:nbtotal_logs]
+        json_logs = []
+        # convert raw logs to readable data
+        for log in logs:
+            ins = log[0]
+            id1 = log[1]
+            id2 = log[2]
+            result = log[3]
+            if ins == 0xA1:  # encrypted or plain import? depends on value of id2
+                ins = 0xA1A if (id2 == 0xFFFF) else 0xA1B
+            elif ins == 0xA2:
+                ins = 0xA2A if (id2 == 0xFFFF) else 0xA2B
+            ins = ins_dic.get(ins, hex(log[0]))
+
+            id1 = 'N/A' if id1 == 0xFFFF else str(id1)
+            id2 = 'N/A' if id2 == 0xFFFF else str(id2)
+
+            if (result & 0x63C0) == 0x63C0:  # last nible contains number of pin remaining
+                remaining_tries = (result & 0x000F)
+                result = f'PIN failed - {remaining_tries} tries remaining'
+            else:
+                result = res_dic.get(log[3], hex(log[3]))
+
+            json_logs.append({
+                "Operation": ins,
+                "ID1": id1,
+                "ID2": id2,
+                "Result": result
+            })
+
+        # Convert to JSON string
+        json_string = json.dumps(json_logs)
+        logger.debug(f"JSON formatted logs: {json_string}")
+
+        print(json_logs)
+        print(nbtotal_logs)
+        print(nbavail_logs)
+
+        return nbtotal_logs, nbavail_logs, json_logs
