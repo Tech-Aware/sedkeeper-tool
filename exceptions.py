@@ -2,19 +2,30 @@ import logging
 from log_config import get_logger, SUCCESS, setup_logging
 logger = get_logger(__name__)
 
-# Base Exception for Seedkeeper Tool
+####################################################################################################################
+"""BASE EXCEPTIONS"""
+####################################################################################################################
+
 class SeedkeeperError(Exception):
     """Base exception class for Seedkeeper Tool."""
     def __init__(self, message="Error in Seedkeeper Tool"):
         super().__init__(message)
         logger.error("An error occurred in Seedkeeper Tool", exc_info=True)
 
-# View-related Exceptions
+####################################################################################################################
+"""VIEW RELATED EXCEPTIONS"""
+####################################################################################################################
+
 class ViewError(SeedkeeperError):
     """Base exception class for View-related errors."""
     def __init__(self, message):
         super().__init__(message)
         logger.error("An error occurred in View", exc_info=True)
+
+class InitializationError(ViewError):
+    """Exception raised when View initialization fails."""
+    def __init__(self, message="Error in view initialization"):
+        super().__init__(message)
 
 class AttributeInitializationError(ViewError):
     """Exception raised when there's an error initializing attributes."""
@@ -31,7 +42,12 @@ class FrameError(ViewError):
     def __init__(self, message="Error in frame operation"):
         super().__init__(message)
 
-class FrameClearingError(ViewError):
+class FrameCreationError(FrameError):
+    """Exception raised when there's an error creating or placing a frame."""
+    def __init__(self, message="Error in frame creation"):
+        super().__init__(message)
+
+class FrameClearingError(FrameError):
     """Exception raised when there's an error clearing a frame."""
     def __init__(self, message="Error in frame clearing"):
         super().__init__(message)
@@ -56,14 +72,14 @@ class WindowSetupError(UIElementError):
     def __init__(self, message="Error in window setup"):
         super().__init__(message)
 
-class FrameCreationError(UIElementError):
-    """Exception raised when there's an error creating or placing a frame."""
-    def __init__(self, message="Error in frame creation"):
-        super().__init__(message)
-
 class MenuCreationError(UIElementError):
     """Exception raised when there's an error creating a menu."""
     def __init__(self, message="Error in menu creation"):
+        super().__init__(message)
+
+class MenuDeletionError(ViewError):
+    """Exception raised when there's an error deleting a menu."""
+    def __init__(self, message="Error in menu deletion"):
         super().__init__(message)
 
 class CanvasCreationError(UIElementError):
@@ -91,41 +107,15 @@ class HeaderCreationError(UIElementError):
     def __init__(self, message="Error in header creation"):
         super().__init__(message)
 
-class InitializationError(ViewError):
-    """Exception raised when View initialization fails."""
-    def __init__(self, message="Error in view initialization"):
-        super().__init__(message)
-
-class ButtonCreationError(ViewError):
+class ButtonCreationError(UIElementError):
     """Exception raised when there's an error creating a button."""
     def __init__(self, message="Error in button creation"):
         super().__init__(message)
 
-class MainMenuError(ViewError):
-    """Exception raised for errors in the main menu creation or manipulation."""
-    def __init__(self, message="Error in main menu"):
-        super().__init__(message)
+####################################################################################################################
+"""CONTROLLER RELATED EXCEPTIONS"""
+####################################################################################################################
 
-class MenuDeletionError(ViewError):
-    """Exception raised when there's an error deleting a menu."""
-    def __init__(self, message="Error in menu deletion"):
-        super().__init__(message)
-
-# Data Processing Exceptions
-class SecretRetrievalError(ViewError):
-    """Exception raised when there's an error retrieving secret details."""
-    def __init__(self, message="Error in secret retrieval"):
-        super().__init__(message)
-        logger.error("An error occurred during secret retrieval", exc_info=True)
-
-class SecretProcessingError(ViewError):
-    """Exception raised when there's an error processing a secret."""
-    def __init__(self, message="Error in secret processing"):
-        super().__init__(message)
-        logger.error("An error occurred during secret processing", exc_info=True)
-
-# Controller-related Exceptions
-# Base Exception for Controller
 class ControllerError(SeedkeeperError):
     """Base exception class for Controller-related errors."""
     def __init__(self, message="Error in Controller"):
@@ -152,10 +142,28 @@ class PinChangeError(ControllerError):
     def __init__(self, message="Failed to change PIN"):
         super().__init__(message)
 
-# Card-related Exceptions
+####################################################################################################################
+"""CARD RELATED EXCEPTIONS"""
+####################################################################################################################
+
 class CardError(SeedkeeperError):
     """Exception raised for errors related to card operations."""
     def __init__(self, message="Error in card operation"):
         super().__init__(message)
         logger.error("An error occurred during card operation", exc_info=True)
 
+####################################################################################################################
+"""DATA PROCESSING EXCEPTIONS"""
+####################################################################################################################
+
+class SecretRetrievalError(ViewError):
+    """Exception raised when there's an error retrieving secret details."""
+    def __init__(self, message="Error in secret retrieval"):
+        super().__init__(message)
+        logger.error("An error occurred during secret retrieval", exc_info=True)
+
+class SecretProcessingError(ViewError):
+    """Exception raised when there's an error processing a secret."""
+    def __init__(self, message="Error in secret processing"):
+        super().__init__(message)
+        logger.error("An error occurred during secret processing", exc_info=True)
