@@ -972,11 +972,11 @@ class View(customtkinter.CTk):
                                                    "secrets_icon.png" if self.controller.cc.card_present else "insert_card_icon.jpg",
                                                    0.26, 0.585 if self.controller.cc.card_present else 0.578,
                                                    state=state,
-                                                   command=self.show_secrets if self.controller.cc.card_present else None)
+                                                   command=self.show_view_my_secrets if self.controller.cc.card_present else None)
             self._create_button_for_main_menu_item(menu_frame, "Generate",
                                                    "generate_icon.png" if self.controller.cc.card_present else "generate_locked_icon.png",
                                                    0.33, 0.56, state=state,
-                                                   command=self.show_generate_secret if self.controller.cc.card_present else None,
+                                                   command=self.show_view_generate_secret if self.controller.cc.card_present else None,
                                                    text_color="white" if self.controller.cc.card_present else "grey")
             self._create_button_for_main_menu_item(menu_frame, "Import",
                                                    "import_icon.png" if self.controller.cc.card_present else "import_locked_icon.png",
@@ -986,12 +986,12 @@ class View(customtkinter.CTk):
             self._create_button_for_main_menu_item(menu_frame, "Logs",
                                                    "logs_icon.png" if self.controller.cc.card_present else "settings_locked_icon.png",
                                                    0.47, 0.49, state=state,
-                                                   command=self.show_logs if self.controller.cc.card_present else None,
+                                                   command=self.show_view_logs if self.controller.cc.card_present else None,
                                                    text_color="white" if self.controller.cc.card_present else "grey")
             self._create_button_for_main_menu_item(menu_frame, "Settings",
                                                    "settings_icon.png" if self.controller.cc.card_present else "settings_locked_icon.png",
                                                    0.74, 0.546, state=state,
-                                                   command=self.show_settings if self.controller.cc.card_present else None,
+                                                   command=self.show_view_settings if self.controller.cc.card_present else None,
                                                    text_color="white" if self.controller.cc.card_present else "grey")
             self._create_button_for_main_menu_item(menu_frame, "Help", "help_icon.png", 0.81, 0.49, state='normal',
                                                    command=self.show_help, text_color="white")
@@ -1097,7 +1097,7 @@ class View(customtkinter.CTk):
             if self.controller.cc.card_type != "Satodime" and self.controller.cc.setup_done:
                 logger.debug("009 Enabling 'Change Pin' button")
                 self._create_button_for_main_menu_item(menu_frame, "Change Pin", "change_pin_icon.png", 0.33, 0.567,
-                                                       state='normal', command=lambda: None)
+                                                       state='normal', command=self.show_view_change_pin)
             else:
                 logger.info(f"010 Card type is {self.controller.cc.card_type} | Disabling 'Change Pin' button")
                 self._create_button_for_main_menu_item(menu_frame, "Change Pin", "change_pin_locked_icon.jpg", 0.33,
@@ -1176,7 +1176,7 @@ class View(customtkinter.CTk):
     ########################################
 
     @log_method
-    def show_secrets(self):
+    def show_view_my_secrets(self):
         try:
             logger.info("001 Initiating show secrets process")
             self.welcome_in_display = False
@@ -1192,7 +1192,7 @@ class View(customtkinter.CTk):
             raise ViewError(f"006 Failed to show secrets: {e}") from e
 
     @log_method
-    def show_generate_secret(self):
+    def show_view_generate_secret(self):
         try:
             logger.info("001 Initiating secret generation process")
             self.welcome_in_display = False
@@ -1217,12 +1217,12 @@ class View(customtkinter.CTk):
             logger.error(f"003 Error in import_secret: {e}", exc_info=True)
             raise ViewError(f"004 Failed to import secret: {e}") from e
 
-    def show_logs(self):
+    def show_view_logs(self):
         total_number_of_logs, total_number_available_logs, logs = self.controller.get_logs()
         self.view_logs_details(logs)
 
     @log_method
-    def show_settings(self):
+    def show_view_settings(self):
         try:
             logger.info("001 Displaying settings")
             self._delete_seedkeeper_menu()
@@ -1235,6 +1235,38 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"006 Error in show_settings: {e}", exc_info=True)
             raise ViewError(f"007 Failed to show settings: {e}") from e
+
+    @log_method
+    def show_view_start_setup(self):
+        try:
+            logger.info("001 Starting show_view_start_setup method")
+
+            self.welcome_in_display = False
+            self._clear_welcome_frame()
+            self._clear_current_frame()
+            logger.debug("002 Welcome and current frames cleared")
+
+            self.view_start_setup()
+            logger.log(SUCCESS, "003 Start setup view displayed successfully")
+        except Exception as e:
+            logger.error(f"004 Error in show_view_start_setup: {e}", exc_info=True)
+            raise ViewError(f"005 Failed to show start setup view: {e}") from e
+
+    @log_method
+    def show_view_change_pin(self):
+        try:
+            logger.info("001 Starting show_view_change_pin method")
+
+            self.welcome_in_display = False
+            self._clear_welcome_frame()
+            self._clear_current_frame()
+            logger.debug("002 Welcome and current frames cleared")
+
+            self.view_change_pin()
+            logger.log(SUCCESS, "003 Change PIN view displayed successfully")
+        except Exception as e:
+            logger.error(f"004 Error in show_view_change_pin: {e}", exc_info=True)
+            raise ViewError(f"005 Failed to show change PIN view: {e}") from e
 
     @log_method
     def show_help(self):
@@ -1278,7 +1310,7 @@ class View(customtkinter.CTk):
             @log_method
             def center_popup(popup):
                 try:
-                    popup_width, popup_height = 400, 200
+                    popup_width, popup_height = 400, 220
                     position_right = int(self.winfo_screenwidth() / 2 - popup_width / 2)
                     position_down = int(self.winfo_screenheight() / 2 - popup_height / 2)
                     popup.geometry(f"{popup_width}x{popup_height}+{position_right}+{position_down}")
@@ -1450,7 +1482,7 @@ class View(customtkinter.CTk):
         def _create_welcome_button():
             try:
                 logger.info("017 Creating welcome button")
-                self.lets_go_button = self._create_welcome_button("Let's go", self.show_secrets)
+                self.lets_go_button = self._create_welcome_button("Let's go", self.show_view_my_secrets)
                 self.lets_go_button.place(relx=0.85, rely=0.93, anchor="center")
 
                 logger.log(SUCCESS, "018 Welcome button created successfully")
@@ -1499,7 +1531,7 @@ class View(customtkinter.CTk):
             try:
                 logger.info("005 Creating return button")
                 return_button = self._create_button(text="Back",
-                                                    command=lambda: [self.show_secrets()])
+                                                    command=lambda: [self.show_view_my_secrets()])
                 return_button.place(relx=0.95, rely=0.95, anchor="se")
                 logger.log(SUCCESS, "006 Return button created successfully")
             except Exception as e:
@@ -1542,10 +1574,10 @@ class View(customtkinter.CTk):
             try:
                 logger.info("017 Creating start setup labels")
                 label1 = self._create_label(f"Your {self.controller.cc.card_type} is connected.")
-                label1.place(relx=0.29, rely=0.27, anchor="w")
+                label1.place(relx=0.045, rely=0.27, anchor="w")
 
                 label2 = self._create_label("Select on the menu the action you wish to perform.")
-                label2.place(relx=0.29, rely=0.32, anchor="w")
+                label2.place(relx=0.045, rely=0.32, anchor="w")
                 logger.log(SUCCESS, "018 Start setup labels created successfully")
             except Exception as e:
                 logger.error(f"019 Error creating start setup labels: {e}", exc_info=True)
@@ -1577,6 +1609,7 @@ class View(customtkinter.CTk):
             _create_start_setup_header()
             _create_start_setup_labels()
             _create_return_button()
+            self.create_satochip_utils_menu()
             logger.log(SUCCESS, "026 Start setup view initialized successfully")
         except (FrameCreationError, UIElementError) as e:
             logger.error(f"027 Error in start_setup: {e}", exc_info=True)
@@ -1584,6 +1617,110 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"029 Unexpected error in start_setup: {e}", exc_info=True)
             raise ViewError(f"030 Unexpected error during start setup initialization: {e}") from e
+
+    @log_method
+    def view_change_pin(self):
+        try:
+            logger.info("001 Starting change_pin method")
+
+            @log_method
+            def _create_change_pin_frame():
+                try:
+                    logger.info("002 Creating change PIN frame")
+                    self._create_frame()
+                    logger.log(SUCCESS, "003 Change PIN frame created successfully")
+                except Exception as e:
+                    logger.error(f"004 Error creating change PIN frame: {e}", exc_info=True)
+                    raise FrameCreationError(f"005 Failed to create change PIN frame: {e}") from e
+
+            @log_method
+            def _create_change_pin_header():
+                try:
+                    logger.info("006 Creating change PIN header")
+                    self.header = self._create_an_header("Change PIN", "change_pin_popup_icon.jpg")
+                    self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                    logger.log(SUCCESS, "007 Change PIN header created successfully")
+                except Exception as e:
+                    logger.error(f"008 Error creating change PIN header: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to create change PIN header: {e}") from e
+
+            @log_method
+            def _create_change_pin_content():
+                try:
+                    logger.info("010 Creating change PIN content")
+
+                    instructions = [
+                        "Change your personal PIN code.",
+                        "We strongly encourage you to set up a strong password between 4 and 16",
+                        "characters. You can use symbols, lower and upper cases, letters and",
+                        "numbers."
+                    ]
+
+                    for i, text in enumerate(instructions):
+                        label = self._create_label(text)
+                        label.place(relx=0.05, rely=0.20 + i * 0.05, anchor="w")
+
+                    pin_entries = [
+                        ("Current PIN:", 0.40, "current_pin_entry"),
+                        ("New PIN code:", 0.55, "new_pin_entry"),
+                        ("Repeat new PIN code:", 0.70, "confirm_new_pin_entry")
+                    ]
+
+                    for label_text, rely, entry_name in pin_entries:
+                        label = self._create_label(label_text)
+                        label.configure(font=self._make_text_bold(18))
+                        label.place(relx=0.05, rely=rely, anchor="w")
+
+                        entry = self._create_entry(show_option="*")
+                        entry.place(relx=0.05, rely=rely + 0.05, anchor="w")
+                        setattr(self, entry_name, entry)
+
+                    self.after(100, self.current_pin_entry.focus_force)
+
+                    logger.log(SUCCESS, "011 Change PIN content created successfully")
+                except Exception as e:
+                    logger.error(f"012 Error creating change PIN content: {e}", exc_info=True)
+                    raise UIElementError(f"013 Failed to create change PIN content: {e}") from e
+
+            @log_method
+            def _create_change_pin_buttons():
+                try:
+                    logger.info("014 Creating change PIN buttons")
+
+                    cancel_button = self._create_button("Cancel", command=self.view_start_setup)
+                    cancel_button.place(relx=0.63, rely=0.9, anchor="w")
+
+                    change_button = self._create_button("Change it", command=_perform_pin_change)
+                    change_button.place(relx=0.8, rely=0.9, anchor="w")
+
+                    self.bind('<Return>', lambda event: _perform_pin_change())
+
+                    logger.log(SUCCESS, "015 Change PIN buttons created successfully")
+                except Exception as e:
+                    logger.error(f"016 Error creating change PIN buttons: {e}", exc_info=True)
+                    raise UIElementError(f"017 Failed to create change PIN buttons: {e}") from e
+
+            @log_method
+            def _perform_pin_change():
+                try:
+                    current_pin = self.current_pin_entry.get()
+                    new_pin = self.new_pin_entry.get()
+                    confirm_new_pin = self.confirm_new_pin_entry.get()
+                    self.controller.change_card_pin(current_pin, new_pin, confirm_new_pin)
+                except Exception as e:
+                    logger.error(f"018 Error performing PIN change: {e}", exc_info=True)
+                    self.show("ERROR", "Failed to change PIN", "Ok")
+
+            _create_change_pin_frame()
+            _create_change_pin_header()
+            _create_change_pin_content()
+            _create_change_pin_buttons()
+            self.create_satochip_utils_menu()
+
+            logger.log(SUCCESS, "019 change_pin method completed successfully")
+        except Exception as e:
+            logger.error(f"020 Unexpected error in change_pin: {e}", exc_info=True)
+            raise ViewError(f"021 Failed to display change PIN view: {e}")
 
     @log_method
     def view_my_secrets(self, secrets_data: Dict[str, Any]):
@@ -1639,7 +1776,7 @@ class View(customtkinter.CTk):
                         logger.warning(f"011 Unsupported secret type: {secret['type']}")
                         _create_generic_secret_frame(secret_details)
 
-                    back_button = self._create_button(text="Back", command=self.show_secrets)
+                    back_button = self._create_button(text="Back", command=self.show_view_my_secrets)
                     back_button.place(relx=0.95, rely=0.98, anchor="se")
 
                     logger.log(SUCCESS, f"012 Secret details displayed for ID: {secret['id']}")
@@ -2054,7 +2191,7 @@ class View(customtkinter.CTk):
                             save_button = self._create_button("Save on card", command=_save_mnemonic_to_card)
                             save_button.place(relx=0.85, rely=0.93, anchor="center")
 
-                            back_button = self._create_button("Back", command=self.show_generate_secret)
+                            back_button = self._create_button("Back", command=self.show_view_generate_secret)
                             back_button.place(relx=0.65, rely=0.93, anchor="center")
 
                             logger.log(SUCCESS, "030 Generate mnemonic content created successfully")
@@ -2321,7 +2458,7 @@ class View(customtkinter.CTk):
                             save_button.place(relx=0.85, rely=0.93, anchor="center")
 
                             back_button = self._create_button("Back",
-                                                              command=self.show_generate_secret)
+                                                              command=self.show_view_generate_secret)
                             back_button.place(relx=0.65, rely=0.93, anchor="center")
 
                             logger.log(SUCCESS, "084 Generate login/password content created successfully")
@@ -2703,72 +2840,68 @@ class View(customtkinter.CTk):
         finally:
             logger.info("072 Exiting import_secret method")
 
+    @log_method
     def view_logs_details(self, logs_details):
-        @log_method
-        def _create_logs_frame():
-            try:
-                logger.info("001 Creating logs frame")
-                self._create_frame()
-                self._create_canvas()
-                logger.log(SUCCESS, "002 Logs frame created successfully")
-            except Exception as e:
-                logger.error(f"003 Error creating logs frame: {e}", exc_info=True)
-                raise FrameCreationError(f"004 Failed to create logs frame: {e}") from e
+        try:
+            logger.info("001 Starting view_logs_details method")
 
-        @log_method
-        def _create_logs_header():
-            try:
-                logger.info("005 Creating logs header")
-                self.header = self._create_an_header("Logs History", "secrets_icon_ws.png")
-                self.header.place(relx=0.03, rely=0.08, anchor="nw")
-                logger.log(SUCCESS, "006 Logs header created successfully")
-            except Exception as e:
-                logger.error(f"007 Error creating logs header: {e}", exc_info=True)
-                raise UIElementError(f"008 Failed to create logs header: {e}") from e
+            @log_method
+            def _create_logs_frame():
+                try:
+                    logger.info("002 Creating logs frame")
+                    self._create_frame()
+                    logger.log(SUCCESS, "003 Logs frame created successfully")
+                except Exception as e:
+                    logger.error(f"004 Error creating logs frame: {e}", exc_info=True)
+                    raise FrameCreationError(f"005 Failed to create logs frame: {e}") from e
 
-        @log_method
-        def _create_logs_table(logs_details):
-            def _on_mouse_on_log(event, buttons):
-                for button in buttons:
-                    button.configure(fg_color=HIGHLIGHT_COLOR, cursor="hand2")
+            @log_method
+            def _create_logs_header():
+                try:
+                    logger.info("006 Creating logs header")
+                    self.header = self._create_an_header("Logs History", "secrets_icon_ws.png")
+                    self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                    logger.log(SUCCESS, "007 Logs header created successfully")
+                except Exception as e:
+                    logger.error(f"008 Error creating logs header: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to create logs header: {e}") from e
 
-            def _on_mouse_out_log(event, buttons):
-                for button in buttons:
-                    button.configure(fg_color=button.default_color)
+            @log_method
+            def _create_logs_table(logs_details):
+                try:
+                    logger.info("010 Creating logs table")
 
-            try:
-                logger.info("014 Creating logs table")
+                    def _on_mouse_on_log(event, buttons):
+                        for button in buttons:
+                            button.configure(fg_color=HIGHLIGHT_COLOR, cursor="hand2")
 
-                # Introduce table
-                label_text = self._create_label(text="Find what had been done in your Seedkeeper card:")
-                label_text.place(relx=0.05, rely=0.25, anchor="w")
+                    def _on_mouse_out_log(event, buttons):
+                        for button in buttons:
+                            button.configure(fg_color=button.default_color)
 
-                # Define headers
-                headers = ['Operation', 'ID1', 'ID2', 'Result']
-                rely = 0.3
+                    label_text = self._create_label(text="Find what had been done in your Seedkeeper card:")
+                    label_text.place(relx=0.05, rely=0.25, anchor="w")
 
-                # Create header labels
-                header_frame = customtkinter.CTkFrame(self.current_frame, width=750, bg_color=DEFAULT_BG_COLOR,
-                                                      corner_radius=0, fg_color=DEFAULT_BG_COLOR)
-                header_frame.place(relx=0.04, rely=rely, relwidth=0.9, anchor="w")
+                    headers = ['Operation', 'ID1', 'ID2', 'Result']
+                    header_widths = [300, 75, 75, 300]
 
-                header_widths = [300, 75, 75, 300]  # Define specific widths for each header
-                for col, width in zip(headers, header_widths):
-                    header_button = customtkinter.CTkButton(header_frame, text=col,
-                                                            font=customtkinter.CTkFont(size=14, family='Outfit',
-                                                                                       weight="bold"),
-                                                            corner_radius=0, state='disabled', text_color='white',
-                                                            fg_color=BG_MAIN_MENU, width=width)
-                    header_button.pack(side="left", expand=True, fill="both")
+                    header_frame = customtkinter.CTkFrame(self.current_frame, width=750, bg_color=DEFAULT_BG_COLOR,
+                                                          corner_radius=0, fg_color=DEFAULT_BG_COLOR)
+                    header_frame.place(relx=0.04, rely=0.3, relwidth=0.9, anchor="w")
 
-                logger.debug("015 Table headers created")
+                    for col, width in zip(headers, header_widths):
+                        header_button = customtkinter.CTkButton(header_frame, text=col,
+                                                                font=customtkinter.CTkFont(size=14, family='Outfit',
+                                                                                           weight="bold"),
+                                                                corner_radius=0, state='disabled', text_color='white',
+                                                                fg_color=BG_MAIN_MENU, width=width)
+                        header_button.pack(side="left", expand=True, fill="both")
 
-                table_frame = self._create_scrollable_frame(self.current_frame, width=700, height=400, x=26, y=200)
+                    logger.debug("011 Table headers created")
 
-                # Create rows of labels with alternating colors
-                for i, log in enumerate(logs_details):
-                    try:
-                        rely += 0.06
+                    table_frame = self._create_scrollable_frame(self.current_frame, width=700, height=400, x=26, y=200)
+
+                    for i, log in enumerate(logs_details):
                         row_frame = customtkinter.CTkFrame(table_frame, width=750, bg_color=DEFAULT_BG_COLOR,
                                                            fg_color=DEFAULT_BG_COLOR)
                         row_frame.pack(pady=2, fill="x")
@@ -2784,26 +2917,28 @@ class View(customtkinter.CTk):
                                                                   font=customtkinter.CTkFont(size=14, family='Outfit'),
                                                                   hover_color=HIGHLIGHT_COLOR, width=width,
                                                                   corner_radius=0)
-                            cell_button.default_color = fg_color  # Store the default color
+                            cell_button.default_color = fg_color
                             cell_button.pack(side='left', expand=True, fill="both")
                             buttons.append(cell_button)
 
-                        # Bind hover events to change color for all buttons in the row
                         for button in buttons:
                             button.bind("<Enter>", lambda event, btns=buttons: _on_mouse_on_log(event, btns))
                             button.bind("<Leave>", lambda event, btns=buttons: _on_mouse_out_log(event, btns))
 
-                        logger.debug(f"016 Row created for logs ID: {log['Operation'], log['ID1'], log['ID2'], log['Result']}")
-                    except Exception as e:
-                        logger.error(f"017 Error creating row for log {log['Operation'], log['ID1'], log['ID2'], log['Result']}: {str(e)}")
-                        raise UIElementError(f"018 Failed to create row for logs {log['Operation'], log['ID1'], log['ID2'], log['Result']}") from e
+                        logger.debug(
+                            f"012 Row created for log: {log['Operation'], log['ID1'], log['ID2'], log['Result']}")
 
-                logger.log(SUCCESS, "019 Logs table created successfully")
-            except Exception as e:
-                logger.error(f"020 Error in _create_logs_table: {e}", exc_info=True)
-                raise UIElementError(f"021 Failed to create logs table: {e}") from e
+                    logger.log(SUCCESS, "013 Logs table created successfully")
+                except Exception as e:
+                    logger.error(f"014 Error in _create_logs_table: {e}", exc_info=True)
+                    raise UIElementError(f"015 Failed to create logs table: {e}") from e
 
-        _create_logs_frame()
-        _create_logs_header()
-        _create_logs_table(logs_details)
-        self.create_seedkeeper_menu()
+            _create_logs_frame()
+            _create_logs_header()
+            _create_logs_table(logs_details)
+            self.create_seedkeeper_menu()
+
+            logger.log(SUCCESS, "016 view_logs_details completed successfully")
+        except Exception as e:
+            logger.error(f"017 Unexpected error in view_logs_details: {e}", exc_info=True)
+            raise ViewError(f"018 Failed to display logs details: {e}")
