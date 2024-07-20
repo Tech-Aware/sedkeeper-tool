@@ -85,7 +85,9 @@ class Controller:
         else:
             logger.error(f"Unknown request type: {request_type}")
             raise ControllerError(f"Unknown request type: {request_type}")
-
+    ####################################################################################################################
+    """PIN MANAGEMENT"""
+    ####################################################################################################################
     @log_method
     def verify_pin(self, pin: str):
         try:
@@ -152,6 +154,58 @@ class Controller:
         except Exception as e:
             logger.critical(f"An unexpected error occurred in PIN_dialog: {e}", exc_info=True)
             return (False, None)
+
+    @log_method
+    def change_card_pin(self, current_pin, new_pin, new_pin_confirm):
+        try:
+            logger.info("001 Starting change_card_pin method")
+
+            if not self.cc.card_present or self.cc.card_type == "Satodime":
+                logger.warning("002 Card not present or incompatible card type")
+                raise CardNotSuitableError("Card not present or incompatible card type")
+
+            if len(new_pin) < 4:
+                logger.warning("003 New PIN is too short")
+                raise InvalidPinError("PIN must contain at least 4 characters")
+
+            if new_pin != new_pin_confirm:
+                logger.warning("004 New PINs do not match")
+                raise PinMismatchError("The PIN values do not match!\n Please type PIN again!")
+
+            current_pin_bytes = list(current_pin.encode('utf8'))
+            new_pin_bytes = list(new_pin.encode('utf8'))
+
+            response, sw1, sw2 = self.cc.card_change_PIN(0, current_pin_bytes, new_pin_bytes)
+
+            if sw1 == 0x90 and sw2 == 0x00:
+                logger.log(SUCCESS, "005 PIN changed successfully")
+                self.view.show("SUCCESS", "PIN changed successfully!", "Ok",
+                               lambda: self.view.show_view_start_setup(),
+                               "./pictures_db/change_pin_popup_icon.jpg")
+                return True
+            else:
+                error_msg = f"Failed to change PIN with error code: {hex(sw1)}{hex(sw2)}\nProbably too long"
+                logger.error(f"006 {error_msg}")
+                raise PinChangeError(error_msg)
+
+        except CardNotSuitableError as e:
+            logger.error(f"007 CardNotSuitableError: {e}")
+            self.view.show("ERROR", str(e), "Ok", None, "./pictures_db/change_pin_popup_icon.jpg")
+        except InvalidPinError as e:
+            logger.error(f"008 InvalidPinError: {e}")
+            self.view.show("ERROR", str(e), "Ok", None, "./pictures_db/change_pin_popup_icon.jpg")
+        except PinMismatchError as e:
+            logger.error(f"009 PinMismatchError: {e}")
+            self.view.show("WARNING", str(e), "Ok", None, "./pictures_db/change_pin_popup_icon.jpg")
+        except PinChangeError as e:
+            logger.error(f"010 PinChangeError: {e}")
+            self.view.show("ERROR", str(e), "Ok", None, "./pictures_db/change_pin_popup_icon.jpg")
+        except Exception as e:
+            logger.error(f"011 Unexpected error in change_card_pin: {e}", exc_info=True)
+            self.view.show("ERROR", "An unexpected error occurred\n during PIN change", "Ok", None,
+                           "./pictures_db/change_pin_popup_icon.jpg")
+
+        return False
 
     ####################################################################################################################
     """MY SECRETS MANAGEMENT"""
