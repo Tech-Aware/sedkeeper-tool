@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](git https://keepachangelog.com/en/1.0.
 ## [Unreleased]
 
 ### Added
+- New functionality in `view.py` for displaying logs:
+  - Implemented `view_logs_details` method with scrollable frame for better user experience
+  - Added comprehensive error handling for log display
+- New PIN change functionality in `view.py`:
+  - Implemented `view_change_pin` method with full UI and error handling
+- Enhanced `controller.py` with PIN change functionality:
+  - Added `change_card_pin` method with robust error handling
+  - Improved `get_logs` method to return formatted log data
+- New exception types in `exceptions.py` for PIN-related errors:
+  - Added `CardNotSuitableError`, `InvalidPinError`, `PinMismatchError`, and `PinChangeError`
+- Improved error handling and logging throughout both `view.py` and `controller.py`
+
+### Changed
+- Updated various "show" methods in `view.py` to use new view names (e.g., `show_view_my_secrets`)
+
+## [0.1.3] - 2024-07-19
+
+### Added
 - New functionality in `view.py` for importing secrets:
   - Implemented `view_import_secret` method for secret import selection
   - Added `_show_import_mnemonic` method for importing mnemonic secrets
