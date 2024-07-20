@@ -125,11 +125,32 @@ class SecretProcessingError(ViewError):
         logger.error("An error occurred during secret processing", exc_info=True)
 
 # Controller-related Exceptions
+# Base Exception for Controller
 class ControllerError(SeedkeeperError):
     """Base exception class for Controller-related errors."""
     def __init__(self, message="Error in Controller"):
         super().__init__(message)
         logger.error("An error occurred in Controller", exc_info=True)
+
+class CardNotSuitableError(ControllerError):
+    """Exception raised when the card is not present or is not suitable for the operation."""
+    def __init__(self, message="Card not present or incompatible"):
+        super().__init__(message)
+
+class InvalidPinError(ControllerError):
+    """Exception raised when the PIN does not meet the required criteria."""
+    def __init__(self, message="Invalid PIN"):
+        super().__init__(message)
+
+class PinMismatchError(ControllerError):
+    """Exception raised when the new PIN and confirmation PIN do not match."""
+    def __init__(self, message="PIN mismatch"):
+        super().__init__(message)
+
+class PinChangeError(ControllerError):
+    """Exception raised when there is an error during the PIN change process."""
+    def __init__(self, message="Failed to change PIN"):
+        super().__init__(message)
 
 # Card-related Exceptions
 class CardError(SeedkeeperError):
@@ -137,3 +158,4 @@ class CardError(SeedkeeperError):
     def __init__(self, message="Error in card operation"):
         super().__init__(message)
         logger.error("An error occurred during card operation", exc_info=True)
+
