@@ -84,10 +84,7 @@ class View(customtkinter.CTk):
             raise InitializationError(f"020 Unexpected error during View initialization: {e}") from e
 
     ####################################################################################################################
-    """ 
-    ################################################## UTILS ###########################################################
-    """
-
+    """ UTILS """
     ####################################################################################################################
 
     ########################################
@@ -267,7 +264,12 @@ class View(customtkinter.CTk):
     ########################################
 
     @log_method
-    def _create_label(self, text, bg_fg_color: str = None, frame=None) -> customtkinter.CTkLabel:
+    def _create_label(
+            self,
+            text,
+            bg_fg_color: str = None,
+            frame=None
+    ) -> customtkinter.CTkLabel:
         try:
             logger.info(f"001 Starting label creation with text: '{text}'")
             label = None
@@ -311,7 +313,10 @@ class View(customtkinter.CTk):
             raise LabelCreationError(f"012 Failed to create label: {e}") from e
 
     @log_method
-    def _make_text_bold(self, size=None):
+    def _make_text_bold(
+            self,
+            size=None
+    ) -> customtkinter.CTkFont:
         try:
             logger.debug("Entering make_text_bold method")
             logger.debug("Configuring bold font")
@@ -528,7 +533,14 @@ class View(customtkinter.CTk):
             raise FrameCreationError(f"005 Failed to create frame: {e}") from e
 
     @log_method
-    def _create_scrollable_frame(self, parent_frame, width, height, x, y):
+    def _create_scrollable_frame(
+            self,
+            parent_frame,
+            width,
+            height,
+            x,
+            y
+    ) -> customtkinter.CTkFrame:
         try:
             logger.info("001 Starting scrollable frame creation")
 
@@ -674,7 +686,10 @@ class View(customtkinter.CTk):
 
     @staticmethod
     @log_method
-    def _create_background_photo(self, picture_path):
+    def _create_background_photo(
+            self,
+            picture_path
+    ) -> ImageTk.PhotoImage:
         try:
             logger.info(f"001 Starting background photo creation with path: {picture_path}")
 
@@ -720,7 +735,10 @@ class View(customtkinter.CTk):
             raise BackgroundPhotoError(f"019 Unexpected error during background photo creation: {e}") from e
 
     @log_method
-    def _create_canvas(self, frame=None) -> customtkinter.CTkCanvas:
+    def _create_canvas(
+            self,
+            frame=None
+    ) -> customtkinter.CTkCanvas:
         try:
             logger.info("001 Starting canvas creation")
             canvas = customtkinter.CTkCanvas(self.current_frame, bg="whitesmoke", width=750, height=600)
@@ -736,7 +754,10 @@ class View(customtkinter.CTk):
     ########################################
 
     @log_method
-    def update_status(self, isConnected=None):
+    def update_status(
+            self,
+            isConnected=None
+    ):
         try:
             logger.info("001 Starting status update")
             if self.controller.cc.mode_factory_reset == True:
@@ -790,7 +811,10 @@ class View(customtkinter.CTk):
             raise ViewError(f"023 Failed to update status: {e}") from e
 
     @log_method
-    def get_passphrase(self, msg):
+    def get_passphrase(
+            self,
+            msg
+    ) -> Optional[str]:
         try:
             logger.info("001 Initiating passphrase entry")
             popup = customtkinter.CTkToplevel(self)
@@ -852,10 +876,8 @@ class View(customtkinter.CTk):
             raise UIElementError(f"009 Failed to get passphrase: {e}") from e
 
     ####################################################################################################################
-    """ 
-    ############################################# MAIN MENUS ###########################################################
-    """
-
+    """ MAIN MENUS """
+    ####################################################################################################################
     @log_method
     def _create_button_for_main_menu_item(
             self,
@@ -931,7 +953,11 @@ class View(customtkinter.CTk):
             raise MenuCreationError(f"006 Failed to create Seedkeeper menu: {e}") from e
 
     @log_method
-    def _seedkeeper_lateral_menu(self, state=None, frame=None):
+    def _seedkeeper_lateral_menu(
+            self,
+            state=None,
+            frame=None
+    ) -> customtkinter.CTkFrame:
         try:
             logger.info("001 Starting Seedkeeper lateral menu creation")
             if self.menu:
@@ -981,7 +1007,7 @@ class View(customtkinter.CTk):
             self._create_button_for_main_menu_item(menu_frame, "Import",
                                                    "import_icon.png" if self.controller.cc.card_present else "import_locked_icon.png",
                                                    0.40, 0.51, state=state,
-                                                   command=self.show_import_secret if self.controller.cc.card_present else None,
+                                                   command=self.show_view_import_secret if self.controller.cc.card_present else None,
                                                    text_color="white" if self.controller.cc.card_present else "grey")
             self._create_button_for_main_menu_item(menu_frame, "Logs",
                                                    "logs_icon.png" if self.controller.cc.card_present else "settings_locked_icon.png",
@@ -1043,7 +1069,7 @@ class View(customtkinter.CTk):
             self,
             state=None,
             frame=None
-    ):
+    ) -> customtkinter.CTkFrame:
         try:
             logger.info("001 Starting Satochip-utils lateral menu creation")
             if state is None:
@@ -1171,10 +1197,11 @@ class View(customtkinter.CTk):
             logger.error(f"005 Unexpected error in _delete_satochip_utils_menu: {e}", exc_info=True)
             raise MenuDeletionError(f"006 Failed to delete Satochip-utils menu: {e}") from e
 
-    ########################################
-    # MENU SELECTION
-    ########################################
+    ####################################################################################################################
+    """ METHODS TO DISPLAY A VIEW FROM MENU SELECTION """
+    ####################################################################################################################
 
+    # SEEDKEEPER MENU SELECTION
     @log_method
     def show_view_my_secrets(self):
         try:
@@ -1205,7 +1232,7 @@ class View(customtkinter.CTk):
             raise ViewError(f"005 Failed to show generate secret: {e}")
 
     @log_method
-    def show_import_secret(self):
+    def show_view_import_secret(self):
         try:
             logger.info("001 Initiating secret import process")
             self.welcome_in_display = False
@@ -1236,6 +1263,7 @@ class View(customtkinter.CTk):
             logger.error(f"006 Error in show_settings: {e}", exc_info=True)
             raise ViewError(f"007 Failed to show settings: {e}") from e
 
+    # SETTINGS MENU SELECTION
     @log_method
     def show_view_start_setup(self):
         try:
@@ -1395,10 +1423,8 @@ class View(customtkinter.CTk):
             raise UIElementError(f"018 Failed to show popup: {e}") from e
 
     ####################################################################################################################
-    """ 
-    ################################################### VIEWS #########################################################
-    """
-
+    """ VIEWS """
+    ####################################################################################################################
     @log_method
     def view_welcome(self):
         self.welcome_in_display = True
@@ -1529,6 +1555,9 @@ class View(customtkinter.CTk):
             logger.error(f"026 Unexpected error in welcome method: {e}", exc_info=True)
             raise ViewError(f"027 Unexpected error while initializing welcome view: {e}") from e
 
+    ####################################################################################################################
+    """ SPECIFIC VIEW OF SATOCHIP UTIL FOR MANAGE SETTINGS """
+    ####################################################################################################################
     @log_method
     def view_start_setup(self):
 
@@ -1843,8 +1872,15 @@ class View(customtkinter.CTk):
             logger.error(f"023 Unexpected error in view_edit_label: {e}", exc_info=True)
             raise ViewError(f"024 Failed to create edit label view: {e}") from e
 
+
+    ####################################################################################################################
+    """ SPECIFIC VIEW OF SEEDKEEPER """
+    ####################################################################################################################
     @log_method
-    def view_my_secrets(self, secrets_data: Dict[str, Any]):
+    def view_my_secrets(
+            self,
+            secrets_data: Dict[str, Any]
+    ):
         @log_method
         def _create_secrets_frame():
             try:
@@ -2778,7 +2814,7 @@ class View(customtkinter.CTk):
                             save_button = self._create_button("Save on card", command=_save_mnemonic_to_import_on_card)
                             save_button.place(relx=0.85, rely=0.93, anchor="center")
 
-                            back_button = self._create_button("Back", command=self.show_import_secret)
+                            back_button = self._create_button("Back", command=self.show_view_import_secret)
                             back_button.place(relx=0.65, rely=0.93, anchor="center")
 
                             logger.log(SUCCESS, "011 Import mnemonic content created successfully")
@@ -2906,7 +2942,7 @@ class View(customtkinter.CTk):
                             save_button.place(relx=0.85, rely=0.93, anchor="center")
 
                             back_button = self._create_button("Back",
-                                                              command=self.show_import_secret)
+                                                              command=self.show_view_import_secret)
                             back_button.place(relx=0.65, rely=0.93, anchor="center")
 
                             logger.log(SUCCESS, "052 Import login/password widgets created successfully")
@@ -2962,7 +2998,10 @@ class View(customtkinter.CTk):
             logger.info("072 Exiting import_secret method")
 
     @log_method
-    def view_logs_details(self, logs_details):
+    def view_logs_details(
+            self,
+            logs_details
+    ):
         try:
             logger.info("001 Starting view_logs_details method")
 
