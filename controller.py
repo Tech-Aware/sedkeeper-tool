@@ -207,6 +207,46 @@ class Controller:
 
         return False
 
+    @log_method
+    def edit_label(self, label):
+        try:
+            logger.info("001 Starting edit_label method")
+            logger.info(f"002 New label to set: {label}")
+
+            response, sw1, sw2 = self.cc.card_set_label(label)
+
+            if sw1 == 0x90 and sw2 == 0x00:
+                logger.log(SUCCESS, f"003 New label set successfully: {label}")
+                self.view.show(
+                    "SUCCESS",
+                    "New label set successfully",
+                    "Ok",
+                    self.view.view_start_setup,
+                    "./pictures_db/edit_label_icon_ws.jpg"
+                )
+            else:
+                error_code = hex(sw1 * 256 + sw2)
+                logger.warning(f"004 Failed to set new label. Error code: {error_code}")
+                self.view.show(
+                    "ERROR",
+                    f"Failed to set label (code {error_code})",
+                    "Ok",
+                    None,
+                    "./pictures_db/edit_label_icon_ws.jpg"
+                )
+
+            logger.log(SUCCESS, "005 edit_label method completed")
+        except Exception as e:
+            logger.error(f"006 Unexpected error in edit_label: {e}", exc_info=True)
+            self.view.show(
+                "ERROR",
+                f"Failed to edit label: {e}",
+                "Ok",
+                None,
+                "./pictures_db/edit_label_icon_ws.jpg"
+            )
+            raise ControllerError(f"007 Failed to edit label: {e}") from e
+
     ####################################################################################################################
     """MY SECRETS MANAGEMENT"""
     ####################################################################################################################
