@@ -1106,7 +1106,7 @@ class View(customtkinter.CTk):
 
             if self.controller.cc.setup_done:
                 self._create_button_for_main_menu_item(menu_frame, "Edit Label", "edit_label_icon.png", 0.40, 0.537,
-                                                       state='normal', command=lambda: [None])
+                                                       state='normal', command=self.show_view_edit_label)
             else:
                 self._create_button_for_main_menu_item(menu_frame, "Edit Label", "edit_label_locked_icon.jpg", 0.40,
                                                        0.546,
@@ -1267,6 +1267,22 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"004 Error in show_view_change_pin: {e}", exc_info=True)
             raise ViewError(f"005 Failed to show change PIN view: {e}") from e
+
+    @log_method
+    def show_view_edit_label(self):
+        try:
+            logger.info("001 Starting show_view_edit_label method")
+
+            self.welcome_in_display = False
+            self._clear_welcome_frame()
+            self._clear_current_frame()
+            logger.debug("002 Welcome and current frames cleared")
+
+            self.view_edit_label()
+            logger.log(SUCCESS, "003 Edit label view displayed successfully")
+        except Exception as e:
+            logger.error(f"004 Error in show_view_edit_label: {e}", exc_info=True)
+            raise ViewError(f"005 Failed to show edit label view: {e}") from e
 
     @log_method
     def show_help(self):
@@ -1721,6 +1737,111 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"020 Unexpected error in change_pin: {e}", exc_info=True)
             raise ViewError(f"021 Failed to display change PIN view: {e}")
+
+    @log_method
+    def view_edit_label(self):
+        try:
+            logger.info("001 Starting view_edit_label method")
+
+            @log_method
+            def _create_edit_label_frame():
+                try:
+                    logger.info("002 Creating edit label frame")
+                    self._create_frame()
+                    logger.log(SUCCESS, "003 Edit label frame created successfully")
+                except Exception as e:
+                    logger.error(f"004 Error creating edit label frame: {e}", exc_info=True)
+                    raise FrameCreationError(f"005 Failed to create edit label frame: {e}") from e
+
+            @log_method
+            def _create_edit_label_header():
+                try:
+                    logger.info("006 Creating edit label header")
+                    header_text = "Edit Label"
+                    self.header = self._create_an_header(header_text, "edit_label_icon_ws.jpg")
+                    self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                    logger.log(SUCCESS, "007 Edit label header created successfully")
+                except Exception as e:
+                    logger.error(f"008 Error creating edit label header: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to create edit label header: {e}") from e
+
+            @log_method
+            def _create_edit_label_content():
+                try:
+                    logger.info("010 Creating edit label content")
+
+                    instructions = [
+                        f"Edit the label of your {self.controller.cc.card_type}.",
+                        "The label is a tag that identifies your card. It can be used to distinguish",
+                        "several cards, or to associate it with a person, a name or a story."
+                    ]
+
+                    for i, text in enumerate(instructions):
+                        label = self._create_label(text)
+                        label.place(relx=0.05, rely=0.20 + i * 0.05, anchor="w")
+
+                    label_entries = [
+                        ("Label:", 0.40, "edit_card_entry")
+                    ]
+
+                    for label_text, rely, entry_name in label_entries:
+                        label = self._create_label(label_text)
+                        label.configure(font=self._make_text_bold(18))
+                        label.place(relx=0.05, rely=rely, anchor="w")
+
+                        entry = self._create_entry()
+                        entry.place(relx=0.05, rely=rely + 0.05, anchor="w")
+                        setattr(self, entry_name, entry)
+
+                    self.after(100, self.edit_card_entry.focus_force)
+
+                    logger.log(SUCCESS, "011 Edit label content created successfully")
+                except Exception as e:
+                    logger.error(f"012 Error creating edit label content: {e}", exc_info=True)
+                    raise UIElementError(f"013 Failed to create edit label content: {e}") from e
+
+            @log_method
+            def _create_edit_label_buttons():
+                try:
+                    logger.info("014 Creating edit label buttons")
+                    self.cancel_button = self._create_button("Cancel", command=self.show_view_start_setup)
+                    self.cancel_button.place(relx=0.63, rely=0.9, anchor="w")
+
+                    self.finish_button = self._create_button("Change it", command=lambda: self.controller.edit_label(
+                        self.edit_card_entry.get()))
+                    self.finish_button.place(relx=0.8, rely=0.9, anchor="w")
+                    self.bind('<Return>', lambda event: self.controller.edit_label(self.edit_card_entry.get()))
+                    logger.log(SUCCESS, "015 Edit label buttons created successfully")
+                except Exception as e:
+                    logger.error(f"016 Error creating edit label buttons: {e}", exc_info=True)
+                    raise UIElementError(f"017 Failed to create edit label buttons: {e}") from e
+
+            @log_method
+            def _handle_card_verification():
+                try:
+                    logger.info("018 Handling card verification")
+                    if self.controller.cc.card_type != "Satodime":
+                        if self.controller.cc.is_pin_set():
+                            self.controller.cc.card_verify_PIN_simple()
+                        else:
+                            self.controller.PIN_dialog(f'Unlock your {self.controller.cc.card_type}')
+                    logger.log(SUCCESS, "019 Card verification handled successfully")
+                except Exception as e:
+                    logger.error(f"020 Error handling card verification: {e}", exc_info=True)
+                    raise ViewError(f"021 Failed to handle card verification: {e}") from e
+
+            self._clear_current_frame()
+            _create_edit_label_frame()
+            _create_edit_label_header()
+            _create_edit_label_content()
+            _create_edit_label_buttons()
+            _handle_card_verification()
+            self.create_satochip_utils_menu()
+
+            logger.log(SUCCESS, "022 Edit label view created successfully")
+        except Exception as e:
+            logger.error(f"023 Unexpected error in view_edit_label: {e}", exc_info=True)
+            raise ViewError(f"024 Failed to create edit label view: {e}") from e
 
     @log_method
     def view_my_secrets(self, secrets_data: Dict[str, Any]):
