@@ -749,6 +749,39 @@ class View(customtkinter.CTk):
             logger.error(f"004 Unexpected error in _create_canvas: {e}", exc_info=True)
             raise CanvasCreationError(f"005 Failed to create canvas: {e}") from e
 
+    @log_method
+    def _update_textbox(self, text):
+        try:
+            logger.info("001 Starting _update_textbox method")
+
+            @log_method
+            def _clear_textbox():
+                try:
+                    logger.info("002 Clearing the current content of the textbox")
+                    self.text_box.delete(1.0, "end")
+                    logger.log(SUCCESS, "003 Textbox content cleared successfully")
+                except Exception as e:
+                    logger.error(f"004 Error clearing textbox content: {e}", exc_info=True)
+                    raise UIElementError(f"005 Failed to clear textbox content: {e}") from e
+
+            @log_method
+            def _insert_new_text():
+                try:
+                    logger.info("006 Inserting new text into the textbox")
+                    self.text_box.insert("end", text)
+                    logger.log(SUCCESS, "007 New text inserted into textbox successfully")
+                except Exception as e:
+                    logger.error(f"008 Error inserting new text into textbox: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to insert new text into textbox: {e}") from e
+
+            _clear_textbox()
+            _insert_new_text()
+
+            logger.log(SUCCESS, "010 _update_textbox method completed successfully")
+        except Exception as e:
+            logger.error(f"011 Unexpected error in _update_textbox: {e}", exc_info=True)
+            raise ViewError(f"012 Failed to update textbox: {e}") from e
+
     ########################################
     # FOR CARD INFORMATION
     ########################################
@@ -1150,7 +1183,7 @@ class View(customtkinter.CTk):
                 self._create_button_for_main_menu_item(menu_frame, "Check Authenticity", "check_authenticity_icon.png",
                                                        0.47, 0.775,
                                                        state='normal', command=lambda: [before_check_authenticity(),
-                                                                                        None])
+                                                                                        self.show_view_check_authenticity()])
             else:
                 self._create_button_for_main_menu_item(menu_frame, "Check Authenticity",
                                                        "check_authenticity_locked_icon.jpg", 0.47, 0.66,
@@ -1311,6 +1344,22 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"004 Error in show_view_edit_label: {e}", exc_info=True)
             raise ViewError(f"005 Failed to show edit label view: {e}") from e
+
+    @log_method
+    def show_view_check_authenticity(self):
+        try:
+            logger.info("001 Starting show_view_check_authenticity method")
+
+            self.welcome_in_display = False
+            self._clear_welcome_frame()
+            self._clear_current_frame()
+            logger.debug("002 Welcome and current frames cleared")
+
+            self.view_check_authenticity()
+            logger.log(SUCCESS, "003 Check authenticity view displayed successfully")
+        except Exception as e:
+            logger.error(f"004 Error in show_view_check_authenticity: {e}", exc_info=True)
+            raise ViewError(f"005 Failed to show check authenticity view: {e}") from e
 
     @log_method
     def show_help(self):
@@ -1871,6 +1920,166 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"023 Unexpected error in view_edit_label: {e}", exc_info=True)
             raise ViewError(f"024 Failed to create edit label view: {e}") from e
+
+    @log_method
+    def view_check_authenticity(self):
+        try:
+            logger.info("001 Starting view_check_authenticity method")
+
+            @log_method
+            def _create_check_authenticity_frame():
+                try:
+                    logger.info("002 Creating check authenticity frame")
+                    self._create_frame()
+                    logger.log(SUCCESS, "003 Check authenticity frame created successfully")
+                except Exception as e:
+                    logger.error(f"004 Error creating check authenticity frame: {e}", exc_info=True)
+                    raise FrameCreationError(f"005 Failed to create check authenticity frame: {e}") from e
+
+            @log_method
+            def _create_check_authenticity_header():
+                try:
+                    logger.info("006 Creating check authenticity header")
+                    self.header = self._create_an_header("Check authenticity", "check_authenticity_icon_ws.jpg")
+                    self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                    logger.log(SUCCESS, "007 Check authenticity header created successfully")
+                except Exception as e:
+                    logger.error(f"008 Error creating check authenticity header: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to create check authenticity header: {e}") from e
+
+            @log_method
+            def _create_check_authenticity_content():
+                try:
+                    logger.info("010 Creating check authenticity content")
+                    text = self._create_label("Check whether or not you have a genuine Satochip card.")
+                    text.place(relx=0.045, rely=0.20, anchor="w")
+
+                    status_label = self._create_label("Status:")
+                    status_label.configure(font=self._make_text_bold())
+                    status_label.place(relx=0.045, rely=0.27, anchor="w")
+
+                    if self.controller.cc.card_present:
+                        _display_authenticity_status()
+
+                    _create_certificate_radio_buttons()
+                    _create_text_box()
+
+                    logger.log(SUCCESS, "011 Check authenticity content created successfully")
+                except Exception as e:
+                    logger.error(f"012 Error creating check authenticity content: {e}", exc_info=True)
+                    raise UIElementError(f"013 Failed to create check authenticity content: {e}") from e
+
+            @log_method
+            def _display_authenticity_status():
+                icon_path = "./pictures_db/icon_genuine_card.jpg" if is_authentic else "./pictures_db/icon_not_genuine_card.jpg"
+                status_text = "Your card is authentic. " if is_authentic else "Your card is not authentic. "
+
+                icon_image = Image.open(icon_path)
+                icon = customtkinter.CTkImage(light_image=icon_image, size=(30, 30))
+                icon_label = customtkinter.CTkLabel(self.current_frame, image=icon, text=status_text,
+                                                    compound='right', bg_color="whitesmoke", fg_color="whitesmoke",
+                                                    font=customtkinter.CTkFont(family="Outfit", size=18,
+                                                                               weight="normal"))
+                icon_label.place(relx=0.15, rely=0.267, anchor="w")
+
+                if not is_authentic:
+                    _display_warning_message()
+
+            @log_method
+            def _display_warning_message():
+                warning_texts = [
+                    ("Warning!", 0.7, True),
+                    ("We could not authenticate the issuer of this card.", 0.75, False),
+                    ("If you did not load the card applet by yourself, be extremely careful!", 0.8, False),
+                    ("Contact support@satochip.io to report any suspicious device.", 0.85, False)
+                ]
+
+                for text, rely, is_bold in warning_texts:
+                    label = self._create_label(text)
+                    if is_bold:
+                        label.configure(font=self._make_text_bold())
+                    label.place(relx=0.33, rely=rely, anchor="w")
+
+            @log_method
+            def _create_certificate_radio_buttons():
+                self.certificate_radio_value = customtkinter.StringVar(value="")
+                radio_buttons = [
+                    ("Root CA certificate", "root_ca_certificate", 0.045),
+                    ("Sub CA certificate", "sub_ca_certificate", 0.345),
+                    ("Device certificate", "device_certificate", 0.645)
+                ]
+
+                for text, value, relx in radio_buttons:
+                    radio = customtkinter.CTkRadioButton(self.current_frame, text=text,
+                                                         variable=self.certificate_radio_value, value=value,
+                                                         font=customtkinter.CTkFont(family="Outfit", size=14,
+                                                                                    weight="normal"),
+                                                         bg_color="whitesmoke", fg_color="green", hover_color="green",
+                                                         command=_update_radio_selection)
+                    radio.place(relx=relx, rely=0.35, anchor="w")
+
+            @log_method
+            def _create_text_box():
+                self.text_box = customtkinter.CTkTextbox(self, corner_radius=10,
+                                                         bg_color='whitesmoke', fg_color=BG_BUTTON,
+                                                         border_color=BG_BUTTON, border_width=0,
+                                                         width=581, height=228 if is_authentic else 150,
+                                                         text_color="grey",
+                                                         font=customtkinter.CTkFont(family="Outfit", size=13,
+                                                                                    weight="normal"))
+
+            @log_method
+            def _update_radio_selection():
+                try:
+                    selection = self.certificate_radio_value.get()
+                    logger.info(f"014 Radio button selected: {selection}")
+                    text_content = {
+                        'root_ca_certificate': txt_ca,
+                        'sub_ca_certificate': txt_subca,
+                        'device_certificate': txt_device
+                    }.get(selection, "")
+                    self._update_textbox(text_content)
+                    self.text_box.place(relx=0.28, rely=0.4, anchor="nw")
+                except Exception as e:
+                    logger.error(f"015 Error updating radio selection: {e}", exc_info=True)
+                    raise UIElementError(f"016 Failed to update radio selection: {e}") from e
+
+            @log_method
+            def _create_check_authenticity_buttons():
+                try:
+                    logger.info("017 Creating check authenticity buttons")
+                    self.cancel_button = self._create_button("Back", command=self.view_start_setup)
+                    self.cancel_button.place(relx=0.8, rely=0.9, anchor="w")
+                    logger.log(SUCCESS, "018 Check authenticity buttons created successfully")
+                except Exception as e:
+                    logger.error(f"019 Error creating check authenticity buttons: {e}", exc_info=True)
+                    raise UIElementError(f"020 Failed to create check authenticity buttons: {e}") from e
+
+            # Main execution
+            if self.controller.cc.card_present:
+                logger.info("021 Card detected: checking authenticity")
+                is_authentic, txt_ca, txt_subca, txt_device, txt_error = self.controller.cc.card_verify_authenticity()
+                if txt_error:
+                    txt_device = f"{txt_error}\n------------------\n{txt_device}"
+
+            self._clear_current_frame()
+            _create_check_authenticity_frame()
+            _create_check_authenticity_header()
+            _create_check_authenticity_content()
+            _create_check_authenticity_buttons()
+            self.create_satochip_utils_menu()
+
+            if self.controller.cc.card_type != "Satodime":
+                try:
+                    self.controller.cc.card_verify_PIN_simple()
+                except Exception as e:
+                    logger.error(f"022 Error verifying PIN: {e}", exc_info=True)
+                    self.view_start_setup()
+
+            logger.log(SUCCESS, "023 view_check_authenticity completed successfully")
+        except Exception as e:
+            logger.error(f"024 Unexpected error in view_check_authenticity: {e}", exc_info=True)
+            raise ViewError(f"025 Failed to create check authenticity view: {e}") from e
 
 
     ####################################################################################################################
