@@ -1050,7 +1050,7 @@ class View(customtkinter.CTk):
             self._create_button_for_main_menu_item(menu_frame, "Settings",
                                                    "settings_icon.png" if self.controller.cc.card_present else "settings_locked_icon.png",
                                                    0.74, 0.546, state=state,
-                                                   command=self.show_view_settings if self.controller.cc.card_present else None,
+                                                   command=self.show_view_about if self.controller.cc.card_present else None,
                                                    text_color="white" if self.controller.cc.card_present else "grey")
             self._create_button_for_main_menu_item(menu_frame, "Help", "help_icon.png", 0.81, 0.49, state='normal',
                                                    command=self.show_help, text_color="white")
@@ -1190,19 +1190,9 @@ class View(customtkinter.CTk):
                                                        state='disabled',
                                                        command=lambda: None)
             if self.controller.cc.card_present:
-                if self.controller.cc.card_type != "Satodime":
-                    self._create_button_for_main_menu_item(menu_frame, "Reset my Card", "reset_icon.png", 0.54, 0.665,
-                                                           state='normal', command=lambda: None)
-                else:
-                    self._create_button_for_main_menu_item(menu_frame, "Reset my Card", "reset_locked_icon.jpg",
-                                                           0.54, 0.595,
-                                                           state='disabled', command=lambda: None)
                 self._create_button_for_main_menu_item(menu_frame, "About", "about_icon.jpg", rel_y=0.73, rel_x=0.476,
-                                                       state='normal', command=lambda: None)
+                                                       state='normal', command=self.show_view_about)
             else:
-                self._create_button_for_main_menu_item(menu_frame, "Reset my Card", "reset_locked_icon.jpg", 0.54,
-                                                       0.595,
-                                                       state='disabled', command=lambda: None)
                 self._create_button_for_main_menu_item(menu_frame, "About", "about_locked_icon.jpg", rel_y=0.73,
                                                        rel_x=0.5052, state='disabled', command=lambda: None)
 
@@ -1360,6 +1350,20 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"004 Error in show_view_check_authenticity: {e}", exc_info=True)
             raise ViewError(f"005 Failed to show check authenticity view: {e}") from e
+
+    @log_method
+    def show_view_about(self):
+        try:
+            logger.info("001 Initiating about view process")
+            self.welcome_in_display = False
+            self._clear_welcome_frame()
+            self._clear_current_frame()
+            logger.debug("002 Welcome and current frames cleared")
+            self.view_about()
+            logger.log(SUCCESS, "003 About view displayed successfully")
+        except Exception as e:
+            logger.error(f"004 Error in show_view_about: {e}", exc_info=True)
+            raise ViewError(f"005 Failed to show about view: {e}") from e
 
     @log_method
     def show_help(self):
@@ -2080,6 +2084,161 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"024 Unexpected error in view_check_authenticity: {e}", exc_info=True)
             raise ViewError(f"025 Failed to create check authenticity view: {e}") from e
+
+
+    @log_method
+    def view_about(self):
+        try:
+            logger.info("001 Starting view_about method")
+
+            @log_method
+            def _create_about_frame():
+                try:
+                    logger.info("002 Creating about frame")
+                    self._create_frame()
+                    logger.log(SUCCESS, "003 About frame created successfully")
+                except Exception as e:
+                    logger.error(f"004 Error creating about frame: {e}", exc_info=True)
+                    raise FrameCreationError(f"005 Failed to create about frame: {e}") from e
+
+            @log_method
+            def _create_about_header():
+                try:
+                    logger.info("006 Creating about header")
+                    self.header = self._create_an_header("About", "about_icon_ws.jpg")
+                    self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                    logger.log(SUCCESS, "007 About header created successfully")
+                except Exception as e:
+                    logger.error(f"008 Error creating about header: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to create about header: {e}") from e
+
+            @log_method
+            def _load_background_image():
+                try:
+                    logger.info("010 Loading background image")
+                    self.background_photo = self._create_background_photo(self, "./pictures_db/about.png")
+                    self.canvas = self._create_canvas()
+                    self.canvas.place(relx=0.5, rely=0.3, anchor="center")
+                    self.canvas.create_image(0, 0, image=self.background_photo, anchor="nw")
+                    logger.log(SUCCESS, "011 Background image loaded successfully")
+                except Exception as e:
+                    logger.error(f"012 Error loading background image: {e}", exc_info=True)
+                    raise UIElementError(f"013 Failed to load background image: {e}") from e
+
+            @log_method
+            def _create_card_information():
+                try:
+                    logger.info("014 Creating card information section")
+                    card_information = self._create_label("Card information")
+                    card_information.place(relx=0.05, rely=0.25, anchor="w")
+                    card_information.configure(font=self._make_text_bold())
+
+                    applet_version = self._create_label(
+                        f"Applet version: {self.controller.card_status['applet_full_version_string']}")
+                    applet_version.place(relx=0.05, rely=0.33)
+
+                    if self.controller.cc.card_type == "Satodime" or self.controller.cc.is_pin_set():
+                        _create_authenticated_card_info()
+
+                    logger.log(SUCCESS, "015 Card information section created successfully")
+                except Exception as e:
+                    logger.error(f"016 Error creating card information section: {e}", exc_info=True)
+                    raise UIElementError(f"017 Failed to create card information section: {e}") from e
+
+            @log_method
+            def _create_authenticated_card_info():
+                if self.controller.cc.card_type != "Satodime":
+                    self.controller.cc.card_verify_PIN_simple()
+                card_label_named = self._create_label(f"Label: [{self.controller.get_card_label_infos()}]")
+                is_authentic, _, _, _, _ = self.controller.cc.card_verify_authenticity()
+                card_genuine = self._create_label(f"Genuine: {'YES' if is_authentic else 'NO'}")
+                card_label_named.place(relx=0.05, rely=0.28)
+                card_genuine.place(relx=0.05, rely=0.38)
+
+            @log_method
+            def _create_card_configuration():
+                try:
+                    logger.info("018 Creating card configuration section")
+                    card_configuration = self._create_label("Card configuration")
+                    card_configuration.place(relx=0.05, rely=0.48, anchor="w")
+                    card_configuration.configure(font=self._make_text_bold())
+
+                    if self.controller.cc.card_type != "Satodime":
+                        pin_info = f"PIN counter:[{self.controller.card_status['PIN0_remaining_tries']}] tries remaining"
+                    else:
+                        pin_info = "No PIN required"
+                    self._create_label(pin_info).place(relx=0.05, rely=0.52)
+
+                    if self.controller.cc.card_type == "Satochip":
+                        two_fa_status = "2FA enabled" if self.controller.cc.needs_2FA else "2FA disabled"
+                        self._create_label(two_fa_status).place(relx=0.05, rely=0.58)
+
+                    logger.log(SUCCESS, "019 Card configuration section created successfully")
+                except Exception as e:
+                    logger.error(f"020 Error creating card configuration section: {e}", exc_info=True)
+                    raise UIElementError(f"021 Failed to create card configuration section: {e}") from e
+
+            @log_method
+            def _create_card_connectivity():
+                try:
+                    logger.info("022 Creating card connectivity section")
+                    card_connectivity = self._create_label("Card connectivity")
+                    card_connectivity.place(relx=0.05, rely=0.68, anchor="w")
+                    card_connectivity.configure(font=self._make_text_bold())
+
+                    nfc_status = {
+                        0: "NFC enabled",
+                        1: "NFC disabled",
+                    }.get(self.controller.cc.nfc_policy, "NFC: [BLOCKED]")
+                    self._create_label(nfc_status).place(relx=0.05, rely=0.715)
+
+                    logger.log(SUCCESS, "023 Card connectivity section created successfully")
+                except Exception as e:
+                    logger.error(f"024 Error creating card connectivity section: {e}", exc_info=True)
+                    raise UIElementError(f"025 Failed to create card connectivity section: {e}") from e
+
+            @log_method
+            def _create_software_information():
+                from version import  VERSION
+                try:
+                    logger.info("026 Creating software information section")
+                    software_information = self._create_label("Software information")
+                    software_information.place(relx=0.05, rely=0.81, anchor="w")
+                    software_information.configure(font=self._make_text_bold())
+                    self._create_label(f"SeedKeeper-Tool version: {VERSION}").place(relx=0.05, rely=0.83)
+                    self._create_label(f"Pysatochip version: {PYSATOCHIP_VERSION}").place(relx=0.05, rely=0.88)
+
+                    logger.log(SUCCESS, "027 Software information section created successfully")
+                except Exception as e:
+                    logger.error(f"028 Error creating software information section: {e}", exc_info=True)
+                    raise UIElementError(f"029 Failed to create software information section: {e}") from e
+
+            @log_method
+            def _create_return_button():
+                try:
+                    logger.info("005 Creating return button")
+                    return_button = self._create_button(text="Back",
+                                                        command=lambda: [self.show_view_my_secrets()])
+                    return_button.place(relx=0.95, rely=0.95, anchor="se")
+                    logger.log(SUCCESS, "006 Return button created successfully")
+                except Exception as e:
+                    logger.error(f"007 Error creating return button: {e}", exc_info=True)
+                    raise UIElementError(f"008 Failed to create return button: {e}") from e
+
+            _create_about_frame()
+            _load_background_image()
+            _create_about_header()
+            _create_card_information()
+            _create_card_configuration()
+            _create_card_connectivity()
+            _create_software_information()
+            _create_return_button()
+            self.create_satochip_utils_menu()
+
+            logger.log(SUCCESS, "037 view_about method completed successfully")
+        except Exception as e:
+            logger.error(f"038 Unexpected error in view_about: {e}", exc_info=True)
+            raise ViewError(f"039 Failed to display about view: {e}")
 
 
     ####################################################################################################################
@@ -3311,3 +3470,4 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"017 Unexpected error in view_logs_details: {e}", exc_info=True)
             raise ViewError(f"018 Failed to display logs details: {e}")
+
