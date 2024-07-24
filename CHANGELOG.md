@@ -2,30 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](git https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ### Added
-- New functionality in `view.py` for displaying logs:
-  - Implemented `view_logs_details` method with scrollable frame for better user experience
-  - Added comprehensive error handling for log display
-- New PIN change functionality in `view.py`:
-  - Implemented `view_change_pin` method with full UI and error handling
-- Enhanced `controller.py` with PIN change functionality:
-  - Added `change_card_pin` method with robust error handling
-  - Improved `get_logs` method to return formatted log data
-- New exception types in `exceptions.py` for PIN-related errors:
-  - Added `CardNotSuitableError`, `InvalidPinError`, `PinMismatchError`, and `PinChangeError`
-- Improved error handling and logging throughout both `view.py` and `controller.py`
-- New edit label functionality:
-  - Implemented `view_edit_label` method in `view.py`
-  - Added `edit_label` method in `controller.py`
+- New functionality in `view.py` for displaying About information:
+  - Implemented `view_about` method to show application and card details
+  - Added `show_view_about` method to handle About view initialization
+- New `get_card_label_infos` method in `controller.py` to retrieve card label information
+- Enhanced error handling and logging across both `view.py` and `controller.py`
 
 ### Changed
-- Updated various "show" methods in `view.py` to use new view names (e.g., `show_view_my_secrets`)
-- Refactored `view_change_pin` for better organization and error handling
-- Enhanced error handling in `change_card_pin` method in `controller.py`
+- Updated `_satochip_utils_lateral_menu` in `view.py` to include About button
+- Refactored `update_status` method in `view.py` for improved clarity and error management
+- Improved error handling in `edit_label` method of `controller.py`
+
+### Removed
+- Removed reset functionality from Satochip utils menu in `view.py`
+
+## [0.1.3] - 2024-07-21
+
+### Added
+- New functionality in `view.py` for importing secrets:
+  - Implemented `view_import_secret` method for secret import selection
+  - Added `_show_import_mnemonic` method for importing mnemonic secrets
+  - Added `_show_import_password` method for importing login/password secrets
+- Enhanced error handling in `view.py` with more specific exception types
+- Improved method signatures in `view.py` with type hints
+- Refactored existing methods in `view.py` for better organization
+- Enhanced logging throughout `view.py`
+- New `get_logs` method in `controller.py` for retrieving and formatting card logs
+- Improved error handling in `card_setup_native_seed` method in `controller.py`
+- Added section comments in `controller.py` for better code organization
+
+### Changed
+- Refactored method calls in `controller.py` for consistency (e.g., `start_setup` to `view_start_setup`)
+- Ensured consistent use of `@log_method` decorator in `controller.py`
+
+### Fixed
+- Enhanced logging in `controller.py` with more detailed debug messages
+
 
 ## [0.1.3] - 2024-07-20
 
