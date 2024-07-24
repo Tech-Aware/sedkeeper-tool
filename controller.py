@@ -247,6 +247,43 @@ class Controller:
             )
             raise ControllerError(f"007 Failed to edit label: {e}") from e
 
+    @log_method
+    def get_card_label_infos(self) -> Optional[str]:
+        """
+        Get the label information from the card.
+
+        Returns:
+            Optional[str]: The card label if present, None if no card or no label.
+        """
+        try:
+            logger.info("001 Starting get_card_label_infos method")
+
+            if not self.cc.card_present:
+                logger.info("002 No card present")
+                return None
+
+            response, sw1, sw2, label = self.cc.card_get_label()
+
+            if label is None:
+                logger.info("003 Label is None")
+                return None
+
+            if label == "":
+                logger.info("004 Label is Blank")
+                return ""
+
+            logger.info(f"005 Label found: {label}")
+            logger.log(SUCCESS, "006 Card label retrieved successfully")
+            return label
+
+        except CardError as e:
+            logger.error(f"007 CardError in get_card_label_infos: {e}", exc_info=True)
+            raise ControllerError(f"008 Failed to get card label: {e}") from e
+
+        except Exception as e:
+            logger.error(f"009 Unexpected error in get_card_label_infos: {e}", exc_info=True)
+            raise ControllerError(f"010 Unexpected error while getting card label: {e}") from e
+
     ####################################################################################################################
     """MY SECRETS MANAGEMENT"""
     ####################################################################################################################
