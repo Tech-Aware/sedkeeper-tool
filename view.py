@@ -2619,7 +2619,7 @@ class View(customtkinter.CTk):
                     type_label.place(relx=0.05, rely=0.35, anchor="w")
 
                     self.secret_type, secret_type_menu = self.create_option_list(
-                        ["Mnemonic seedphrase", "Couple login/password"],
+                        ["Mnemonic seedphrase", "Login/password"],
                         default_value="Mnemonic seedphrase",
                         width=555
                     )
@@ -3088,7 +3088,7 @@ class View(customtkinter.CTk):
                     type_label.place(relx=0.05, rely=0.35, anchor="w")
 
                     self.secret_type, secret_type_menu = self.create_option_list(
-                        ["Mnemonic seedphrase", "Couple login/password"],
+                        ["Mnemonic seedphrase", "Login/password"],
                         default_value="Mnemonic seedphrase",
                         width=555,
                     )
