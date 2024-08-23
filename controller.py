@@ -1,4 +1,5 @@
 import sys
+import os
 from typing import Optional, Dict, List, Callable, Any
 from functools import wraps
 import logging
@@ -85,9 +86,57 @@ class Controller:
         else:
             logger.error(f"Unknown request type: {request_type}")
             raise ControllerError(f"Unknown request type: {request_type}")
+
     ####################################################################################################################
     """PIN MANAGEMENT"""
     ####################################################################################################################
+    @log_method
+    def card_setup_native_pin(self, pin: str) -> bool:
+        try:
+            logger.info("001 Starting card_setup_native_pin method")
+            logger.info("002 Setting up card PIN and applet references")
+
+            pin_0: List = list(pin)
+            pin_tries_0: int = 0x05
+            ublk_tries_0: int = 0x01
+            ublk_0: List[int] = list(os.urandom(16))  # PUK code
+            pin_tries_1: int = 0x01
+            ublk_tries_1: int = 0x01
+            pin_1: List[int] = list(os.urandom(16))  # Second pin
+            ublk_1: List[int] = list(os.urandom(16))
+            secmemsize: int = 32  # Number of slots reserved in memory cache
+            memsize: int = 0x0000  # RFU
+            create_object_ACL: int = 0x01  # RFU
+            create_key_ACL: int = 0x01  # RFU
+            create_pin_ACL: int = 0x01  # RFU
+
+            logger.info("003 Sending setup native PIN command to card")
+            response, sw1, sw2 = self.cc.card_setup(
+                pin_tries_0, ublk_tries_0, pin_0, ublk_0,
+                pin_tries_1, ublk_tries_1, pin_1, ublk_1,
+                secmemsize, memsize,
+                create_object_ACL, create_key_ACL, create_pin_ACL
+            )
+            logger.info(f"004 Response from card: {response}, sw1: {hex(sw1)}, sw2: {hex(sw2)}")
+
+            if sw1 != 0x90 or sw2 != 0x00:
+                error_msg = f"Unable to set up applet! sw12={hex(sw1)} {hex(sw2)}"
+                logger.warning(f"005 {error_msg}")
+                self.view.show("ERROR", error_msg, "Ok", None, "./pictures_db/change_pin_popup_icon.jpg")
+                return False
+            else:
+                logger.log(SUCCESS, "006 Applet setup successfully")
+                self.setup_done = True
+                self.view.update_status()
+                self.view.show_view_start_setup()
+                return True
+
+        except Exception as e:
+            logger.error(f"007 Unexpected error in card_setup_native_pin: {e}", exc_info=True)
+            self.view.show("ERROR", "An unexpected error occurred during PIN setup", "Ok", None,
+                           "./pictures_db/change_pin_popup_icon.jpg")
+            raise ControllerError(f"008 Failed to set up native PIN: {e}") from e
+
     @log_method
     def verify_pin(self, pin: str):
         try:
@@ -103,6 +152,7 @@ class Controller:
             logger.error(f"Unexpected error during PIN verification: {e}")
             raise
 
+
     def PIN_dialog(self, msg):
         try:
             logger.info("Entering PIN_dialog method")
@@ -115,12 +165,12 @@ class Controller:
             while True:
                 try:
                     logger.debug("Requesting passphrase")
-                    pin = self.request('get_passphrase', msg)
+                    pin = self.view.get_passphrase(msg)
                     logger.debug(f"Passphrase received: pin={'***' if pin else None}")
 
                     if pin is None:
                         logger.info("Passphrase request cancelled or window closed")
-                        self.request("show", "INFO", 'Device cannot be unlocked without PIN code!', 'Ok',
+                        self.view.show("INFO", 'Device cannot be unlocked without PIN code!', 'Ok',
                                      lambda: switch_unlock_to_false_and_quit(), "./pictures_db/change_pin_popup_icon.jpg")
                         break
 
@@ -140,7 +190,10 @@ class Controller:
                         logger.info("PIN length is valid")
                         pin = pin.encode('utf8')
                         try:
-                            self.cc.card_verify_PIN_simple(pin)
+                            if self.cc.setup_done:
+                                self.cc.card_verify_PIN_simple(pin)
+                            else:
+                                self.card_setup_native_pin(pin)
                             break
                         except Exception as e:
                             logger.info("exception from pin dialog")
@@ -154,6 +207,7 @@ class Controller:
         except Exception as e:
             logger.critical(f"An unexpected error occurred in PIN_dialog: {e}", exc_info=True)
             return (False, None)
+
 
     @log_method
     def change_card_pin(self, current_pin, new_pin, new_pin_confirm):
