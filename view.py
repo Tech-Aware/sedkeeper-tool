@@ -85,6 +85,7 @@ class View(customtkinter.CTk):
 
     ####################################################################################################################
     """ UTILS """
+
     ####################################################################################################################
 
     ########################################
@@ -440,7 +441,7 @@ class View(customtkinter.CTk):
             text: Optional[str] = None,
             command: Optional[Callable] = None,
             frame: Optional[customtkinter.CTkFrame] = None
-) -> customtkinter.CTkButton:
+    ) -> customtkinter.CTkButton:
         try:
             logger.info(f"001 Starting button creation with text: '{text}'")
             button = None
@@ -851,7 +852,7 @@ class View(customtkinter.CTk):
         try:
             logger.info("001 Initiating passphrase entry")
             popup = customtkinter.CTkToplevel(self)
-            popup.title("PIN Required")
+            popup.title("PIN Required") if self.controller.cc.setup_done else popup.title("PIN setup")
             popup.configure(fg_color='whitesmoke')
             popup.protocol("WM_DELETE_WINDOW", lambda: [self.show(
                 "WARNING",
@@ -866,9 +867,15 @@ class View(customtkinter.CTk):
 
             icon_image = Image.open("./pictures_db/change_pin_popup_icon.jpg")
             icon = customtkinter.CTkImage(light_image=icon_image, size=(30, 30))
-            icon_label = customtkinter.CTkLabel(popup, image=icon, text="\nEnter the PIN code of your card.",
-                                                compound='top',
-                                                font=customtkinter.CTkFont(family="Outfit", size=18, weight="normal"))
+            icon_label = customtkinter.CTkLabel(
+                popup, image=icon, text="\nEnter the PIN code of your card." if self.controller.cc.setup_done else "Create a PIN code",
+                compound='top',
+                font=customtkinter.CTkFont(
+                    family="Outfit",
+                    size=18,
+                    weight="normal"
+                )
+            )
             icon_label.pack(pady=(10, 5))
             logger.debug("003 Icon and label added to popup")
 
@@ -910,6 +917,7 @@ class View(customtkinter.CTk):
 
     ####################################################################################################################
     """ MAIN MENUS """
+
     ####################################################################################################################
     @log_method
     def _create_button_for_main_menu_item(
@@ -1222,6 +1230,7 @@ class View(customtkinter.CTk):
 
     ####################################################################################################################
     """ METHODS TO DISPLAY A VIEW FROM MENU SELECTION """
+
     ####################################################################################################################
 
     # SEEDKEEPER MENU SELECTION
@@ -1477,6 +1486,7 @@ class View(customtkinter.CTk):
 
     ####################################################################################################################
     """ VIEWS """
+
     ####################################################################################################################
     @log_method
     def view_welcome(self):
@@ -1610,6 +1620,7 @@ class View(customtkinter.CTk):
 
     ####################################################################################################################
     """ SPECIFIC VIEW OF SATOCHIP UTIL FOR MANAGE SETTINGS """
+
     ####################################################################################################################
     @log_method
     def view_start_setup(self):
@@ -2085,7 +2096,6 @@ class View(customtkinter.CTk):
             logger.error(f"024 Unexpected error in view_check_authenticity: {e}", exc_info=True)
             raise ViewError(f"025 Failed to create check authenticity view: {e}") from e
 
-
     @log_method
     def view_about(self):
         try:
@@ -2199,7 +2209,7 @@ class View(customtkinter.CTk):
 
             @log_method
             def _create_software_information():
-                from version import  VERSION
+                from version import VERSION
                 try:
                     logger.info("026 Creating software information section")
                     software_information = self._create_label("Software information")
@@ -2240,9 +2250,9 @@ class View(customtkinter.CTk):
             logger.error(f"038 Unexpected error in view_about: {e}", exc_info=True)
             raise ViewError(f"039 Failed to display about view: {e}")
 
-
     ####################################################################################################################
     """ SPECIFIC VIEW OF SEEDKEEPER """
+
     ####################################################################################################################
     @log_method
     def view_my_secrets(
@@ -2360,7 +2370,6 @@ class View(customtkinter.CTk):
                             cell_button.default_color = fg_color  # Store the default color
                             cell_button.pack(side='left', expand=True, fill="both")
                             buttons.append(cell_button)
-
 
                         # Bind hover events to change color for all buttons in the row
                         for button in buttons:
@@ -3470,4 +3479,3 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"017 Unexpected error in view_logs_details: {e}", exc_info=True)
             raise ViewError(f"018 Failed to display logs details: {e}")
-
