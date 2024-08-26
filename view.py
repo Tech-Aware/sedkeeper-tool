@@ -3186,8 +3186,7 @@ class View(customtkinter.CTk):
                             self.passphrase_entry = customtkinter.CTkEntry(
                                 self.current_frame,
                                 width=300,
-                                placeholder_text="Enter passphrase (optional)",
-                                show="*"
+                                placeholder_text="Enter passphrase (optional)"
                             )
                             self.passphrase_entry.place(relx=0.28, rely=0.57, anchor="w")
                             self.passphrase_entry.configure(state="disabled")
