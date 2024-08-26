@@ -453,16 +453,19 @@ class Controller:
             MNEMONIC = Mnemonic(language="english")
             if MNEMONIC.check(mnemonic):
                 logger.info("002 Imported seed is valid")
-                seed = Mnemonic.to_seed(mnemonic, passphrase)
+                if passphrase:
+                    seed = Mnemonic.to_seed(mnemonic, passphrase)
+                else:
+                    seed = Mnemonic.to_seed(mnemonic)
                 self.card_setup_native_seed(seed)
                 logger.log(SUCCESS, "003 Seed imported successfully")
             else:
                 logger.warning("004 Imported seed is invalid")
                 self.view.show('WARNING', "Invalid BIP39 seedphrase, please retry.", 'Ok', None,
-                               "./pictures_db/icon_seed_popup.jpg")
+                               "./pictures_db/generate_icon_ws.png")
         except Exception as e:
             logger.error(f"005 Error importing seed: {e}", exc_info=True)
-            self.view.show("ERROR", "Failed to import seed", "Ok", None, "./pictures_db/icon_seed_popup.jpg")
+            self.view.show("ERROR", "Failed to import seed", "Ok", None, "./pictures_db/generate_icon_ws.png")
 
     @log_method
     def card_setup_native_seed(self, seed):
