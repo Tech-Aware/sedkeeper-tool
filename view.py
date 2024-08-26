@@ -3050,6 +3050,7 @@ class View(customtkinter.CTk):
         finally:
             logger.info("107 Exiting generate_secret method")
 
+    @log_method
     def view_import_secret(self):
         try:
             @log_method
@@ -3222,6 +3223,20 @@ class View(customtkinter.CTk):
                             logger.info("019 Saving mnemonic to card")
                             mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
                             passphrase = self.passphrase_entry.get() if self.use_passphrase.get() else None
+                            selected_word_count = int(self.radio_value.get())
+
+                            # Verification of mnemonic length
+                            actual_word_count = len(mnemonic.split())
+
+                            if actual_word_count != selected_word_count:
+                                logger.warning("022 Mnemonic word count does not match the selected count")
+                                raise ValueError(f"Selected {selected_word_count}-word mnemonic, but {actual_word_count} provided.")
+
+                            # Verify that passphrase selected is not empty
+                            if self.use_passphrase.get() and not passphrase:
+                                logger.warning("023 Passphrase checkbox is checked but no passphrase provided")
+                                raise ValueError("Passphrase checked but not provided.")
+
                             if mnemonic and passphrase:
                                 self.controller.import_seed(mnemonic, passphrase)
                                 logger.log(SUCCESS, "020 Mnemonic with passphrase saved to card successfully")
@@ -3231,8 +3246,10 @@ class View(customtkinter.CTk):
                             else:
                                 logger.warning("022 No mnemonic to save")
                                 raise ValueError("023 No mnemonic generated")
+
                         except ValueError as e:
                             logger.error(f"024 Error saving mnemonic to card: {e}", exc_info=True)
+                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/generate_icon_ws.png")
                             raise UIElementError(f"025 Failed to save mnemonic to card: {e}") from e
                         except Exception as e:
                             logger.error(f"026 Error saving mnemonic to card: {e}", exc_info=True)
