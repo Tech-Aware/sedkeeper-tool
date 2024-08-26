@@ -48,45 +48,50 @@ class View(customtkinter.CTk):
                 raise InitializationError("004 Attribute initialization failed") from e
 
             try:
+                self._set_package_directory()
+                logger.debug("004 Package directory set successfully")
+            except InitializationError as e:
+                logger.error(f"005 Failed to set package directory: {e}")
+                raise InitializationError("007 Package directory setup failed") from e
+
+            try:
                 self._setup_main_window()
-                logger.debug("005 Main window set up successfully")
+                logger.debug("006 Main window set up successfully")
             except tkinter.TclError as e:
-                logger.error(f"006 Failed to set up main window: {e}")
-                raise InitializationError("007 Main window setup failed") from e
+                logger.error(f"007 Failed to set up main window: {e}")
+                raise InitializationError("008 Main window setup failed") from e
 
             try:
                 self._declare_widgets()
-                logger.debug("008 Widgets declared successfully")
+                logger.debug("009 Widgets declared successfully")
             except tkinter.TclError as e:
-                logger.error(f"009 Failed to declare widgets: {e}")
-                raise InitializationError("010 Widget declaration failed") from e
+                logger.error(f"010 Failed to declare widgets: {e}")
+                raise InitializationError("011 Widget declaration failed") from e
 
             try:
                 self._set_close_protocol()
-                logger.debug("011 Close protocol set successfully")
+                logger.debug("012 Close protocol set successfully")
             except AttributeError as e:
-                logger.error(f"012 Failed to set close protocol: {e}")
-                raise InitializationError("013 Close protocol setup failed") from e
+                logger.error(f"013 Failed to set close protocol: {e}")
+                raise InitializationError("014 Close protocol setup failed") from e
 
             try:
                 self.controller = Controller(None, self, loglevel=loglevel)
-                logger.debug("014 Controller initialized successfully")
+                logger.debug("015 Controller initialized successfully")
             except Exception as e:
-                logger.error(f"015 Failed to initialize controller: {e}")
-                raise InitializationError("016 Controller initialization failed") from e
+                logger.error(f"016 Failed to initialize controller: {e}")
+                raise InitializationError("017 Controller initialization failed") from e
 
-            logger.log(SUCCESS, "017 View initialization completed successfully")
+            logger.log(SUCCESS, "018 View initialization completed successfully")
         except InitializationError as e:
-            logger.critical(f"018 View initialization failed: {e}", exc_info=True)
+            logger.critical(f"019 View initialization failed: {e}", exc_info=True)
             raise
         except Exception as e:
-            logger.critical(f"019 Unexpected error during View initialization: {e}", exc_info=True)
-            raise InitializationError(f"020 Unexpected error during View initialization: {e}") from e
+            logger.critical(f"020 Unexpected error during View initialization: {e}", exc_info=True)
+            raise InitializationError(f"021 Unexpected error during View initialization: {e}") from e
 
     ####################################################################################################################
     """ UTILS """
-
-    ####################################################################################################################
 
     ########################################
     # FOR INITIALIZATION
@@ -131,9 +136,29 @@ class View(customtkinter.CTk):
             logger.error(f"008 Unexpected error in _initialize_attributes: {e}", exc_info=True)
             raise InitializationError(f"009 Unexpected error during attribute initialization: {e}") from e
 
-    ########################################
-    # FOR MAIN WINDOW
-    ########################################
+    @log_method
+    def _set_package_directory(self):
+        try:
+            logger.info("001 Setting package directory")
+            if getattr(sys, 'frozen', False):
+                # Running in a bundle
+                logger.debug("002 Running in a bundled application")
+                if sys.platform == "darwin":  # MacOS
+                    self.pkg_dir = os.path.join(sys._MEIPASS, "seedkeeper")
+                    logger.debug("003 Running on MacOS, setting pkg_dir with 'seedkeeper' subdirectory")
+                else:
+                    self.pkg_dir = sys._MEIPASS
+                    logger.debug("004 Running on non-MacOS platform, setting pkg_dir to sys._MEIPASS")
+            else:
+                # Running live
+                self.pkg_dir = os.path.split(os.path.realpath(__file__))[0]
+                logger.debug("005 Running live, setting pkg_dir to script directory")
+
+            logger.debug(f"006 PKGDIR set to: {self.pkg_dir}")
+            logger.log(SUCCESS, "007 Package directory set successfully")
+        except Exception as e:
+            logger.error(f"008 Error setting package directory: {e}", exc_info=True)
+            raise InitializationError(f"009 Failed to set package directory: {e}") from e
 
     @log_method
     def _setup_main_window(self):
@@ -224,6 +249,7 @@ class View(customtkinter.CTk):
             logger.error(f"005 Unexpected error in _set_close_protocol: {e}", exc_info=True)
             raise UIElementError(f"006 Unexpected error during close protocol setup: {e}") from e
 
+    # for main windows
     @log_method
     def _on_close_app(self):
         try:
@@ -1061,7 +1087,7 @@ class View(customtkinter.CTk):
                                                    command=self.show_view_about if self.controller.cc.card_present else None,
                                                    text_color="white" if self.controller.cc.card_present else "grey")
             self._create_button_for_main_menu_item(menu_frame, "Help", "help_icon.png", 0.81, 0.49, state='normal',
-                                                   command=self.show_help, text_color="white")
+                                                   command=self.show_view_help, text_color="white")
             self._create_button_for_main_menu_item(menu_frame, "Go to the webshop", "webshop_icon.png", 0.95, 0.82,
                                                    state='normal',
                                                    command=lambda: webbrowser.open("https://satochip.io/shop/", new=2))
@@ -1375,11 +1401,15 @@ class View(customtkinter.CTk):
             raise ViewError(f"005 Failed to show about view: {e}") from e
 
     @log_method
-    def show_help(self):
+    def show_view_help(self):
         try:
             logger.info("001 Displaying help information")
-            # TODO: Implement full functionality to show help
-            logger.log(SUCCESS, "002 Help information displayed successfully")
+            self.welcome_in_display = False
+            self._clear_current_frame()
+            self._clear_welcome_frame()
+            logger.debug("002 Welcome and current frames cleared")
+            self.view_help()
+            logger.log(SUCCESS, "003 Help information displayed successfully")
         except Exception as e:
             logger.error(f"003 Error in show_help: {e}", exc_info=True)
             raise ViewError(f"004 Failed to show help: {e}") from e
@@ -3479,3 +3509,138 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"017 Unexpected error in view_logs_details: {e}", exc_info=True)
             raise ViewError(f"018 Failed to display logs details: {e}")
+
+    @log_method
+    def view_help(self):
+        try:
+            logger.info("001 Starting view_help method")
+
+            @log_method
+            def _create_help_frame():
+                try:
+                    logger.info("002 Creating help frame")
+                    self._create_frame()
+                    logger.log(SUCCESS, "003 Help frame created successfully")
+                except Exception as e:
+                    logger.error(f"004 Error creating help frame: {e}", exc_info=True)
+                    raise FrameCreationError(f"005 Failed to create help frame: {e}") from e
+
+            @log_method
+            def _create_help_header():
+                try:
+                    logger.info("006 Creating help header")
+                    self.header = self._create_an_header("Help", "about_icon_ws.jpg")
+                    self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                    logger.log(SUCCESS, "007 Help header created successfully")
+                except Exception as e:
+                    logger.error(f"008 Error creating help header: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to create help header: {e}") from e
+
+            @log_method
+            def _create_help_content():
+                try:
+                    logger.info("010 Creating help content")
+                    text = self._create_label("Choose a language to find some help:")
+                    text.place(relx=0.045, rely=0.20, anchor="w")
+
+                    _create_text_box()
+                    _create_language_radio_buttons()
+
+                    logger.log(SUCCESS, "011 Help content created successfully")
+                except Exception as e:
+                    logger.error(f"012 Error creating help content: {e}", exc_info=True)
+                    raise UIElementError(f"013 Failed to create help content: {e}") from e
+
+            @log_method
+            def _create_language_radio_buttons():
+                self.language_radio_value = customtkinter.StringVar(value="English")  # Default to English
+                radio_buttons = [
+                    ("French", "Français", 0.045),
+                    ("English", "English", 0.345),
+                ]
+
+                for text, value, rel_x in radio_buttons:
+                    radio = customtkinter.CTkRadioButton(self.current_frame, text=text,
+                                                         variable=self.language_radio_value, value=value,
+                                                         font=customtkinter.CTkFont(family="Outfit", size=14,
+                                                                                    weight="normal"),
+                                                         bg_color="whitesmoke", fg_color="green", hover_color="green",
+                                                         command=_update_radio_selection)
+                    radio.place(relx=rel_x, rely=0.28, anchor="w")
+
+                # Initial load of help text
+                _update_radio_selection()
+
+            @log_method
+            def _create_text_box():
+                self.text_box = customtkinter.CTkTextbox(self.current_frame, corner_radius=10,
+                                                         bg_color='whitesmoke', fg_color=BG_BUTTON,
+                                                         border_color=BG_BUTTON, border_width=0,
+                                                         width=700, height=280,
+                                                         text_color="grey",
+                                                         font=customtkinter.CTkFont(family="Outfit", size=13,
+                                                                                    weight="normal"))
+                self.text_box.place(relx=0.04, rely=0.35, anchor="nw")
+
+            @log_method
+            def _load_help_texts():
+                self.help_texts = {}
+                languages = ["Français", "English"]
+                for lang in languages:
+                    file_path = os.path.join(self.pkg_dir, 'help', f"{lang}.txt")
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            self.help_texts[lang] = f.read().strip()
+                    except FileNotFoundError:
+                        logger.error(f"014 Help file not found: {file_path}")
+                        self.help_texts[lang] = f"Help text for {lang} is not available."
+                    except Exception as e:
+                        logger.error(f"015 Error loading help text for {lang}: {e}", exc_info=True)
+                        self.help_texts[lang] = f"An error occurred while loading help text for {lang}."
+
+            @log_method
+            def _update_radio_selection():
+                try:
+                    selection = self.language_radio_value.get()
+                    logger.info(f"016 Radio button selected: {selection}")
+
+                    if selection in self.help_texts:
+                        text_content = self.help_texts[selection]
+                    else:
+                        logger.warning(f"017 No help text found for language: {selection}")
+                        text_content = "Help text not available for this language."
+
+                    self._update_textbox(text_content)
+                except Exception as e:
+                    logger.error(f"018 Error updating radio selection: {e}", exc_info=True)
+                    raise UIElementError(f"019 Failed to update radio selection: {e}") from e
+
+            @log_method
+            def _create_back_button():
+                try:
+                    logger.info("020 Creating back button")
+                    self.back_button = self._create_button("Back", command=self.view_start_setup)
+                    self.back_button.place(relx=0.8, rely=0.9, anchor="w")
+                    logger.log(SUCCESS, "021 Back button created successfully")
+                except Exception as e:
+                    logger.error(f"022 Error creating back button: {e}", exc_info=True)
+                    raise UIElementError(f"023 Failed to create back button: {e}") from e
+
+            try:
+                self._clear_current_frame()
+                _load_help_texts()
+                _create_help_frame()
+                _create_help_header()
+                _create_help_content()
+                _create_back_button()
+                self.create_seedkeeper_menu()
+
+                logger.log(SUCCESS, "024 view_help completed successfully")
+            except Exception as e:
+                logger.error(f"025 Unexpected error in view_help: {e}", exc_info=True)
+                raise ViewError(f"026 Failed to create help view: {e}") from e
+
+        except Exception as e:
+            logger.error(f"027 Unexpected error in view_help: {e}", exc_info=True)
+            self.view.show("ERROR", "An unexpected error occurred while displaying help", "Ok", None,
+                           "./pictures_db/help_icon.png")
