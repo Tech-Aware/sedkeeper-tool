@@ -1224,11 +1224,11 @@ class View(customtkinter.CTk):
                                                        state='disabled',
                                                        command=lambda: None)
             if self.controller.cc.card_present:
-                self._create_button_for_main_menu_item(menu_frame, "About", "about_icon.jpg", rel_y=0.73, rel_x=0.476,
-                                                       state='normal', command=self.show_view_about)
+                self._create_button_for_main_menu_item(menu_frame, "Back to seedkeeper", "back_to_seedkeeper_icon.png", rel_y=0.73, rel_x=0.84,
+                                                       state='normal', command=self.show_view_my_secrets)
             else:
-                self._create_button_for_main_menu_item(menu_frame, "About", "about_locked_icon.jpg", rel_y=0.73,
-                                                       rel_x=0.5052, state='disabled', command=lambda: None)
+                self._create_button_for_main_menu_item(menu_frame, "Back to seedkeeper", "about_locked_icon.jpg", rel_y=0.73,
+                                                       rel_x=0.84, state='disabled', command=self.show_view_my_secrets)
 
             self._create_button_for_main_menu_item(menu_frame, "Go to the Webshop", "webshop_icon.png", 0.95, 0.805,
                                                    state='normal',
@@ -1257,7 +1257,6 @@ class View(customtkinter.CTk):
     ####################################################################################################################
     """ METHODS TO DISPLAY A VIEW FROM MENU SELECTION """
 
-    ####################################################################################################################
 
     # SEEDKEEPER MENU SELECTION
     @log_method
@@ -1320,6 +1319,20 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"006 Error in show_settings: {e}", exc_info=True)
             raise ViewError(f"007 Failed to show settings: {e}") from e
+
+    @log_method
+    def show_view_help(self):
+        try:
+            logger.info("001 Displaying help information")
+            self.welcome_in_display = False
+            self._clear_current_frame()
+            self._clear_welcome_frame()
+            logger.debug("002 Welcome and current frames cleared")
+            self.view_help()
+            logger.log(SUCCESS, "003 Help information displayed successfully")
+        except Exception as e:
+            logger.error(f"003 Error in show_help: {e}", exc_info=True)
+            raise ViewError(f"004 Failed to show help: {e}") from e
 
     # SETTINGS MENU SELECTION
     @log_method
@@ -1400,19 +1413,6 @@ class View(customtkinter.CTk):
             logger.error(f"004 Error in show_view_about: {e}", exc_info=True)
             raise ViewError(f"005 Failed to show about view: {e}") from e
 
-    @log_method
-    def show_view_help(self):
-        try:
-            logger.info("001 Displaying help information")
-            self.welcome_in_display = False
-            self._clear_current_frame()
-            self._clear_welcome_frame()
-            logger.debug("002 Welcome and current frames cleared")
-            self.view_help()
-            logger.log(SUCCESS, "003 Help information displayed successfully")
-        except Exception as e:
-            logger.error(f"003 Error in show_help: {e}", exc_info=True)
-            raise ViewError(f"004 Failed to show help: {e}") from e
 
     ########################################
     # POPUP
@@ -1651,7 +1651,6 @@ class View(customtkinter.CTk):
     ####################################################################################################################
     """ SPECIFIC VIEW OF SATOCHIP UTIL FOR MANAGE SETTINGS """
 
-    ####################################################################################################################
     @log_method
     def view_start_setup(self):
 
@@ -1664,18 +1663,6 @@ class View(customtkinter.CTk):
             except Exception as e:
                 logger.error(f"003 Error creating start setup frame: {e}", exc_info=True)
                 raise FrameCreationError(f"004 Failed to create start setup frame: {e}") from e
-
-        @log_method
-        def _create_return_button():
-            try:
-                logger.info("005 Creating return button")
-                return_button = self._create_button(text="Back",
-                                                    command=lambda: [self.show_view_my_secrets()])
-                return_button.place(relx=0.95, rely=0.95, anchor="se")
-                logger.log(SUCCESS, "006 Return button created successfully")
-            except Exception as e:
-                logger.error(f"007 Error creating return button: {e}", exc_info=True)
-                raise UIElementError(f"008 Failed to create return button: {e}") from e
 
         @log_method
         def _create_start_setup_header():
@@ -1747,7 +1734,6 @@ class View(customtkinter.CTk):
             _load_background_image()
             _create_start_setup_header()
             _create_start_setup_labels()
-            _create_return_button()
             self.create_satochip_utils_menu()
             logger.log(SUCCESS, "026 Start setup view initialized successfully")
         except (FrameCreationError, UIElementError) as e:
@@ -2253,18 +2239,6 @@ class View(customtkinter.CTk):
                     logger.error(f"028 Error creating software information section: {e}", exc_info=True)
                     raise UIElementError(f"029 Failed to create software information section: {e}") from e
 
-            @log_method
-            def _create_return_button():
-                try:
-                    logger.info("005 Creating return button")
-                    return_button = self._create_button(text="Back",
-                                                        command=lambda: [self.show_view_my_secrets()])
-                    return_button.place(relx=0.95, rely=0.95, anchor="se")
-                    logger.log(SUCCESS, "006 Return button created successfully")
-                except Exception as e:
-                    logger.error(f"007 Error creating return button: {e}", exc_info=True)
-                    raise UIElementError(f"008 Failed to create return button: {e}") from e
-
             _create_about_frame()
             _load_background_image()
             _create_about_header()
@@ -2272,7 +2246,6 @@ class View(customtkinter.CTk):
             _create_card_configuration()
             _create_card_connectivity()
             _create_software_information()
-            _create_return_button()
             self.create_satochip_utils_menu()
 
             logger.log(SUCCESS, "037 view_about method completed successfully")
