@@ -5,7 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [Unreleased]
+
+### Added
+- New help functionality in `view.py`:
+  - Implemented `view_help` method to display help information with language selection
+  - Added support for loading and displaying help texts from files
+- New `_set_package_directory` method in `view.py` for cross-platform application path handling
+
+### Changed
+- Updated PIN dialog in `view.py` to handle both verification and initial PIN setup
+- Refactored "Couple login/password" to "Login/password" for consistency in `view.py`
+- Enhanced error handling and logging in new and existing methods in `view.py`
+
+
+## [0.1.5] - 2024-07-23
+
+### Added
+- New PIN setup functionality in `controller.py`:
+  - Implemented `card_setup_native_pin` method for initial PIN setup
+- Enhanced `get_passphrase` method in `view.py`:
+  - Added support for both PIN setup and verification scenarios
+  - Implemented dynamic popup title and label text based on setup status
+
+### Changed
+- Modified PIN dialog in `controller.py` to handle both verification and setup
+- Updated secret type selection in `view.py`:
+  - Changed "Couple login/password" to "Login/password" in dropdown options
+  - Applied this change to both "Generate" and "Import" screens
+
+### Improved
+- Enhanced error handling and logging in PIN management functions
+- Improved overall user experience during PIN setup and verification processes
+
+
+## [0.1.4] - 2024-07-22
 
 ### Added
 - New functionality in `view.py` for displaying About information:
