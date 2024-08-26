@@ -894,7 +894,8 @@ class View(customtkinter.CTk):
             icon_image = Image.open("./pictures_db/change_pin_popup_icon.jpg")
             icon = customtkinter.CTkImage(light_image=icon_image, size=(30, 30))
             icon_label = customtkinter.CTkLabel(
-                popup, image=icon, text="\nEnter the PIN code of your card." if self.controller.cc.setup_done else "Create a PIN code",
+                popup, image=icon,
+                text="\nEnter the PIN code of your card." if self.controller.cc.setup_done else "Create a PIN code",
                 compound='top',
                 font=customtkinter.CTkFont(
                     family="Outfit",
@@ -1224,10 +1225,12 @@ class View(customtkinter.CTk):
                                                        state='disabled',
                                                        command=lambda: None)
             if self.controller.cc.card_present:
-                self._create_button_for_main_menu_item(menu_frame, "Back to seedkeeper", "back_to_seedkeeper_icon.png", rel_y=0.73, rel_x=0.84,
+                self._create_button_for_main_menu_item(menu_frame, "Back to seedkeeper", "back_to_seedkeeper_icon.png",
+                                                       rel_y=0.73, rel_x=0.84,
                                                        state='normal', command=self.show_view_my_secrets)
             else:
-                self._create_button_for_main_menu_item(menu_frame, "Back to seedkeeper", "about_locked_icon.jpg", rel_y=0.73,
+                self._create_button_for_main_menu_item(menu_frame, "Back to seedkeeper", "about_locked_icon.jpg",
+                                                       rel_y=0.73,
                                                        rel_x=0.84, state='disabled', command=self.show_view_my_secrets)
 
             self._create_button_for_main_menu_item(menu_frame, "Go to the Webshop", "webshop_icon.png", 0.95, 0.805,
@@ -1256,7 +1259,6 @@ class View(customtkinter.CTk):
 
     ####################################################################################################################
     """ METHODS TO DISPLAY A VIEW FROM MENU SELECTION """
-
 
     # SEEDKEEPER MENU SELECTION
     @log_method
@@ -1412,7 +1414,6 @@ class View(customtkinter.CTk):
         except Exception as e:
             logger.error(f"004 Error in show_view_about: {e}", exc_info=True)
             raise ViewError(f"005 Failed to show about view: {e}") from e
-
 
     ########################################
     # POPUP
@@ -2593,7 +2594,7 @@ class View(customtkinter.CTk):
                         if selected_type == "Mnemonic seedphrase":
                             logger.debug("011 Mnemonic seedphrase selected")
                             _show_generate_mnemonic()
-                        elif selected_type == "Couple login/password":
+                        elif selected_type == "Login/password":
                             logger.debug("012 Couple login/password selected")
                             _show_generate_password()
                         else:
@@ -2671,8 +2672,8 @@ class View(customtkinter.CTk):
                             label = self._create_label("Label:")
                             label.place(relx=0.05, rely=0.20, anchor="nw")
 
-                            label_name = self._create_entry()
-                            label_name.place(relx=0.04, rely=0.25, anchor="nw")
+                            self.mnemonic_label_name = self._create_entry()
+                            self.mnemonic_label_name.place(relx=0.04, rely=0.25, anchor="nw")
 
                             self.radio_value = customtkinter.StringVar(value="12")
                             self.use_passphrase = customtkinter.BooleanVar(value=False)
@@ -2779,14 +2780,30 @@ class View(customtkinter.CTk):
                             logger.info("046 Saving mnemonic to card")
                             mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
                             passphrase = self.passphrase_entry.get() if self.use_passphrase.get() else None
+
+                            label_text = self.mnemonic_label_name.get().strip()
+                            if not label_text:
+                                logger.warning("Label field is empty; cannot save mnemonic.")
+                                raise ValueError("Please provide a label before saving.")
+
+                            # Verify that passphrase selected is not empty
+                            if self.use_passphrase.get() and not passphrase:
+                                logger.warning("023 Passphrase checkbox is checked but no passphrase provided")
+                                raise ValueError("Passphrase checked but not provided.")
+
                             if mnemonic:
-                                self.controller.import_seed(mnemonic, passphrase)
-                                logger.log(SUCCESS, "047 Mnemonic saved to card successfully")
+                                if passphrase:
+                                    self.controller.import_seed(mnemonic, passphrase)
+                                    logger.log(SUCCESS, "047 Mnemonic with passphrase saved to card successfully")
+                                else:
+                                    self.controller.import_seed(mnemonic)
+                                    logger.log(SUCCESS, "047 Mnemonic without passphrase saved to card successfully")
                             else:
                                 logger.warning("048 No mnemonic to save")
                                 raise ValueError("049 No mnemonic generated")
                         except ValueError as e:
                             logger.error(f"050 Error saving mnemonic to card: {e}", exc_info=True)
+                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/generate_icon_ws.png")
                             raise UIElementError(f"051 Failed to save mnemonic to card: {e}") from e
                         except Exception as e:
                             logger.error(f"052 Error saving mnemonic to card: {e}", exc_info=True)
@@ -2822,7 +2839,7 @@ class View(customtkinter.CTk):
                     def _create_generate_password_header():
                         try:
                             logger.info("062 Creating generate login/password header")
-                            header_text = "Generate couple login/password"
+                            header_text = "Generate login/password"
                             self.header = self._create_an_header(header_text, "generate_icon_ws.png")
                             self.header.place(relx=0.03, rely=0.08, anchor="nw")
                             logger.log(SUCCESS, "063 Generate login/password header created successfully")
@@ -2832,20 +2849,55 @@ class View(customtkinter.CTk):
 
                     @log_method
                     def _generate_new_password():
+                        import random
                         try:
                             logger.info("066 Generating new login/password")
-                            generated_password = "example_password"  # TODO: implement the password generation into controller
+                            if not self.slider_moved:
+                                logger.warning("Slider has not been moved; cannot generate password.")
+                                raise ValueError(
+                                    "Adjust the slider to select the password length.")
+
+                            # Récupération de la longueur sélectionnée
+                            password_length = int(self.length_slider.get())
+                            print(password_length)
+
+                            # Récupération des types de caractères sélectionnés
+                            char_pool = ""
+                            if self.var_abc.get():
+                                char_pool += "abcdefghijklmnopqrstuvwxyz"
+                            if self.var_ABC.get():
+                                char_pool += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                            if self.var_numeric.get():
+                                char_pool += "0123456789"
+                            if self.var_symbolic.get():
+                                char_pool += "!@#$%^&*()-_=+[]{}|;:,.<>?/~`"
+
+                            if not char_pool:
+                                logger.warning("No character sets selected for password generation")
+                                raise ValueError(
+                                    "No character sets selected. Please select at least one character set.")
+
+                            # Génération du mot de passe
+                            generated_password = ''.join(random.choice(char_pool) for _ in range(password_length))
+
+                            # Centrer le mot de passe dans la boîte de texte
                             textbox_width = 100
                             centered_text = generated_password.center(textbox_width)
 
+                            # Affichage du mot de passe dans la boîte de texte
                             self.password_text_box.configure(state='normal')
                             self.password_text_box.delete("1.0", customtkinter.END)
                             self.password_text_box.insert("1.0", centered_text)
                             self.password_text_box.configure(state='disabled')
+
                             logger.log(SUCCESS, "067 New login/password generated successfully")
-                        except Exception as e:
+                        except ValueError as e:
                             logger.error(f"068 Error generating login/password: {e}", exc_info=True)
+                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/generate_icon_ws.png")
                             raise UIElementError(f"069 Failed to generate login/password: {e}") from e
+                        except Exception as e:
+                            logger.error(f"070 Error generating login/password: {e}", exc_info=True)
+                            raise UIElementError(f"071 Failed to generate login/password: {e}") from e
 
                     @log_method
                     def _update_password():
@@ -2866,9 +2918,9 @@ class View(customtkinter.CTk):
                             label = self._create_label("Label:")
                             label.place(relx=0.04, rely=0.20, anchor="nw")
 
-                            label_name = self._create_entry()
-                            label_name.place(relx=0.12, rely=0.195, anchor="nw")
-                            label_name.configure(width=400)
+                            self.label_name = self._create_entry()
+                            self.label_name.place(relx=0.12, rely=0.195, anchor="nw")
+                            self.label_name.configure(width=400)
 
                             login = self._create_label("Login:")
                             login.place(relx=0.04, rely=0.32, anchor="nw")
@@ -2885,34 +2937,37 @@ class View(customtkinter.CTk):
                             url_name.configure(width=400)
 
                             logger.debug("075 Labels and entries created successfully")
+                            self.slider_moved = False
 
                             # Slide bar creation
                             @log_method
                             def _length_slider_event(value):
                                 try:
+                                    self.slider_moved = True
                                     int_value = int(value)
                                     length_value_label.configure(text=f"{int_value}")
-                                    length_value_label.place(x=length_slider.get() * 3.5 + 250, y=324)
+                                    length_value_label.place(x=self.length_slider.get() * 3.5 + 250, y=324)
 
                                     if int_value < 8:
-                                        length_slider.configure(button_color="red", progress_color="red")
+                                        self.length_slider.configure(button_color="red", progress_color="red")
                                     elif int_value == 8:
-                                        length_slider.configure(button_color="orange", progress_color="orange")
+                                        self.length_slider.configure(button_color="orange", progress_color="orange")
                                     elif int_value > 8:
-                                        length_slider.configure(button_color="green", progress_color="green")
+                                        self.length_slider.configure(button_color="green", progress_color="green")
 
                                     logger.debug(f"076 Slider value updated to {int_value}")
                                 except Exception as e:
                                     logger.error(f"077 Error updating slider value: {e}", exc_info=True)
                                     raise UIElementError(f"078 Failed to update slider value: {e}") from e
 
-                            length_slider = customtkinter.CTkSlider(self.current_frame,
-                                                                    from_=4, to=16,
-                                                                    command=_length_slider_event,
-                                                                    width=600,
-                                                                    progress_color=BG_HOVER_BUTTON,
-                                                                    button_color=BG_MAIN_MENU)
-                            length_slider.place(relx=0.15, rely=0.55)
+                            self.length_slider = customtkinter.CTkSlider(self.current_frame,
+                                                                         from_=4, to=16,
+                                                                         command=_length_slider_event,
+                                                                         width=600,
+                                                                         progress_color=BG_HOVER_BUTTON,
+                                                                         button_color=BG_MAIN_MENU)
+
+                            self.length_slider.place(relx=0.15, rely=0.55)
 
                             length = self._create_label("Length: ")
                             length.place(relx=0.04, rely=0.535)
@@ -3008,6 +3063,12 @@ class View(customtkinter.CTk):
                         try:
                             logger.info("087 Saving login/password to card")
                             password = self.password_text_box.get("1.0", customtkinter.END).strip()
+
+                            label_text = self.label_name.get().strip()
+                            if not label_text:
+                                logger.warning("Label field is empty; cannot save password.")
+                                raise ValueError("Provide a label before saving.")
+
                             if password:
                                 # TODO: Implement actual saving logic
                                 logger.log(SUCCESS, "088 Login/password saved to card successfully")
@@ -3016,6 +3077,7 @@ class View(customtkinter.CTk):
                                 raise ValueError("090 No password generated")
                         except ValueError as e:
                             logger.error(f"091 Error saving login/password to card: {e}", exc_info=True)
+                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/generate_icon_ws.png")
                             raise UIElementError(f"092 Failed to save login/password to card: {e}") from e
                         except Exception as e:
                             logger.error(f"093 Unexpected error saving login/password to card: {e}", exc_info=True)
@@ -3063,7 +3125,7 @@ class View(customtkinter.CTk):
                         if selected_type == "Mnemonic seedphrase":
                             logger.debug("002 Mnemonic seedphrase selected")
                             _show_import_mnemonic()
-                        elif selected_type == "Couple login/password":
+                        elif selected_type == "Login/password":
                             logger.debug("003 Couple login/password selected")
                             _show_import_password()
                         else:
@@ -3229,7 +3291,8 @@ class View(customtkinter.CTk):
 
                             if actual_word_count != selected_word_count:
                                 logger.warning("022 Mnemonic word count does not match the selected count")
-                                raise ValueError(f"Selected {selected_word_count}-word mnemonic, but {actual_word_count} provided.")
+                                raise ValueError(
+                                    f"Selected {selected_word_count}-word mnemonic, but {actual_word_count} provided.")
 
                             # Verify that passphrase selected is not empty
                             if self.use_passphrase.get() and not passphrase:
