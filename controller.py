@@ -4,6 +4,7 @@ from typing import Optional, Dict, List, Callable, Any
 from functools import wraps
 import logging
 import json
+import binascii
 from mnemonic import Mnemonic
 
 from pysatochip.CardConnector import (CardConnector, CardNotPresentError, PinRequiredError, WrongPinError,
@@ -550,3 +551,89 @@ class Controller:
         print(nbavail_logs)
 
         return nbtotal_logs, nbavail_logs, json_logs
+
+    @log_method
+    def import_password(self, label: str, login: str, password: str, url: str = None):
+        try:
+            logger.info("001 Starting password import process")
+
+            # Préparer les données pour l'importation
+            secret_type = 0x90  # Type pour mot de passe
+            export_rights = 0x01  # Droits d'exportation (à ajuster selon vos besoins)
+
+            # Créer le dictionnaire secret
+            secret_dic = {
+                'header': self.cc.make_header(secret_type, export_rights, label),
+                'secret_list': list(password.encode('utf-8'))
+            }
+
+            # Ajouter des métadonnées supplémentaires
+            metadata = f"login:{login}\nurl:{url}"
+            secret_dic['secret_list'] += list(metadata.encode('utf-8'))
+
+            # Appeler la méthode d'importation de secret
+            id, fingerprint = self.cc.seedkeeper_import_secret(secret_dic)
+
+            logger.log(SUCCESS, f"002 Password imported successfully with id: {id} and fingerprint: {fingerprint}")
+
+            return id, fingerprint
+
+        except SeedKeeperError as e:
+            logger.error(f"003 SeedKeeper error during password import: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"004 Unexpected error during password import: {str(e)}")
+            raise ControllerError(f"005 Failed to import password: {str(e)}") from e
+
+    @log_method
+    def decode_secret(self, secret_hex):
+        try:
+            logger.info("001 Starting secret decoding process")
+
+            # Convertir la chaîne hexadécimale en bytes
+            secret_bytes = binascii.unhexlify(secret_hex)
+
+            # Décoder en UTF-8
+            decoded_secret = secret_bytes.decode('utf-8')
+
+            # Initialiser le dictionnaire de résultats
+            result = {
+                'password': '',
+                'login': '',
+                'url': ''
+            }
+
+            # Séparer les parties
+            parts = decoded_secret.split('login:')
+
+            if len(parts) > 1:
+                # Le mot de passe est la première partie
+                result['password'] = parts[0].strip()
+
+                # Traiter le reste
+                remaining = parts[1]
+                login_url_parts = remaining.split('url:')
+
+                if len(login_url_parts) > 1:
+                    result['login'] = login_url_parts[0].strip()
+                    result['url'] = login_url_parts[1].strip()
+                else:
+                    result['login'] = remaining.strip()
+            else:
+                # Si 'login:' n'est pas trouvé, considérer tout comme mot de passe
+                result['password'] = decoded_secret
+
+            # Remplacer 'None' par une chaîne vide
+            for key in result:
+                if result[key] == 'None':
+                    result[key] = ''
+
+            logger.info("002 Secret successfully decoded")
+            return result
+
+        except binascii.Error as e:
+            logger.error(f"003 Error decoding hex string: {str(e)}")
+            raise ValueError("Invalid hexadecimal string") from e
+        except Exception as e:
+            logger.error(f"004 Unexpected error during secret decoding: {str(e)}")
+            raise ControllerError(f"Failed to decode secret: {str(e)}") from e
