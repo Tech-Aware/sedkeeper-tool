@@ -2310,7 +2310,7 @@ class View(customtkinter.CTk):
                     if secret['type'] == 'Password':
                         _create_password_secret_frame(secret_details)
                     elif secret['type'] == 'Masterseed':
-                        _create_mnemonic_secret_frame(secret_details)
+                        _create_masterseed_secret_frame(secret_details)
                     else:
                         logger.warning(f"011 Unsupported secret type: {secret['type']}")
                         _create_generic_secret_frame(secret_details)
@@ -2394,54 +2394,76 @@ class View(customtkinter.CTk):
         @log_method
         def _create_password_secret_frame(secret_details):
             try:
-                delete_button = self._create_button(text="Delete secret",
-                                                    command=lambda: None)  # self._delete_secret(secret['id']))
-                delete_button.place(relx=0.7, rely=0.15, anchor="se")
-
                 logger.info("001 Creating password secret frame")
-                # Create labels and entry fields
-                labels = ['Label:', 'Login:', 'URL:']
-                entries = {}
-
-                for i, label_text in enumerate(labels):
-                    try:
-                        label = self._create_label(label_text)
-                        label.place(relx=0.045, rely=0.2 + i * 0.15, anchor="w")
-                        logger.debug(f"002 Created label: {label_text}")
-
-                        entry = self._create_entry()
-                        entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
-                        entries[label_text.lower()[:-1]] = entry
-                        logger.debug(f"003 Created entry for: {label_text}")
-                    except Exception as e:
-                        logger.error(f"004 Error creating label or entry for {label_text}: {e}", exc_info=True)
-                        raise UIElementError(f"005 Failed to create label or entry for {label_text}: {e}") from e
-
-                # Set values
-                entries['label'].insert(0, secret_details['label'])
-                entries['login'].insert(0, "Placeholder Login")  # Replace with actual data
-                entries['url'].insert(0, "Placeholder URL")  # Replace with actual data
-                logger.debug("006 Entry values set")
-
-                # Create password field
+                # Create field for label login, url and password
                 try:
+                    label_label = self._create_label("Label:")
+                    label_label.place(relx=0.045, rely=0.2)
+                    self.label_entry = self._create_entry()
+                    self.label_entry.insert(0, secret_details['label'])
+                    self.label_entry.place(relx=0.045, rely=0.27)
+
+                    login_label = self._create_label("Login:")
+                    login_label.place(relx=0.045, rely=0.34)
+                    self.login_entry = self._create_entry(show_option="*")
+                    self.login_entry.place(relx=0.045, rely=0.41)
+
+                    url_label = self._create_label("Url:")
+                    url_label.place(relx=0.045, rely=0.48)
+                    self.url_entry = self._create_entry(show_option="*")
+                    self.url_entry.place(relx=0.045, rely=0.55)
+
                     password_label = self._create_label("Password:")
                     password_label.place(relx=0.045, rely=0.7, anchor="w")
 
-                    password_entry = self._create_entry()
-                    password_entry.configure(width=500)
-                    password_entry.place(relx=0.04, rely=0.77, anchor="w")
-                    password_entry.insert(0, "********")  # TODO implement method to retrieve password into controller
+                    self.password_entry = self._create_entry(show_option="*")
+                    self.password_entry.configure(width=500)
+                    self.password_entry.place(relx=0.04, rely=0.77, anchor="w")
+
+                    # Decode secret
+                    try:
+                        self.decoded_login_password = self.controller.decode_secret(secret_details['secret'])
+                    except ValueError as e:
+                        self.show("ERROR", f"Invalid secret format: {str(e)}", "Ok")
+                    except ControllerError as e:
+                        self.show("ERROR", f"Failed to decode secret: {str(e)}", "Ok")
+
+                    self.login_entry.insert(0, self.decoded_login_password['login'])
+                    self.url_entry.insert(0, self.decoded_login_password['url'])
+                    self.password_entry.insert(0, self.decoded_login_password['password'])
                     logger.debug("007 Password field created")
+
                 except Exception as e:
                     logger.error(f"008 Error creating password field: {e}", exc_info=True)
                     raise UIElementError(f"009 Failed to create password field: {e}") from e
 
+                def _toggle_password_visibility(login_entry, url_entry, password_entry):
+                    try:
+                        login_current_state = login_entry.cget("show")
+                        login_new_state = "" if login_current_state == "*" else "*"
+                        login_entry.configure(show=login_new_state)
+                        url_current_state =  url_entry.cget("show")
+                        url_new_state = "" if url_current_state == "*" else "*"
+                        url_entry.configure(show=url_new_state)
+                        password_current_state = password_entry.cget("show")
+                        password_new_state = "" if password_current_state == "*" else "*"
+                        password_entry.configure(show=password_new_state)
+                        logger.log(
+                            SUCCESS,
+                            f"{'hidden' if (login_new_state, url_new_state, password_new_state) == '*' else 'visible'}")
+                    except Exception as e:
+                        logger.error(f"018 Error toggling password visibility: {e}", exc_info=True)
+                        raise UIElementError(f"019 Failed to toggle password visibility: {e}") from e
+
                 # Create action buttons
                 try:
                     show_button = self._create_button(text="Show",
-                                                      command=lambda: None)  # self._toggle_password_visibility(password_entry))
+                                                      command=lambda: _toggle_password_visibility(self.login_entry, self.url_entry, self.password_entry))  # self._toggle_password_visibility(password_entry))
                     show_button.place(relx=0.9, rely=0.8, anchor="se")
+
+                    delete_button = self._create_button(text="Delete secret",
+                                                        command=lambda: None)  # self._delete_secret(secret['id']))
+                    delete_button.place(relx=0.75, rely=0.98, anchor="se")
                     logger.debug("010 Action buttons created")
                 except Exception as e:
                     logger.error(f"011 Error creating action buttons: {e}", exc_info=True)
@@ -2453,8 +2475,9 @@ class View(customtkinter.CTk):
                 raise ViewError(f"015 Failed to create password secret frame: {e}") from e
 
         @log_method
-        def _create_mnemonic_secret_frame(secret_details):
+        def _create_masterseed_secret_frame(secret_details):
             try:
+                print(secret_details)
                 logger.info("001 Creating mnemonic secret frame")
                 # Create labels and entry fields
                 labels = ['Label:', 'Mnemonic type:']
@@ -2875,7 +2898,7 @@ class View(customtkinter.CTk):
                             if not char_pool:
                                 logger.warning("No character sets selected for password generation")
                                 raise ValueError(
-                                    "No character sets selected. Please select at least one character set.")
+                                    "No character sets selected.\nPlease select at least one character set.")
 
                             # Génération du mot de passe
                             generated_password = ''.join(random.choice(char_pool) for _ in range(password_length))
@@ -2915,26 +2938,26 @@ class View(customtkinter.CTk):
                             logger.info("074 Creating generate login/password content")
 
                             # Label and entry creation
-                            label = self._create_label("Label:")
+                            label = self._create_label("Label*:")
                             label.place(relx=0.04, rely=0.20, anchor="nw")
 
-                            self.label_name = self._create_entry()
-                            self.label_name.place(relx=0.12, rely=0.195, anchor="nw")
-                            self.label_name.configure(width=400)
+                            self.generate_label_name = self._create_entry()
+                            self.generate_label_name.place(relx=0.12, rely=0.195, anchor="nw")
+                            self.generate_label_name.configure(width=400)
 
-                            login = self._create_label("Login:")
-                            login.place(relx=0.04, rely=0.32, anchor="nw")
+                            self.generate_login = self._create_label("Login*:")
+                            self.generate_login.place(relx=0.04, rely=0.32, anchor="nw")
 
-                            login_name = self._create_entry()
-                            login_name.place(relx=0.12, rely=0.318, anchor="nw")
-                            login_name.configure(width=400)
+                            self.generate_login_name = self._create_entry()
+                            self.generate_login_name.place(relx=0.12, rely=0.318, anchor="nw")
+                            self.generate_login_name.configure(width=400)
 
-                            url = self._create_label("Url:")
-                            url.place(relx=0.04, rely=0.44, anchor="nw")
+                            self.generate_url = self._create_label("Url:")
+                            self.generate_url.place(relx=0.04, rely=0.44, anchor="nw")
 
-                            url_name = self._create_entry()
-                            url_name.place(relx=0.12, rely=0.438, anchor="nw")
-                            url_name.configure(width=400)
+                            self.generate_url_name = self._create_entry()
+                            self.generate_url_name.place(relx=0.12, rely=0.438, anchor="nw")
+                            self.generate_url_name.configure(width=400)
 
                             logger.debug("075 Labels and entries created successfully")
                             self.slider_moved = False
@@ -2969,7 +2992,7 @@ class View(customtkinter.CTk):
 
                             self.length_slider.place(relx=0.15, rely=0.55)
 
-                            length = self._create_label("Length: ")
+                            length = self._create_label("Length*: ")
                             length.place(relx=0.04, rely=0.535)
 
                             length_value_label = self._create_label("6")
@@ -3062,16 +3085,25 @@ class View(customtkinter.CTk):
                     def _save_password_to_card():
                         try:
                             logger.info("087 Saving login/password to card")
+                            label = self.generate_label_name.get()
+                            login = self.generate_login_name.get()
+                            url = self.generate_url_name.get()
                             password = self.password_text_box.get("1.0", customtkinter.END).strip()
 
-                            label_text = self.label_name.get().strip()
-                            if not label_text:
-                                logger.warning("Label field is empty; cannot save password.")
-                                raise ValueError("Provide a label before saving.")
+                            if not label:
+                                logger.warning("No label provide for password encryption.")
+                                raise ValueError("Please, provide a label for password encryption")
+
+                            if not login:
+                                logger.warning("No login provide for password encryption")
+                                raise ValueError("Please, provide a login for password encryption")
 
                             if password:
-                                # TODO: Implement actual saving logic
-                                logger.log(SUCCESS, "088 Login/password saved to card successfully")
+                                id, fingerprint = self.controller.import_password(label, login, password, url)
+                                self.show("SUCCESS",
+                                          f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
+                                          "Ok")
+                                logger.log(SUCCESS, "058 Password saved to card successfully")
                             else:
                                 logger.warning("089 No password to save")
                                 raise ValueError("090 No password generated")
@@ -3363,23 +3395,23 @@ class View(customtkinter.CTk):
                             label = self._create_label("Label:")
                             label.place(relx=0.04, rely=0.20, anchor="nw")
 
-                            label_name = self._create_entry()
-                            label_name.place(relx=0.12, rely=0.195, anchor="nw")
-                            label_name.configure(width=400)
+                            self.password_label_name = self._create_entry()
+                            self.password_label_name.place(relx=0.12, rely=0.195, anchor="nw")
+                            self.password_label_name.configure(width=400)
 
                             login = self._create_label("Login:")
                             login.place(relx=0.04, rely=0.32, anchor="nw")
 
-                            login_name = self._create_entry()
-                            login_name.place(relx=0.12, rely=0.318, anchor="nw")
-                            login_name.configure(width=400)
+                            self.password_login_name = self._create_entry()
+                            self.password_login_name.place(relx=0.12, rely=0.318, anchor="nw")
+                            self.password_login_name.configure(width=400)
 
                             url = self._create_label("Url:")
                             url.place(relx=0.04, rely=0.44, anchor="nw")
 
-                            url_name = self._create_entry()
-                            url_name.place(relx=0.12, rely=0.438, anchor="nw")
-                            url_name.configure(width=400)
+                            self.password_url_name = self._create_entry()
+                            self.password_url_name.place(relx=0.12, rely=0.438, anchor="nw")
+                            self.password_url_name.configure(width=400)
 
                             logger.debug("051 Labels and entries created successfully")
 
@@ -3411,22 +3443,35 @@ class View(customtkinter.CTk):
 
                     @log_method
                     def _save_password_to_import_on_card():
-                        def _save_password_to_import_on_card():
-                            try:
-                                logger.info("055 Saving login/password to card")
-                                password = self.password_text_box.get("1.0", customtkinter.END).strip()
-                                if password:
-                                    # TODO: Implement actual saving logic
-                                    logger.log(SUCCESS, "056 Login/password saved to card successfully")
-                                else:
-                                    logger.warning("057 No password to save")
-                                    raise ValueError("058 No password generated")
-                            except ValueError as e:
-                                logger.error(f"059 Error saving login/password to card: {e}", exc_info=True)
-                                raise UIElementError(f"060 Failed to save login/password to card: {e}") from e
-                            except Exception as e:
-                                logger.error(f"061 Unexpected error saving login/password to card: {e}", exc_info=True)
-                                raise UIElementError(f"062 Unexpected error saving login/password to card: {e}") from e
+                        try:
+                            logger.info("055 Saving password to card")
+                            label = self.password_label_name.get()
+                            login = self.password_login_name.get()
+                            url = self.password_url_name.get()
+                            password = self.password_text_box.get("1.0", customtkinter.END).strip()
+
+                            if not password:
+                                logger.warning("056 No password to save")
+                                raise ValueError("057 No password generated")
+
+                            id, fingerprint = self.controller.import_password(label, login, password, url)
+
+                            self.show("SUCCESS", f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
+                                      "Ok")
+                            logger.log(SUCCESS, "058 Password saved to card successfully")
+
+                        except ValueError as e:
+                            logger.error(f"059 Error saving password to card: {str(e)}")
+                            self.show("ERROR", str(e), "Ok")
+                        except ControllerError as e:
+                            logger.error(f"061 Controller error saving password to card: {str(e)}")
+                            self.show("ERROR", f"Failed to save password: {str(e)}", "Ok")
+                        except SeedkeeperError as e:
+                            logger.error(f"060 SeedKeeper error saving password to card: {str(e)}")
+                            self.show("ERROR", f"Failed to save password: {str(e)}", "Ok")
+                        except Exception as e:
+                            logger.error(f"062 Unexpected error saving password to card: {str(e)}")
+                            self.show("ERROR", "An unexpected error occurred while saving the password", "Ok")
 
                     self._clear_current_frame()
                     _generate_import_password_frame()
