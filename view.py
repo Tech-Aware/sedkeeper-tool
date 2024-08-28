@@ -2879,8 +2879,7 @@ class View(customtkinter.CTk):
                             self.passphrase_entry = customtkinter.CTkEntry(
                                 self.current_frame,
                                 width=300,
-                                placeholder_text="Enter passphrase (optional)",
-                                show="*"
+                                placeholder_text="Enter passphrase (optional)"
                             )
                             self.passphrase_entry.place(relx=0.28, rely=0.57, anchor="w")
                             self.passphrase_entry.configure(state="disabled")
@@ -2888,7 +2887,7 @@ class View(customtkinter.CTk):
                             generate_mnemonic_button = self._create_button("Generate", command=_generate_new_mnemonic)
                             generate_mnemonic_button.place(relx=0.75, rely=0.45, anchor="w")
 
-                            save_button = self._create_button("Save on card", command=_save_mnemonic_to_import_on_card)
+                            save_button = self._create_button("Save on card", command=_save_mnemonic_generated_on_card)
                             save_button.place(relx=0.85, rely=0.93, anchor="center")
 
                             back_button = self._create_button("Back", command=self.show_view_generate_secret)
@@ -2937,7 +2936,7 @@ class View(customtkinter.CTk):
                             raise UIElementError(f"045 Failed to toggle passphrase: {e}") from e
 
                     @log_method
-                    def _save_mnemonic_to_import_on_card():
+                    def _save_mnemonic_generated_on_card():
                         try:
                             logger.info("008 Saving mnemonic to card")
                             label = self.mnemonic_label_name.get()
@@ -3355,7 +3354,7 @@ class View(customtkinter.CTk):
                     logger.info("001 Starting _show_import_mnemonic")
 
                     @log_method
-                    def _generate_import_mnemonic_frame():
+                    def _import_mnemonic_frame():
                         try:
                             logger.info("002 Creating import mnemonic frame")
                             self._create_frame()
@@ -3365,7 +3364,7 @@ class View(customtkinter.CTk):
                             raise FrameCreationError(f"005 Failed to create import mnemonic frame: {e}") from e
 
                     @log_method
-                    def _generate_import_mnemonic_header():
+                    def _import_mnemonic_header():
                         try:
                             logger.info("006 Creating import mnemonic header")
                             header_text = "Import seedphrase"
@@ -3377,68 +3376,60 @@ class View(customtkinter.CTk):
                             raise UIElementError(f"009 Failed to create import mnemonic header: {e}") from e
 
                     @log_method
-                    def _generate_import_mnemonic_widgets():
+                    def _import_mnemonic_widgets():
                         try:
                             logger.info("010 Creating import mnemonic content")
 
-                            label = self._create_label("Label:")
-                            label.place(relx=0.05, rely=0.20, anchor="nw")
+                            self.import_label = self._create_label("Label:")
+                            self.import_label.place(relx=0.05, rely=0.20, anchor="nw")
 
-                            label_name = self._create_entry()
-                            label_name.place(relx=0.04, rely=0.25, anchor="nw")
+                            self.import_label_name = self._create_entry()
+                            self.import_label_name.place(relx=0.04, rely=0.25, anchor="nw")
 
-                            self.radio_value = customtkinter.StringVar(value="12")
-                            self.use_passphrase = customtkinter.BooleanVar(value=False)
+                            self.import_radio_value = customtkinter.StringVar(value="12")
+                            self.import_use_passphrase = customtkinter.BooleanVar(value=False)
 
-                            radio_12 = customtkinter.CTkRadioButton(
+                            self.import_radio_12 = customtkinter.CTkRadioButton(
                                 self.current_frame,
                                 text="12 words",
-                                variable=self.radio_value,
+                                variable=self.import_radio_value,
                                 value="12",
                                 command=None
                             )
-                            radio_12.place(relx=0.05, rely=0.35, anchor="w")
+                            self.import_radio_12.place(relx=0.05, rely=0.35, anchor="w")
 
-                            radio_24 = customtkinter.CTkRadioButton(
+                            self.import_radio_24 = customtkinter.CTkRadioButton(
                                 self.current_frame,
                                 text="24 words",
-                                variable=self.radio_value,
+                                variable=self.import_radio_value,
                                 value="24",
                                 command=None
                             )
-                            radio_24.place(relx=0.2, rely=0.35, anchor="w")
+                            self.import_radio_24.place(relx=0.2, rely=0.35, anchor="w")
 
-                            self.mnemonic_textbox = customtkinter.CTkTextbox(self, corner_radius=20,
-                                                                             bg_color="whitesmoke", fg_color=BG_BUTTON,
-                                                                             border_color=BG_BUTTON, border_width=1,
-                                                                             width=500, height=83,
-                                                                             text_color="grey",
-                                                                             font=customtkinter.CTkFont(family="Outfit",
-                                                                                                        size=13,
-                                                                                                        weight="normal"))
-                            self.mnemonic_textbox.place(relx=0.28, rely=0.45, anchor="w")
+                            self.import_mnemonic_textbox = self._create_textbox()
 
-                            passphrase_checkbox = customtkinter.CTkCheckBox(
+                            self.import_mnemonic_textbox.place(relx=0.045, rely=0.5, anchor="w")
+
+                            self.import_passphrase_checkbox = customtkinter.CTkCheckBox(
                                 self.current_frame,
                                 text="Use passphrase",
-                                variable=self.use_passphrase,
+                                variable=self.import_use_passphrase,
                                 command=_toggle_passphrase_to_import
                             )
-                            passphrase_checkbox.place(relx=0.05, rely=0.57, anchor="w")
 
-                            self.passphrase_entry = customtkinter.CTkEntry(
-                                self.current_frame,
-                                width=300,
-                                placeholder_text="Enter passphrase (optional)"
-                            )
-                            self.passphrase_entry.place(relx=0.28, rely=0.57, anchor="w")
-                            self.passphrase_entry.configure(state="disabled")
+                            self.import_passphrase_checkbox.place(relx=0.05, rely=0.65, anchor="w")
 
-                            save_button = self._create_button("Save on card", command=_save_mnemonic_to_import_on_card)
-                            save_button.place(relx=0.85, rely=0.93, anchor="center")
+                            self.import_passphrase_entry = self._create_entry()
+                            self.import_passphrase_entry.place(relx=0.045, rely=0.73, anchor="w")
+                            self.import_passphrase_entry.configure(state="disabled")
 
-                            back_button = self._create_button("Back", command=self.show_view_import_secret)
-                            back_button.place(relx=0.65, rely=0.93, anchor="center")
+                            self.import_save_button = self._create_button("Save on card",
+                                                                          command=_save_mnemonic_to_import_on_card)
+                            self.import_save_button.place(relx=0.85, rely=0.93, anchor="center")
+
+                            self.import_back_button = self._create_button("Back", command=lambda: [self.import_mnemonic_textbox.destroy(), self.show_view_import_secret()])
+                            self.import_back_button.place(relx=0.65, rely=0.93, anchor="center")
 
                             logger.log(SUCCESS, "011 Import mnemonic content created successfully")
                         except Exception as e:
@@ -3449,11 +3440,11 @@ class View(customtkinter.CTk):
                     def _toggle_passphrase_to_import():
                         try:
                             logger.info("014 Toggling passphrase")
-                            if self.use_passphrase.get():
-                                self.passphrase_entry.configure(state="normal")
+                            if self.import_use_passphrase.get():
+                                self.import_passphrase_entry.configure(state="normal")
                                 logger.debug("015 Passphrase entry enabled")
                             else:
-                                self.passphrase_entry.configure(state="disabled")
+                                self.import_passphrase_entry.configure(state="disabled")
                                 logger.debug("016 Passphrase entry disabled")
                         except Exception as e:
                             logger.error(f"017 Error toggling passphrase: {e}", exc_info=True)
@@ -3463,45 +3454,55 @@ class View(customtkinter.CTk):
                     def _save_mnemonic_to_import_on_card():
                         try:
                             logger.info("019 Saving mnemonic to card")
-                            mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
-                            passphrase = self.passphrase_entry.get() if self.use_passphrase.get() else None
-                            selected_word_count = int(self.radio_value.get())
 
-                            # Verification of mnemonic length
+                            # Récupération des valeurs nécessaires
+                            label = self.import_label_name.get()
+                            mnemonic = self.import_mnemonic_textbox.get("1.0", customtkinter.END).strip()
+                            passphrase = self.import_passphrase_entry.get() if self.import_use_passphrase.get() else None
+                            selected_word_count = int(self.import_radio_value.get())
+
+                            # Vérification que la mnemonic est fournie
+                            if not mnemonic:
+                                logger.warning("022 No mnemonic to save")
+                                raise ValueError("023 No mnemonic provided")
+
+                            # Vérification du nombre de mots dans la mnemonic
                             actual_word_count = len(mnemonic.split())
-
                             if actual_word_count != selected_word_count:
-                                logger.warning("022 Mnemonic word count does not match the selected count")
+                                logger.warning(
+                                    f"024 Mnemonic word count does not match the selected count: expected {selected_word_count}, got {actual_word_count}")
                                 raise ValueError(
                                     f"Selected {selected_word_count}-word mnemonic, but {actual_word_count} provided.")
 
-                            # Verify that passphrase selected is not empty
-                            if self.use_passphrase.get() and not passphrase:
-                                logger.warning("023 Passphrase checkbox is checked but no passphrase provided")
+                            # Vérification supplémentaire pour la passphrase
+                            if self.import_use_passphrase.get() and not passphrase:
+                                logger.warning("025 Passphrase checkbox is checked but no passphrase provided")
                                 raise ValueError("Passphrase checked but not provided.")
 
-                            if mnemonic and passphrase:
-                                self.controller.import_seed(mnemonic, passphrase)
-                                logger.log(SUCCESS, "020 Mnemonic with passphrase saved to card successfully")
-                            elif mnemonic and not passphrase:
-                                self.controller.import_seed(mnemonic)
-                                logger.log(SUCCESS, "021 Mnemonic without passphrase saved to card successfully")
+                            # Import de la masterseed avec ou sans passphrase
+                            if passphrase:
+                                id, fingerprint = self.controller.import_masterseed(label, mnemonic, passphrase)
                             else:
-                                logger.warning("022 No mnemonic to save")
-                                raise ValueError("023 No mnemonic generated")
+                                id, fingerprint = self.controller.import_masterseed(label, mnemonic)
+
+                            # Affichage du succès
+                            self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerprint: {fingerprint}",
+                                      "Ok", None,
+                                      "./pictures_db_generate_icon_ws.png")
+                            logger.log(SUCCESS, "026 Masterseed saved to card successfully")
 
                         except ValueError as e:
-                            logger.error(f"024 Error saving mnemonic to card: {e}", exc_info=True)
+                            logger.error(f"027 Error saving mnemonic to card: {e}", exc_info=True)
                             self.show("ERROR", str(e), "Ok", None, "./pictures_db/generate_icon_ws.png")
-                            raise UIElementError(f"025 Failed to save mnemonic to card: {e}") from e
+                            raise UIElementError(f"028 Failed to save mnemonic to card: {e}") from e
                         except Exception as e:
-                            logger.error(f"026 Error saving mnemonic to card: {e}", exc_info=True)
-                            raise UIElementError(f"027 Failed to save mnemonic to card: {e}") from e
+                            logger.error(f"029 Unexpected error saving mnemonic to card: {e}", exc_info=True)
+                            raise UIElementError(f"030 Failed to save mnemonic to card: {e}") from e
 
                     self._clear_current_frame()
-                    _generate_import_mnemonic_frame()
-                    _generate_import_mnemonic_header()
-                    _generate_import_mnemonic_widgets()
+                    _import_mnemonic_frame()
+                    _import_mnemonic_header()
+                    _import_mnemonic_widgets()
                     self.create_seedkeeper_menu()
                     self.mnemonic_textbox_active = True
                     logger.log(SUCCESS, "028 _show_import_mnemonic completed successfully")
@@ -3515,7 +3516,7 @@ class View(customtkinter.CTk):
                     logger.info("041 Starting _show_import_password method")
 
                     @log_method
-                    def _generate_import_password_frame():
+                    def _import_password_frame():
                         try:
                             logger.info("042 Creating import login/password frame")
                             self._create_frame()
@@ -3525,7 +3526,7 @@ class View(customtkinter.CTk):
                             raise FrameCreationError(f"045 Failed to create import login/password frame: {e}") from e
 
                     @log_method
-                    def _generate_import_password_header():
+                    def _import_password_header():
                         try:
                             logger.info("046 Creating import login/password header")
                             header_text = "Import couple login/password"
@@ -3537,7 +3538,7 @@ class View(customtkinter.CTk):
                             raise UIElementError(f"049 Failed to create import login/password header: {e}") from e
 
                     @log_method
-                    def _generate_import_password_widgets():
+                    def _import_password_widgets():
                         try:
                             logger.info("050 Creating import login/password widgets")
                             # Label and entry creation
@@ -3635,9 +3636,9 @@ class View(customtkinter.CTk):
                                       None, "./pictures_db/import_icon_ws.png")
 
                     self._clear_current_frame()
-                    _generate_import_password_frame()
-                    _generate_import_password_header()
-                    _generate_import_password_widgets()
+                    _import_password_frame()
+                    _import_password_header()
+                    _import_password_widgets()
                     self.create_seedkeeper_menu()
                     self.password_text_box_active = True
 
