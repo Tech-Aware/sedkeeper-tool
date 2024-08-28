@@ -493,7 +493,6 @@ class Controller:
                 self.view.show('ERROR', 'Error when importing seed to Satochip!', 'Ok', None,
                                "./pictures_db/icon_seed_popup.jpg")
 
-    import json
 
     def get_logs(self):
         logger.debug('In get_logs')
@@ -586,12 +585,13 @@ class Controller:
             raise ControllerError(f"005 Failed to import password: {str(e)}") from e
 
     @log_method
-    def decode_secret(self, secret_hex):
+    def decode_secret_password(self, secret_hex):
         try:
             logger.info("001 Starting secret decoding process")
 
             # Convertir la chaîne hexadécimale en bytes
             secret_bytes = binascii.unhexlify(secret_hex)
+
 
             # Décoder en UTF-8
             decoded_secret = secret_bytes.decode('utf-8')
