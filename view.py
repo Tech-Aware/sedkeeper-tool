@@ -52,43 +52,43 @@ class View(customtkinter.CTk):
                 logger.debug("004 Package directory set successfully")
             except InitializationError as e:
                 logger.error(f"005 Failed to set package directory: {e}")
-                raise InitializationError("007 Package directory setup failed") from e
+                raise InitializationError("006 Package directory setup failed") from e
 
             try:
                 self._setup_main_window()
-                logger.debug("006 Main window set up successfully")
+                logger.debug("007 Main window set up successfully")
             except tkinter.TclError as e:
-                logger.error(f"007 Failed to set up main window: {e}")
-                raise InitializationError("008 Main window setup failed") from e
+                logger.error(f"008 Failed to set up main window: {e}")
+                raise InitializationError("009 Main window setup failed") from e
 
             try:
                 self._declare_widgets()
-                logger.debug("009 Widgets declared successfully")
+                logger.debug("010 Widgets declared successfully")
             except tkinter.TclError as e:
-                logger.error(f"010 Failed to declare widgets: {e}")
-                raise InitializationError("011 Widget declaration failed") from e
+                logger.error(f"011 Failed to declare widgets: {e}")
+                raise InitializationError("012 Widget declaration failed") from e
 
             try:
                 self._set_close_protocol()
-                logger.debug("012 Close protocol set successfully")
+                logger.debug("013 Close protocol set successfully")
             except AttributeError as e:
-                logger.error(f"013 Failed to set close protocol: {e}")
-                raise InitializationError("014 Close protocol setup failed") from e
+                logger.error(f"014 Failed to set close protocol: {e}")
+                raise InitializationError("015 Close protocol setup failed") from e
 
             try:
                 self.controller = Controller(None, self, loglevel=loglevel)
-                logger.debug("015 Controller initialized successfully")
+                logger.debug("016 Controller initialized successfully")
             except Exception as e:
-                logger.error(f"016 Failed to initialize controller: {e}")
-                raise InitializationError("017 Controller initialization failed") from e
+                logger.error(f"017 Failed to initialize controller: {e}")
+                raise InitializationError("018 Controller initialization failed") from e
 
-            logger.log(SUCCESS, "018 View initialization completed successfully")
+            logger.log(SUCCESS, "019 View initialization completed successfully")
         except InitializationError as e:
-            logger.critical(f"019 View initialization failed: {e}", exc_info=True)
+            logger.critical(f"020 View initialization failed: {e}", exc_info=True)
             raise
         except Exception as e:
-            logger.critical(f"020 Unexpected error during View initialization: {e}", exc_info=True)
-            raise InitializationError(f"021 Unexpected error during View initialization: {e}") from e
+            logger.critical(f"021 Unexpected error during View initialization: {e}", exc_info=True)
+            raise InitializationError(f"022 Unexpected error during View initialization: {e}") from e
 
     ####################################################################################################################
     """ UTILS """
@@ -1518,7 +1518,6 @@ class View(customtkinter.CTk):
     ####################################################################################################################
     """ VIEWS """
 
-    ####################################################################################################################
     @log_method
     def view_welcome(self):
         self.welcome_in_display = True
@@ -2257,7 +2256,6 @@ class View(customtkinter.CTk):
     ####################################################################################################################
     """ SPECIFIC VIEW OF SEEDKEEPER """
 
-    ####################################################################################################################
     @log_method
     def view_my_secrets(
             self,
@@ -2311,6 +2309,8 @@ class View(customtkinter.CTk):
                         _create_password_secret_frame(secret_details)
                     elif secret['type'] == 'Masterseed':
                         _create_masterseed_secret_frame(secret_details)
+                    elif secret['type'] == '2FA secret':
+                        _create_2FA_secret_frame(secret_details)
                     else:
                         logger.warning(f"011 Unsupported secret type: {secret['type']}")
                         _create_generic_secret_frame(secret_details)
@@ -2394,7 +2394,8 @@ class View(customtkinter.CTk):
         @log_method
         def _create_password_secret_frame(secret_details):
             try:
-                logger.info("001 Creating password secret frame")
+                logger.info("001 Creating password secret frame to display secret details")
+
                 # Create field for label login, url and password
                 try:
                     label_label = self._create_label("Label:")
@@ -2402,27 +2403,35 @@ class View(customtkinter.CTk):
                     self.label_entry = self._create_entry()
                     self.label_entry.insert(0, secret_details['label'])
                     self.label_entry.place(relx=0.045, rely=0.27)
+                    logger.debug("002 label fields created")
 
                     login_label = self._create_label("Login:")
                     login_label.place(relx=0.045, rely=0.34)
                     self.login_entry = self._create_entry(show_option="*")
                     self.login_entry.place(relx=0.045, rely=0.41)
+                    logger.debug("003 login fields created")
+
 
                     url_label = self._create_label("Url:")
                     url_label.place(relx=0.045, rely=0.48)
                     self.url_entry = self._create_entry(show_option="*")
                     self.url_entry.place(relx=0.045, rely=0.55)
+                    logger.debug("004 url fields created")
 
                     password_label = self._create_label("Password:")
                     password_label.place(relx=0.045, rely=0.7, anchor="w")
-
                     self.password_entry = self._create_entry(show_option="*")
                     self.password_entry.configure(width=500)
                     self.password_entry.place(relx=0.04, rely=0.77, anchor="w")
+                    logger.debug("005 password fields created")
 
                     # Decode secret
                     try:
-                        self.decoded_login_password = self.controller.decode_secret(secret_details['secret'])
+                        logger.debug("006 Decoding secret to show")
+                        self.decoded_login_password = self.controller.decode_secret_password(secret_details['secret'])
+                        logger.log(
+                            SUCCESS, "007 login password secret decoded successfully"
+                        )
                     except ValueError as e:
                         self.show("ERROR", f"Invalid secret format: {str(e)}", "Ok")
                     except ControllerError as e:
@@ -2431,26 +2440,32 @@ class View(customtkinter.CTk):
                     self.login_entry.insert(0, self.decoded_login_password['login'])
                     self.url_entry.insert(0, self.decoded_login_password['url'])
                     self.password_entry.insert(0, self.decoded_login_password['password'])
-                    logger.debug("007 Password field created")
 
                 except Exception as e:
-                    logger.error(f"008 Error creating password field: {e}", exc_info=True)
-                    raise UIElementError(f"009 Failed to create password field: {e}") from e
+                    logger.error(f"008 Error creating fields: {e}", exc_info=True)
+                    raise UIElementError(f"009 Failed to create fields: {e}") from e
 
                 def _toggle_password_visibility(login_entry, url_entry, password_entry):
                     try:
+                        # login
                         login_current_state = login_entry.cget("show")
                         login_new_state = "" if login_current_state == "*" else "*"
                         login_entry.configure(show=login_new_state)
+
+                        # url
                         url_current_state =  url_entry.cget("show")
                         url_new_state = "" if url_current_state == "*" else "*"
                         url_entry.configure(show=url_new_state)
+
+                        # password
                         password_current_state = password_entry.cget("show")
                         password_new_state = "" if password_current_state == "*" else "*"
                         password_entry.configure(show=password_new_state)
+
                         logger.log(
                             SUCCESS,
-                            f"{'hidden' if (login_new_state, url_new_state, password_new_state) == '*' else 'visible'}")
+                            f"{'hidden' if (login_new_state, url_new_state, password_new_state) == '*' else 'visible'}"
+                        )
                     except Exception as e:
                         logger.error(f"018 Error toggling password visibility: {e}", exc_info=True)
                         raise UIElementError(f"019 Failed to toggle password visibility: {e}") from e
@@ -2574,13 +2589,66 @@ class View(customtkinter.CTk):
                 raise ViewError(f"025 Failed to create mnemonic secret frame: {e}") from e
 
         @log_method
+        def _create_2FA_secret_frame(secret_details):
+            try:
+                print(secret_details)
+                self.label_2FA = self._create_label('Label:')
+                self.label_2FA.place(relx=0.045, rely=0.2)
+                self.label_2FA_entry = self._create_entry()
+                self.label_2FA_entry.place(relx=0.045, rely=0.25)
+                self.label_2FA_entry.insert(0, secret_details['label'])
+
+                self.secret_2FA_label = self._create_label('Secret:')
+                self.secret_2FA_label.place(relx=0.045, rely=0.32)
+                self.secret_2FA_entry = self._create_entry(show_option="*")
+                self.secret_2FA_entry.place(relx=0.045, rely=0.37)
+                self.secret_2FA_entry.configure(width=450)
+                self.secret_2FA_entry.insert(0, secret_details['secret'])
+
+                def _toggle_2FA_visibility(secret_2FA_entry):
+                    try:
+                        # secret 2FA
+                        secret_2FA_current_state = secret_2FA_entry.cget("show")
+                        secret_2FA_new_state = "" if secret_2FA_current_state == "*" else "*"
+                        secret_2FA_entry.configure(show=secret_2FA_new_state)
+
+                        logger.log(
+                            SUCCESS,
+                            f"{'hidden' if (secret_2FA_new_state) == '*' else 'visible'}"
+                        )
+                    except Exception as e:
+                        logger.error(f"018 Error toggling password visibility: {e}", exc_info=True)
+                        raise UIElementError(f"019 Failed to toggle password visibility: {e}") from e
+
+                # Create action buttons
+                try:
+                    show_button = self._create_button(text="Show",
+                                                      command=lambda: _toggle_2FA_visibility(
+                                                          self.secret_2FA_entry))
+                    show_button.place(relx=0.9, rely=0.433, anchor="se")
+
+                    delete_button = self._create_button(text="Delete secret",
+                                                        command=lambda: None)  # self._delete_secret(secret['id']))
+                    delete_button.place(relx=0.75, rely=0.98, anchor="se")
+                    logger.debug("010 Action buttons created")
+                except Exception as e:
+                    logger.error(f"011 Error creating action buttons: {e}", exc_info=True)
+                    raise UIElementError(f"012 Failed to create action buttons: {e}") from e
+
+
+                    logger.log(SUCCESS, "Generic secret frame created")
+            except Exception as e:
+                logger.error(f"Error creating generic secret frame: {e}", exc_info=True)
+                raise UIElementError(f"Failed to create generic secret frame: {e}")
+
+        @log_method
         def _create_generic_secret_frame(secret_details):
             try:
                 for key, value in secret_details.items():
                     label = self._create_label(f"{key}:")
                     label.place(relx=0.1, rely=0.2 + len(secret_details) * 0.05, anchor="w")
 
-                    entry = self._create_entry(show="*" if key.lower() == "value" else None)
+                    entry = self._create_entry(show_option="*" if key.lower() == "value" else None)
                     entry.insert(0, value)
                     entry.configure(state="readonly")
                     entry.place(relx=0.3, rely=0.2 + len(secret_details) * 0.05, anchor="w")
@@ -3102,7 +3170,7 @@ class View(customtkinter.CTk):
                                 id, fingerprint = self.controller.import_password(label, login, password, url)
                                 self.show("SUCCESS",
                                           f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
-                                          "Ok")
+                                          "Ok", None, "./pictures_db/generate_icon_ws.png")
                                 logger.log(SUCCESS, "058 Password saved to card successfully")
                             else:
                                 logger.warning("089 No password to save")
@@ -3450,28 +3518,40 @@ class View(customtkinter.CTk):
                             url = self.password_url_name.get()
                             password = self.password_text_box.get("1.0", customtkinter.END).strip()
 
+                            if not label:
+                                logger.warning("No label provide for password encryption.")
+                                raise ValueError("Please, provide a label for password encryption")
+
+                            if not login:
+                                logger.warning("No login provide for password encryption")
+                                raise ValueError("Please, provide a login for password encryption")
+
                             if not password:
-                                logger.warning("056 No password to save")
-                                raise ValueError("057 No password generated")
+                                logger.warning("No password provide for encryption")
+                                raise ValueError("Please, provide a password for encryption")
 
-                            id, fingerprint = self.controller.import_password(label, login, password, url)
-
-                            self.show("SUCCESS", f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
-                                      "Ok")
-                            logger.log(SUCCESS, "058 Password saved to card successfully")
+                            else:
+                                id, fingerprint = self.controller.import_password(label, login, password, url)
+                                self.show("SUCCESS",
+                                          f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
+                                          "Ok", None, "./pictures_db/import_icon_ws.png")
+                                logger.log(SUCCESS, "058 Password saved to card successfully")
 
                         except ValueError as e:
                             logger.error(f"059 Error saving password to card: {str(e)}")
-                            self.show("ERROR", str(e), "Ok")
+                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/import_icon_ws.png")
                         except ControllerError as e:
                             logger.error(f"061 Controller error saving password to card: {str(e)}")
-                            self.show("ERROR", f"Failed to save password: {str(e)}", "Ok")
+                            self.show("ERROR", f"Failed to save password: {str(e)}", "Ok", None,
+                                      "./pictures_db/import_icon_ws.png")
                         except SeedkeeperError as e:
                             logger.error(f"060 SeedKeeper error saving password to card: {str(e)}")
-                            self.show("ERROR", f"Failed to save password: {str(e)}", "Ok")
+                            self.show("ERROR", f"Failed to save password: {str(e)}", "Ok", None,
+                                      "./pictures_db/import_icon_ws.png")
                         except Exception as e:
                             logger.error(f"062 Unexpected error saving password to card: {str(e)}")
-                            self.show("ERROR", "An unexpected error occurred while saving the password", "Ok")
+                            self.show("ERROR", "An unexpected error occurred while saving the password", "Ok",
+                                      None, "./pictures_db/import_icon_ws.png")
 
                     self._clear_current_frame()
                     _generate_import_password_frame()
