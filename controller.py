@@ -6,6 +6,7 @@ import logging
 import json
 import binascii
 from mnemonic import Mnemonic
+import hashlib
 
 from pysatochip.CardConnector import (CardConnector, CardNotPresentError, PinRequiredError, WrongPinError,
                                                  PinBlockedError, UnexpectedSW12Error, CardSetupNotDoneError,
@@ -585,6 +586,54 @@ class Controller:
             raise ControllerError(f"005 Failed to import password: {str(e)}") from e
 
     @log_method
+    def import_masterseed(self, label: str, mnemonic: str, passphrase: Optional[str] = None):
+        try:
+            logger.info("001 Starting masterseed import process")
+            print(mnemonic)
+
+            # Vérifier la validité du mnemonic
+            MNEMONIC = Mnemonic("english")
+            if not MNEMONIC.check(mnemonic):
+                raise ValueError("002 Invalid mnemonic")
+
+            is_valid = MNEMONIC.check(mnemonic)
+            print(f"Mnemonic is valid: {is_valid}")
+
+            # S'assurer que passphrase est une chaîne de caractères ou None
+            if passphrase:
+                mnemonic = f"mnemonic:{mnemonic}passphrase:{passphrase}"
+            else:
+                mnemonic = f"mnemonic:{mnemonic}"
+
+
+            # Préparer les données pour l'importation
+            secret_type = 0x10  # Type pour masterseed
+            export_rights = 0x01  # Droits d'exportation (à ajuster selon vos besoins)
+
+            # Créer le dictionnaire secret
+            secret_dic = {
+                'header': self.cc.make_header(secret_type, export_rights, label),
+                'secret_list': list(mnemonic.encode('utf-8'))
+            }
+
+            # Appeler la méthode d'importation de secret
+            id, fingerprint = self.cc.seedkeeper_import_secret(secret_dic)
+
+            logger.log(SUCCESS, f"003 Masterseed imported successfully with id: {id} and fingerprint: {fingerprint}")
+
+            return id, fingerprint
+
+        except ValueError as e:
+            logger.error(f"004 Validation error during masterseed import: {str(e)}")
+            raise
+        except SeedKeeperError as e:
+            logger.error(f"005 SeedKeeper error during masterseed import: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"006 Unexpected error during masterseed import: {str(e)}")
+            raise ControllerError(f"007 Failed to import masterseed: {str(e)}") from e
+
+    @log_method
     def decode_secret_password(self, secret_hex):
         try:
             logger.info("001 Starting secret decoding process")
@@ -637,3 +686,56 @@ class Controller:
         except Exception as e:
             logger.error(f"004 Unexpected error during secret decoding: {str(e)}")
             raise ControllerError(f"Failed to decode secret: {str(e)}") from e
+
+    @log_method
+    def decode_masterseed(self, seed_hex: str):
+        try:
+            logger.info("001 Starting masterseed decoding process")
+
+            # Convertir la chaîne hexadécimale en bytes
+            try:
+                secret_bytes = binascii.unhexlify(seed_hex)
+            except binascii.Error:
+                raise ValueError("002 Invalid hexadecimal string provided")
+
+            # Décoder en UTF-8
+            try:
+                decoded_secret = secret_bytes.decode('utf-8')
+            except UnicodeDecodeError:
+                raise ValueError("003 Unable to decode secret to UTF-8")
+
+            # Initialiser le dictionnaire de résultats
+            result = {
+                'mnemonic': '',
+                'passphrase': ''
+            }
+
+            # Séparer les parties
+            parts = decoded_secret.split('mnemonic:')
+
+            if len(parts) > 1:
+                # La mnémonique est la première partie
+                result['mnemonic'] = parts[1].split('passphrase:')[0].strip()
+
+                # Traiter le reste pour extraire la passphrase
+                remaining = parts[1].split('passphrase:')
+                if len(remaining) > 1:
+                    result['passphrase'] = remaining[1].strip()
+            else:
+                # Si 'mnemonic:' n'est pas trouvé, considérer tout comme texte brut
+                result['mnemonic'] = decoded_secret
+
+            # Remplacer 'None' par une chaîne vide
+            for key in result:
+                if result[key] == 'None':
+                    result[key] = ''
+
+            logger.info("004 Masterseed successfully decoded")
+            return result
+
+        except ValueError as e:
+            logger.error(f"005 Validation error during masterseed decoding: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"006 Unexpected error during masterseed decoding: {str(e)}")
+            raise ControllerError(f"007 Failed to decode masterseed: {str(e)}") from e
