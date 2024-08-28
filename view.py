@@ -398,6 +398,33 @@ class View(customtkinter.CTk):
             raise EntryCreationError(f"010 Unexpected error during entry creation: {e}") from e
 
     @log_method
+    def _create_textbox(self, show_option: Optional[str] = None) -> customtkinter.CTkTextbox:
+        try:
+            logger.info("001 Starting textbox creation")
+            textbox = None
+
+            try:
+                logger.debug("002 Creating textbox")
+                # Créer la textbox avec les mêmes dimensions et styles que l'entrée
+                textbox = customtkinter.CTkTextbox(self.current_frame, width=555, height=37, corner_radius=10,
+                                                   bg_color='white', fg_color=BG_BUTTON, border_color=BG_BUTTON,
+                                                   text_color='grey')
+
+                # Ajouter du padding pour centrer verticalement le texte
+                textbox.configure(pady=40)  # Ajustez le nombre pour mieux centrer
+
+                logger.debug("003 Textbox created successfully")
+                logger.log(SUCCESS, "005 Textbox created successfully")
+                return textbox
+            except Exception as e:
+                logger.error(f"006 ThemeError while creating textbox: {e}", exc_info=True)
+                raise EntryCreationError(f"007 Failed to create textbox due to theme error: {e}") from e
+
+        except Exception as e:
+            logger.error(f"008 Unexpected error in _create_textbox: {e}", exc_info=True)
+            raise EntryCreationError(f"009 Unexpected error during textbox creation: {e}") from e
+
+    @log_method
     def create_option_list(
             self,
             options,
@@ -2473,7 +2500,9 @@ class View(customtkinter.CTk):
                 # Create action buttons
                 try:
                     show_button = self._create_button(text="Show",
-                                                      command=lambda: _toggle_password_visibility(self.login_entry, self.url_entry, self.password_entry))  # self._toggle_password_visibility(password_entry))
+                                                      command=lambda: _toggle_password_visibility(
+                                                          self.login_entry, self.url_entry, self.password_entry)
+                                                      )
                     show_button.place(relx=0.9, rely=0.8, anchor="se")
 
                     delete_button = self._create_button(text="Delete secret",
@@ -2530,6 +2559,16 @@ class View(customtkinter.CTk):
                     logger.error(f"008 Error creating Xpub and SeedQR buttons: {e}", exc_info=True)
                     raise UIElementError(f"009 Failed to create Xpub and SeedQR buttons: {e}") from e
 
+                # Decode seed to mnemonic
+                try:
+                    logger.debug("Decoding seed to mnemonic words")
+                    secret = self.controller.decode_masterseed(secret_details['secret'])
+                    mnemonic = secret['mnemonic']
+                    passphrase = secret['passphrase']
+                except Exception as e:
+                    logger.error(f"Error decoding Masterseed: {e}", exc_info=True)
+                    raise ControllerError(f"015 Failed to decode Masterseed: {e}") from e
+
                 # Create passphrase field
                 try:
                     passphrase_label = self._create_label("Passphrase:")
@@ -2537,7 +2576,8 @@ class View(customtkinter.CTk):
 
                     passphrase_entry = self._create_entry()
                     passphrase_entry.place(relx=0.2, rely=0.58, anchor="w", relwidth=0.585)
-                    passphrase_entry.insert(0, "Comment récupérer la passhprase ?")  # Replace with actual data
+                    passphrase_entry.insert(0, '*' * len(
+                        passphrase) if passphrase != '' else 'None')  # Masque la passphrase
                     logger.debug("010 Passphrase field created")
                 except Exception as e:
                     logger.error(f"011 Error creating passphrase field: {e}", exc_info=True)
@@ -2548,23 +2588,56 @@ class View(customtkinter.CTk):
                     mnemonic_label = self._create_label("Mnemonic:")
                     mnemonic_label.place(relx=0.045, rely=0.65, anchor="w")
 
-                    mnemonic_entry = self._create_entry(show_option='*')
-                    mnemonic_entry.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
-                    mnemonic_entry.insert(0, secret_details['secret'])  # Replace with actual mnemonic
+                    mnemonic_textbox = self._create_textbox()
+                    mnemonic_textbox.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
+                    mnemonic_textbox.insert("1.0", '*' * len(mnemonic))
                     logger.debug("013 Mnemonic field created")
                 except Exception as e:
                     logger.error(f"014 Error creating mnemonic field: {e}", exc_info=True)
                     raise UIElementError(f"015 Failed to create mnemonic field: {e}") from e
 
+                # Function to toggle visibility of passphrase
                 @log_method
-                def _toggle_mnemonic_visibility(entry):
+                def _toggle_passphrase_visibility(entry, original_text):
+                    try:
+                        logger.info("020 Toggling passphrase visibility")
+                        # Obtenir le contenu actuel de l'entrée
+                        current_text = entry.get()
+
+                        if current_text == '*' * len(original_text):
+                            # Si l'entrée contient uniquement des étoiles, afficher le texte original
+                            entry.delete(0, "end")
+                            entry.insert(0, original_text)
+                            logger.log(SUCCESS, "021 Passphrase visibility toggled to visible")
+                        else:
+                            # Sinon, masquer le texte avec des étoiles
+                            entry.delete(0, "end")
+                            entry.insert(0, '*' * len(original_text))
+                            logger.log(SUCCESS, "021 Passphrase visibility toggled to hidden")
+
+                    except Exception as e:
+                        logger.error(f"022 Error toggling passphrase visibility: {e}", exc_info=True)
+                        raise UIElementError(f"023 Failed to toggle passphrase visibility: {e}") from e
+
+                # Function to toggle visibility of mnemonic
+                @log_method
+                def _toggle_mnemonic_visibility(textbox, original_text):
                     try:
                         logger.info("016 Toggling mnemonic visibility")
-                        current_state = entry.cget("show")
-                        new_state = "" if current_state == "*" else "*"
-                        entry.configure(show=new_state)
-                        logger.log(SUCCESS,
-                                   f"017 Mnemonic visibility toggled to {'hidden' if new_state == '*' else 'visible'}")
+                        # Obtenir le contenu actuel de la textbox
+                        current_text = textbox.get("1.0", "end-1c")
+
+                        if current_text == '*' * len(original_text):
+                            # Si la textbox contient uniquement des étoiles, afficher le texte original
+                            textbox.delete("1.0", "end")
+                            textbox.insert("1.0", original_text)
+                            logger.log(SUCCESS, "017 Mnemonic visibility toggled to visible")
+                        else:
+                            # Sinon, masquer le texte avec des étoiles
+                            textbox.delete("1.0", "end")
+                            textbox.insert("1.0", '*' * len(original_text))
+                            logger.log(SUCCESS, "017 Mnemonic visibility toggled to hidden")
+
                     except Exception as e:
                         logger.error(f"018 Error toggling mnemonic visibility: {e}", exc_info=True)
                         raise UIElementError(f"019 Failed to toggle mnemonic visibility: {e}") from e
@@ -2576,7 +2649,7 @@ class View(customtkinter.CTk):
                     delete_button.place(relx=0.7, rely=0.15, anchor="se")
 
                     show_button = self._create_button(text="Show",
-                                                      command=lambda: _toggle_mnemonic_visibility(mnemonic_entry))
+                                                      command=lambda: [_toggle_mnemonic_visibility(mnemonic_textbox, mnemonic), _toggle_passphrase_visibility(passphrase_entry, passphrase)])
                     show_button.place(relx=0.95, rely=0.8, anchor="e")
                     logger.debug("020 Action buttons created")
                 except Exception as e:
@@ -2634,9 +2707,7 @@ class View(customtkinter.CTk):
                 except Exception as e:
                     logger.error(f"011 Error creating action buttons: {e}", exc_info=True)
                     raise UIElementError(f"012 Failed to create action buttons: {e}") from e
-
-
-                    logger.log(SUCCESS, "Generic secret frame created")
+                logger.log(SUCCESS, "Generic secret frame created")
             except Exception as e:
                 logger.error(f"Error creating generic secret frame: {e}", exc_info=True)
                 raise UIElementError(f"Failed to create generic secret frame: {e}")
@@ -2817,7 +2888,7 @@ class View(customtkinter.CTk):
                             generate_mnemonic_button = self._create_button("Generate", command=_generate_new_mnemonic)
                             generate_mnemonic_button.place(relx=0.75, rely=0.45, anchor="w")
 
-                            save_button = self._create_button("Save on card", command=_save_mnemonic_to_card)
+                            save_button = self._create_button("Save on card", command=_save_mnemonic_to_import_on_card)
                             save_button.place(relx=0.85, rely=0.93, anchor="center")
 
                             back_button = self._create_button("Back", command=self.show_view_generate_secret)
@@ -2866,39 +2937,50 @@ class View(customtkinter.CTk):
                             raise UIElementError(f"045 Failed to toggle passphrase: {e}") from e
 
                     @log_method
-                    def _save_mnemonic_to_card():
+                    def _save_mnemonic_to_import_on_card():
                         try:
-                            logger.info("046 Saving mnemonic to card")
+                            logger.info("008 Saving mnemonic to card")
+                            label = self.mnemonic_label_name.get()
                             mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
                             passphrase = self.passphrase_entry.get() if self.use_passphrase.get() else None
 
-                            label_text = self.mnemonic_label_name.get().strip()
-                            if not label_text:
-                                logger.warning("Label field is empty; cannot save mnemonic.")
-                                raise ValueError("Please provide a label before saving.")
+                            if not mnemonic:
+                                logger.warning("009 No mnemonic to save")
+                                raise ValueError("010 No mnemonic provided")
 
-                            # Verify that passphrase selected is not empty
+                            # Vérification supplémentaire pour la passphrase
                             if self.use_passphrase.get() and not passphrase:
-                                logger.warning("023 Passphrase checkbox is checked but no passphrase provided")
+                                logger.warning("011 Passphrase checkbox is checked but no passphrase provided")
                                 raise ValueError("Passphrase checked but not provided.")
 
-                            if mnemonic:
-                                if passphrase:
-                                    self.controller.import_seed(mnemonic, passphrase)
-                                    logger.log(SUCCESS, "047 Mnemonic with passphrase saved to card successfully")
-                                else:
-                                    self.controller.import_seed(mnemonic)
-                                    logger.log(SUCCESS, "047 Mnemonic without passphrase saved to card successfully")
+                            if passphrase:
+                                id, fingerprint = self.controller.import_masterseed(label, mnemonic, passphrase)
+
                             else:
-                                logger.warning("048 No mnemonic to save")
-                                raise ValueError("049 No mnemonic generated")
+                                id, fingerprint = self.controller.import_masterseed(label, mnemonic)
+
+                            self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerprint: {fingerprint}",
+                                      "Ok", None,
+                                      "./pictures_db_generate_icon_ws.png")
+                            logger.log(SUCCESS, "012 Masterseed saved to card successfully")
+
                         except ValueError as e:
-                            logger.error(f"050 Error saving mnemonic to card: {e}", exc_info=True)
-                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/generate_icon_ws.png")
-                            raise UIElementError(f"051 Failed to save mnemonic to card: {e}") from e
+                            logger.error(f"013 Validation error saving mnemonic to card: {str(e)}")
+                            self.show("ERROR", str(e), "Ok", None,
+                                      "./pictures_db_generate_icon_ws.png")
+                        except ControllerError as e:
+                            logger.error(f"015 Controller error saving mnemonic to card: {str(e)}")
+                            self.show("ERROR", f"Failed to save mnemonic: {str(e)}", "Ok", None,
+                                      "./pictures_db_generate_icon_ws.png")
+                        except SeedkeeperError as e:
+                            logger.error(f"014 SeedKeeper error saving mnemonic to card: {str(e)}")
+                            self.show("ERROR", f"Failed to save mnemonic: {str(e)}", "Ok", None,
+                                      "./pictures_db_generate_icon_ws.png")
                         except Exception as e:
-                            logger.error(f"052 Error saving mnemonic to card: {e}", exc_info=True)
-                            raise UIElementError(f"053 Failed to save mnemonic to card: {e}") from e
+                            logger.error(f"016 Unexpected error saving mnemonic to card: {str(e)}")
+                            self.show("ERROR", "An unexpected error occurred while saving the mnemonic",
+                                      "Ok", None,
+                                      "./pictures_db_generate_icon_ws.png")
 
                     self._clear_current_frame()
                     _generate_mnemonic_frame()
@@ -2945,8 +3027,7 @@ class View(customtkinter.CTk):
                             logger.info("066 Generating new login/password")
                             if not self.slider_moved:
                                 logger.warning("Slider has not been moved; cannot generate password.")
-                                raise ValueError(
-                                    "Adjust the slider to select the password length.")
+                                raise ValueError("Adjust the slider to select the password length.")
 
                             # Récupération de la longueur sélectionnée
                             password_length = int(self.length_slider.get())
