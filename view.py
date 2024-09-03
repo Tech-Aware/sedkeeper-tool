@@ -1553,6 +1553,7 @@ class View(customtkinter.CTk):
         def _setup_welcome_frame():
             try:
                 logger.info("Setting up welcome frame")
+                self._clear_welcome_frame()
                 self.welcome_frame = customtkinter.CTkFrame(self, fg_color=BG_MAIN_MENU)
                 self.welcome_frame.place(relx=0.5, rely=0.5, anchor="center")
                 logger.log(SUCCESS, "Welcome frame set up successfully")
@@ -1647,8 +1648,12 @@ class View(customtkinter.CTk):
                 if self.controller.cc.card_present:
                     self.lets_go_button = self._create_welcome_button("Let's go", self.show_view_my_secrets)
                 else:
-                    self.lets_go_button = self._create_welcome_button("Let's go", lambda: self.show("ERROR", 'Insert card to continue.', 'Ok', None,
-                                                    "./pictures_db/insert_card__icon_ws.png"))
+                    self.lets_go_button = self._create_welcome_button("Let's go", lambda: self.show(
+                        "ERROR",
+                        'Insert card to continue.',
+                        'Ok',
+                        lambda: self.view_welcome(),
+                        "./pictures_db/insert_card__icon_ws.png"))
                 self.lets_go_button.place(relx=0.85, rely=0.93, anchor="center")
 
                 logger.log(SUCCESS, "018 Welcome button created successfully")
