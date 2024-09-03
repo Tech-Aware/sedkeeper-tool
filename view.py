@@ -1252,13 +1252,13 @@ class View(customtkinter.CTk):
                                                        state='disabled',
                                                        command=lambda: None)
             if self.controller.cc.card_present:
-                self._create_button_for_main_menu_item(menu_frame, "Back to seedkeeper", "back_to_seedkeeper_icon.png",
-                                                       rel_y=0.73, rel_x=0.84,
+                self._create_button_for_main_menu_item(menu_frame, "Go back", "back_to_seedkeeper_icon.png",
+                                                       rel_y=0.73, rel_x=0.52,
                                                        state='normal', command=self.show_view_my_secrets)
             else:
-                self._create_button_for_main_menu_item(menu_frame, "Back to seedkeeper", "about_locked_icon.jpg",
+                self._create_button_for_main_menu_item(menu_frame, "Go back", "about_locked_icon.jpg",
                                                        rel_y=0.73,
-                                                       rel_x=0.84, state='disabled', command=self.show_view_my_secrets)
+                                                       rel_x=0.52, state='disabled', command=self.show_view_my_secrets)
 
             self._create_button_for_main_menu_item(menu_frame, "Go to the Webshop", "webshop_icon.png", 0.95, 0.805,
                                                    state='normal',
@@ -2990,10 +2990,10 @@ class View(customtkinter.CTk):
                     _generate_mnemonic_widgets()
                     self.create_seedkeeper_menu()
                     self.mnemonic_textbox_active = True
-                    logger.log(SUCCESS, "054 _show_generate_mnemonic completed successfully")
+                    logger.log(SUCCESS, "_show_generate_mnemonic completed successfully")
                 except Exception as e:
-                    logger.error(f"055 Unexpected error in _show_generate_mnemonic: {e}", exc_info=True)
-                    raise ViewError(f"056 Failed to show generate mnemonic view: {e}") from e
+                    logger.error(f"Unexpected error in _show_generate_mnemonic: {e}", exc_info=True)
+                    raise ViewError(f"Failed to show generate mnemonic view: {e}") from e
 
             @log_method
             def _show_generate_password():
