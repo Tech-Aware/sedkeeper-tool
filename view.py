@@ -378,13 +378,13 @@ class View(customtkinter.CTk):
                     logger.debug(f"002 Creating entry with secure write option: {show_option}")
                     entry = customtkinter.CTkEntry(self.current_frame, width=555, height=37, corner_radius=10,
                                                    bg_color='white', fg_color=BG_BUTTON, border_color=BG_BUTTON,
-                                                   show=f"{show_option}", text_color='grey')
+                                                   show=f"{show_option}", text_color='black')
                     logger.debug("003 Entry created with secure write option")
                 else:
                     logger.debug("004 Creating entry without secure write option")
                     entry = customtkinter.CTkEntry(self.current_frame, width=555, height=37, corner_radius=10,
                                                    bg_color='white', fg_color=BG_BUTTON, border_color=BG_BUTTON,
-                                                   text_color='grey')
+                                                   text_color='black')
                     logger.debug("005 Entry created without secure write option")
 
                 logger.log(SUCCESS, "006 Entry created successfully")
@@ -406,9 +406,9 @@ class View(customtkinter.CTk):
             try:
                 logger.debug("002 Creating textbox")
                 # Créer la textbox avec les mêmes dimensions et styles que l'entrée
-                textbox = customtkinter.CTkTextbox(self.current_frame, width=555, height=37, corner_radius=10,
+                textbox = customtkinter.CTkTextbox(self.current_frame, width=535, height=37, corner_radius=10,
                                                    bg_color='white', fg_color=BG_BUTTON, border_color=BG_BUTTON,
-                                                   text_color='grey')
+                                                   text_color='black', wrap='word')
 
                 # Ajouter du padding pour centrer verticalement le texte
                 textbox.configure(pady=40)  # Ajustez le nombre pour mieux centrer
@@ -2541,9 +2541,13 @@ class View(customtkinter.CTk):
                         logger.error(f"004 Error creating label or entry for {label_text}: {e}", exc_info=True)
                         raise UIElementError(f"005 Failed to create label or entry for {label_text}: {e}") from e
 
-                # Set values
+                # Set values to label and mnemonic type
                 entries['label'].insert(0, secret_details['label'])
                 entries['mnemonic type'].insert(0, secret_details['type'])
+
+                # lock possibilities to wright into entries
+                entries['label'].configure(state='disabled')
+                entries['mnemonic type'].configure(state='disabled')
                 logger.debug("006 Entry values set")
 
                 try:
@@ -2600,19 +2604,21 @@ class View(customtkinter.CTk):
                 @log_method
                 def _toggle_passphrase_visibility(entry, original_text):
                     try:
+                        entry.configure(state='normal')
                         logger.info("020 Toggling passphrase visibility")
-                        # Obtenir le contenu actuel de l'entrée
+                        # retrieve the content from actual entry
                         current_text = entry.get()
 
                         if current_text == '*' * len(original_text):
-                            # Si l'entrée contient uniquement des étoiles, afficher le texte original
+                            # if entry contains only stars, print origina text
                             entry.delete(0, "end")
                             entry.insert(0, original_text)
                             logger.log(SUCCESS, "021 Passphrase visibility toggled to visible")
+                            entry.configure(state='disabled')
                         else:
-                            # Sinon, masquer le texte avec des étoiles
                             entry.delete(0, "end")
                             entry.insert(0, '*' * len(original_text))
+                            entry.configure(state='disabled')
                             logger.log(SUCCESS, "021 Passphrase visibility toggled to hidden")
 
                     except Exception as e:
@@ -2624,6 +2630,7 @@ class View(customtkinter.CTk):
                 def _toggle_mnemonic_visibility(textbox, original_text):
                     try:
                         logger.info("016 Toggling mnemonic visibility")
+                        textbox.configure(state='normal')
                         # Obtenir le contenu actuel de la textbox
                         current_text = textbox.get("1.0", "end-1c")
 
@@ -2631,11 +2638,13 @@ class View(customtkinter.CTk):
                             # Si la textbox contient uniquement des étoiles, afficher le texte original
                             textbox.delete("1.0", "end")
                             textbox.insert("1.0", original_text)
+                            textbox.configure(state='disabled')
                             logger.log(SUCCESS, "017 Mnemonic visibility toggled to visible")
                         else:
                             # Sinon, masquer le texte avec des étoiles
                             textbox.delete("1.0", "end")
                             textbox.insert("1.0", '*' * len(original_text))
+                            textbox.configure(state='disabled')
                             logger.log(SUCCESS, "017 Mnemonic visibility toggled to hidden")
 
                     except Exception as e:
@@ -2858,15 +2867,8 @@ class View(customtkinter.CTk):
                             )
                             radio_24.place(relx=0.2, rely=0.35, anchor="w")
 
-                            self.mnemonic_textbox = customtkinter.CTkTextbox(self, corner_radius=20,
-                                                                             bg_color="whitesmoke", fg_color=BG_BUTTON,
-                                                                             border_color=BG_BUTTON, border_width=1,
-                                                                             width=500, height=83,
-                                                                             text_color="grey",
-                                                                             font=customtkinter.CTkFont(family="Outfit",
-                                                                                                        size=13,
-                                                                                                        weight="normal"))
-                            self.mnemonic_textbox.place(relx=0.28, rely=0.45, anchor="w")
+                            self.mnemonic_textbox = self._create_textbox()
+                            self.mnemonic_textbox.place(relx=0.045, rely=0.5, relheight=0.23, anchor="w")
 
                             passphrase_checkbox = customtkinter.CTkCheckBox(
                                 self.current_frame,
@@ -2874,18 +2876,15 @@ class View(customtkinter.CTk):
                                 variable=self.use_passphrase,
                                 command=_toggle_passphrase
                             )
-                            passphrase_checkbox.place(relx=0.05, rely=0.57, anchor="w")
+                            passphrase_checkbox.place(relx=0.05, rely=0.66, anchor="w")
 
-                            self.passphrase_entry = customtkinter.CTkEntry(
-                                self.current_frame,
-                                width=300,
-                                placeholder_text="Enter passphrase (optional)"
-                            )
-                            self.passphrase_entry.place(relx=0.28, rely=0.57, anchor="w")
-                            self.passphrase_entry.configure(state="disabled")
+                            self.passphrase_entry = self._create_entry()
+                            self.passphrase_entry.place(relx=0.045, rely=0.73, anchor="w")
+                            self.passphrase_entry.configure(placeholder_text="Enter passphrase (optional)")
+                            self.passphrase_entry.configure(state='disabled')
 
                             generate_mnemonic_button = self._create_button("Generate", command=_generate_new_mnemonic)
-                            generate_mnemonic_button.place(relx=0.75, rely=0.45, anchor="w")
+                            generate_mnemonic_button.place(relx=0.8, rely=0.49, anchor="w")
 
                             save_button = self._create_button("Save on card", command=_save_mnemonic_generated_on_card)
                             save_button.place(relx=0.85, rely=0.93, anchor="center")
@@ -2912,10 +2911,12 @@ class View(customtkinter.CTk):
                     def _generate_new_mnemonic():
                         try:
                             logger.info("037 Generating new mnemonic")
+                            self.mnemonic_textbox.configure(state='normal')
                             mnemonic_length = int(self.radio_value.get())
                             mnemonic = self.controller.generate_random_seed(mnemonic_length)
                             self.mnemonic_textbox.delete("1.0", customtkinter.END)
                             self.mnemonic_textbox.insert("1.0", mnemonic)
+                            self.mnemonic_textbox.configure(state='disabled')
                             logger.log(SUCCESS, "038 New mnemonic generated successfully")
                         except Exception as e:
                             logger.error(f"039 Error generating mnemonic: {e}", exc_info=True)
@@ -3421,6 +3422,7 @@ class View(customtkinter.CTk):
                             self.import_passphrase_checkbox.place(relx=0.05, rely=0.65, anchor="w")
 
                             self.import_passphrase_entry = self._create_entry()
+                            self.import_passphrase_entry.configure(placeholder_text="Enter passphrase (optional)")
                             self.import_passphrase_entry.place(relx=0.045, rely=0.73, anchor="w")
                             self.import_passphrase_entry.configure(state="disabled")
 
@@ -3428,7 +3430,7 @@ class View(customtkinter.CTk):
                                                                           command=_save_mnemonic_to_import_on_card)
                             self.import_save_button.place(relx=0.85, rely=0.93, anchor="center")
 
-                            self.import_back_button = self._create_button("Back", command=lambda: [self.import_mnemonic_textbox.destroy(), self.show_view_import_secret()])
+                            self.import_back_button = self._create_button("Back", command=lambda: [self.show_view_import_secret()])
                             self.import_back_button.place(relx=0.65, rely=0.93, anchor="center")
 
                             logger.log(SUCCESS, "011 Import mnemonic content created successfully")
@@ -3572,7 +3574,7 @@ class View(customtkinter.CTk):
                                                                               bg_color="whitesmoke", fg_color=BG_BUTTON,
                                                                               border_color=BG_BUTTON, border_width=1,
                                                                               width=500, height=83,
-                                                                              text_color="grey",
+                                                                              text_color="black",
                                                                               font=customtkinter.CTkFont(
                                                                                   family="Outfit",
                                                                                   size=13,
@@ -3878,7 +3880,7 @@ class View(customtkinter.CTk):
             def _create_back_button():
                 try:
                     logger.info("020 Creating back button")
-                    self.back_button = self._create_button("Back", command=self.view_start_setup)
+                    self.back_button = self._create_button("Back", command=self.show_view_my_secrets)
                     self.back_button.place(relx=0.8, rely=0.9, anchor="w")
                     logger.log(SUCCESS, "021 Back button created successfully")
                 except Exception as e:
