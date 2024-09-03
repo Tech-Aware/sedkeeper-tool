@@ -42,53 +42,53 @@ class View(customtkinter.CTk):
 
             try:
                 self._initialize_attributes()
-                logger.debug("002 Attributes initialized successfully")
+                logger.debug("Attributes initialized successfully")
             except AttributeError as e:
-                logger.error(f"003 Failed to initialize attributes: {e}")
-                raise InitializationError("004 Attribute initialization failed") from e
+                logger.error(f"Failed to initialize attributes: {e}")
+                raise InitializationError("Attribute initialization failed") from e
 
             try:
                 self._set_package_directory()
-                logger.debug("004 Package directory set successfully")
+                logger.debug("Package directory set successfully")
             except InitializationError as e:
-                logger.error(f"005 Failed to set package directory: {e}")
-                raise InitializationError("006 Package directory setup failed") from e
+                logger.error(f"Failed to set package directory: {e}")
+                raise InitializationError("Package directory setup failed") from e
 
             try:
                 self._setup_main_window()
-                logger.debug("007 Main window set up successfully")
+                logger.debug("Main window set up successfully")
             except tkinter.TclError as e:
-                logger.error(f"008 Failed to set up main window: {e}")
-                raise InitializationError("009 Main window setup failed") from e
+                logger.error(f"Failed to set up main window: {e}")
+                raise InitializationError("Main window setup failed") from e
 
             try:
                 self._declare_widgets()
-                logger.debug("010 Widgets declared successfully")
+                logger.debug("Widgets declared successfully")
             except tkinter.TclError as e:
-                logger.error(f"011 Failed to declare widgets: {e}")
-                raise InitializationError("012 Widget declaration failed") from e
+                logger.error(f"Failed to declare widgets: {e}")
+                raise InitializationError("Widget declaration failed") from e
 
             try:
                 self._set_close_protocol()
-                logger.debug("013 Close protocol set successfully")
+                logger.debug("Close protocol set successfully")
             except AttributeError as e:
-                logger.error(f"014 Failed to set close protocol: {e}")
-                raise InitializationError("015 Close protocol setup failed") from e
+                logger.error(f"Failed to set close protocol: {e}")
+                raise InitializationError("Close protocol setup failed") from e
 
             try:
                 self.controller = Controller(None, self, loglevel=loglevel)
-                logger.debug("016 Controller initialized successfully")
+                logger.debug("Controller initialized successfully")
             except Exception as e:
-                logger.error(f"017 Failed to initialize controller: {e}")
-                raise InitializationError("018 Controller initialization failed") from e
+                logger.error(f"Failed to initialize controller: {e}")
+                raise InitializationError("Controller initialization failed") from e
 
-            logger.log(SUCCESS, "019 View initialization completed successfully")
+            logger.log(SUCCESS, "View initialization completed successfully")
         except InitializationError as e:
-            logger.critical(f"020 View initialization failed: {e}", exc_info=True)
+            logger.critical(f"View initialization failed: {e}", exc_info=True)
             raise
         except Exception as e:
-            logger.critical(f"021 Unexpected error during View initialization: {e}", exc_info=True)
-            raise InitializationError(f"022 Unexpected error during View initialization: {e}") from e
+            logger.critical(f"Unexpected error during View initialization: {e}", exc_info=True)
+            raise InitializationError(f"Unexpected error during View initialization: {e}") from e
 
     ####################################################################################################################
     """ UTILS """
@@ -1166,16 +1166,16 @@ class View(customtkinter.CTk):
             frame=None
     ) -> customtkinter.CTkFrame:
         try:
-            logger.info("001 Starting Satochip-utils lateral menu creation")
+            logger.info("Starting Satochip-utils lateral menu creation")
             if state is None:
                 state = "normal" if self.controller.cc.card_present else "disabled"
-                logger.info(f"002 Card {'detected' if state == 'normal' else 'undetected'}, setting state to {state}")
+                logger.info(f"Card {'detected' if state == 'normal' else 'undetected'}, setting state to {state}")
 
             menu_frame = customtkinter.CTkFrame(self.main_frame, width=250, height=600,
                                                 bg_color=BG_MAIN_MENU,
                                                 fg_color=BG_MAIN_MENU, corner_radius=0, border_color="black",
                                                 border_width=0)
-            logger.debug("003 Menu frame created successfully")
+            logger.debug("Menu frame created successfully")
 
             # Logo section
             image_frame = customtkinter.CTkFrame(menu_frame, bg_color=BG_MAIN_MENU, fg_color=BG_MAIN_MENU,
@@ -1188,12 +1188,12 @@ class View(customtkinter.CTk):
             canvas.pack(fill="both", expand=True)
             canvas.create_image(142, 63, image=logo_photo, anchor="center")
             canvas.image = logo_photo  # conserver une référence
-            logger.debug("004 Logo section setup complete")
+            logger.debug("Logo section setup complete")
 
             if self.controller.cc.card_present:
                 if not self.controller.cc.setup_done:
-                    logger.info("005 Setup not done, enabling 'Setup My Card' button")
-                    self._create_button_for_main_menu_item(menu_frame, "Setup My Card", "setup_my_card_icon.png", 0.26,
+                    logger.info("Setup not done, enabling 'Setup My Card' button")
+                    self._create_button_for_main_menu_item(menu_frame, "Setup my card", "setup_my_card_icon.png", 0.26,
                                                            0.60,
                                                            state='normal', command=lambda: None)
                 else:
@@ -1203,33 +1203,33 @@ class View(customtkinter.CTk):
                                                                state='normal',
                                                                command=lambda: None)
                     else:
-                        logger.info("007 Setup completed, disabling 'Setup Done' button")
+                        logger.info("Setup completed, disabling 'Setup Done' button")
                         self._create_button_for_main_menu_item(menu_frame,
-                                                               "Setup Done" if self.controller.cc.card_present else 'Insert Card',
+                                                               "Setup done" if self.controller.cc.card_present else 'Insert card',
                                                                "setup_done_icon.jpg" if self.controller.cc.card_present else "insert_card_icon.jpg",
                                                                0.26,
                                                                0.575 if self.controller.cc.card_present else 0.595,
                                                                state='disabled', command=lambda: None)
             else:
-                logger.info("008 Card not present, setting 'Setup My Card' button state")
-                self._create_button_for_main_menu_item(menu_frame, "Insert a Card", "insert_card_icon.jpg", 0.26, 0.585,
+                logger.info("Card not present, setting 'Setup My Card' button state")
+                self._create_button_for_main_menu_item(menu_frame, "Insert a card", "insert_card_icon.jpg", 0.26, 0.585,
                                                        state='normal', command=lambda: None)
 
             if self.controller.cc.card_type != "Satodime" and self.controller.cc.setup_done:
                 logger.debug("009 Enabling 'Change Pin' button")
-                self._create_button_for_main_menu_item(menu_frame, "Change Pin", "change_pin_icon.png", 0.33, 0.567,
+                self._create_button_for_main_menu_item(menu_frame, "Change PIN", "change_pin_icon.png", 0.33, 0.567,
                                                        state='normal', command=self.show_view_change_pin)
             else:
                 logger.info(f"010 Card type is {self.controller.cc.card_type} | Disabling 'Change Pin' button")
-                self._create_button_for_main_menu_item(menu_frame, "Change Pin", "change_pin_locked_icon.jpg", 0.33,
+                self._create_button_for_main_menu_item(menu_frame, "Change PIN", "change_pin_locked_icon.jpg", 0.33,
                                                        0.57,
                                                        state='disabled', command=lambda: None)
 
             if self.controller.cc.setup_done:
-                self._create_button_for_main_menu_item(menu_frame, "Edit Label", "edit_label_icon.png", 0.40, 0.537,
+                self._create_button_for_main_menu_item(menu_frame, "Edit label", "edit_label_icon.png", 0.40, 0.537,
                                                        state='normal', command=self.show_view_edit_label)
             else:
-                self._create_button_for_main_menu_item(menu_frame, "Edit Label", "edit_label_locked_icon.jpg", 0.40,
+                self._create_button_for_main_menu_item(menu_frame, "Edit label", "edit_label_locked_icon.jpg", 0.40,
                                                        0.546,
                                                        state='disabled', command=lambda: None)
 
@@ -1242,12 +1242,12 @@ class View(customtkinter.CTk):
                         self.controller.PIN_dialog(f'Unlock your {self.controller.cc.card_type}')
 
             if self.controller.cc.setup_done:
-                self._create_button_for_main_menu_item(menu_frame, "Check Authenticity", "check_authenticity_icon.png",
+                self._create_button_for_main_menu_item(menu_frame, "Check authenticity", "check_authenticity_icon.png",
                                                        0.47, 0.775,
                                                        state='normal', command=lambda: [before_check_authenticity(),
                                                                                         self.show_view_check_authenticity()])
             else:
-                self._create_button_for_main_menu_item(menu_frame, "Check Authenticity",
+                self._create_button_for_main_menu_item(menu_frame, "Check authenticity",
                                                        "check_authenticity_locked_icon.jpg", 0.47, 0.66,
                                                        state='disabled',
                                                        command=lambda: None)
@@ -1260,7 +1260,7 @@ class View(customtkinter.CTk):
                                                        rel_y=0.73,
                                                        rel_x=0.52, state='disabled', command=self.show_view_my_secrets)
 
-            self._create_button_for_main_menu_item(menu_frame, "Go to the Webshop", "webshop_icon.png", 0.95, 0.805,
+            self._create_button_for_main_menu_item(menu_frame, "Go to the webshop", "webshop_icon.png", 0.95, 0.805,
                                                    state='normal',
                                                    command=lambda: webbrowser.open("https://satochip.io/shop/", new=2))
 
@@ -1552,36 +1552,36 @@ class View(customtkinter.CTk):
         @log_method
         def _setup_welcome_frame():
             try:
-                logger.info("001 Setting up welcome frame")
+                logger.info("Setting up welcome frame")
                 self.welcome_frame = customtkinter.CTkFrame(self, fg_color=BG_MAIN_MENU)
                 self.welcome_frame.place(relx=0.5, rely=0.5, anchor="center")
-                logger.log(SUCCESS, "002 Welcome frame set up successfully")
+                logger.log(SUCCESS, "Welcome frame set up successfully")
             except Exception as e:
-                error_msg = f"003 Failed to create welcome frame: {e}"
+                error_msg = f"Failed to create welcome frame: {e}"
                 logger.error(error_msg, exc_info=True)
                 raise FrameError(error_msg) from e
 
         @log_method
         def _create_welcome_background():
             try:
-                logger.info("004 Creating welcome background")
+                logger.info("Creating welcome background")
                 bg_image = Image.open("./pictures_db/welcome_in_seedkeeper_tool.png")
                 self.background_photo = ImageTk.PhotoImage(bg_image)
                 self.canvas = customtkinter.CTkCanvas(self.welcome_frame, width=bg_image.width, height=bg_image.height)
                 self.canvas.pack(fill="both", expand=True)
                 self.canvas.create_image(0, 0, image=self.background_photo, anchor="nw")
-                logger.log(SUCCESS, "005 Welcome background created successfully")
+                logger.log(SUCCESS, "Welcome background created successfully")
             except FileNotFoundError:
-                logger.error("006 Background image file not found", exc_info=True)
-                raise UIElementError("007 Background image file not found.")
+                logger.error("Background image file not found", exc_info=True)
+                raise UIElementError("Background image file not found.")
             except Exception as e:
-                logger.error(f"008 Failed to create welcome background: {e}", exc_info=True)
-                raise UIElementError(f"009 Failed to create welcome background: {e}")
+                logger.error(f"Failed to create welcome background: {e}", exc_info=True)
+                raise UIElementError(f"Failed to create welcome background: {e}")
 
         @log_method
         def _create_welcome_header():
             try:
-                logger.info("010 Creating welcome header")
+                logger.info("Creating welcome header")
                 header_frame = customtkinter.CTkFrame(self.welcome_frame, width=380, height=178,
                                                       fg_color=DEFAULT_BG_COLOR)
                 header_frame.place(relx=0.1, rely=0.03, anchor='nw')
@@ -1604,18 +1604,18 @@ class View(customtkinter.CTk):
                 logo_canvas.create_image(x_center, y_center, anchor='nw', image=photo)
                 logo_canvas.image = photo  # Keep a reference to prevent garbage collection
 
-                logger.log(SUCCESS, "011 Welcome header created successfully")
+                logger.log(SUCCESS, "Welcome header created successfully")
             except FileNotFoundError:
-                logger.error(f"012 Logo file not found: {icon_path}", exc_info=True)
+                logger.error(f"Logo file not found: {icon_path}", exc_info=True)
             except Exception as e:
-                error_msg = f"013 Failed to create welcome header: {e}"
+                error_msg = f"Failed to create welcome header: {e}"
                 logger.error(error_msg, exc_info=True)
                 raise UIElementError(error_msg) from e
 
         @log_method
         def _create_welcome_labels():
             try:
-                logger.info("014 Creating welcome labels")
+                logger.info("Creating welcome labels")
                 labels = [
                     ("Seedkeeper-tool", 0.4, True),
                     ("The companion app for your Seedkeeper card.", 0.5, False),
@@ -1634,26 +1634,30 @@ class View(customtkinter.CTk):
                     )
                     label.place(relx=0.05, rely=rely, anchor="w")
 
-                logger.log(SUCCESS, "015 Welcome labels created successfully")
+                logger.log(SUCCESS, "Welcome labels created successfully")
             except Exception as e:
-                error_msg = f"016 Failed to create welcome labels: {e}"
+                error_msg = f"Failed to create welcome labels: {e}"
                 logger.error(error_msg, exc_info=True)
                 raise UIElementError(error_msg) from e
 
         @log_method
         def _create_welcome_button():
             try:
-                logger.info("017 Creating welcome button")
-                self.lets_go_button = self._create_welcome_button("Let's go", self.show_view_my_secrets)
+                logger.info("Creating welcome button")
+                if self.controller.cc.card_present:
+                    self.lets_go_button = self._create_welcome_button("Let's go", self.show_view_my_secrets)
+                else:
+                    self.lets_go_button = self._create_welcome_button("Let's go", lambda: self.show("ERROR", 'Insert card to continue.', 'Ok', None,
+                                                    "./pictures_db/insert_card__icon_ws.png"))
                 self.lets_go_button.place(relx=0.85, rely=0.93, anchor="center")
 
                 logger.log(SUCCESS, "018 Welcome button created successfully")
             except Exception as e:
-                error_msg = f"019 Failed to create welcome button: {e}"
+                error_msg = f"Failed to create welcome button: {e}"
                 logger.error(error_msg, exc_info=True)
                 raise UIElementError(error_msg) from e
 
-        logger.info("020 Initializing welcome view")
+        logger.info("Initializing welcome view")
 
         try:
             self._clear_current_frame()
@@ -1663,17 +1667,17 @@ class View(customtkinter.CTk):
             _create_welcome_labels()
             _create_welcome_button()
 
-            logger.log(SUCCESS, "021 Welcome view created successfully")
+            logger.log(SUCCESS, "Welcome view created successfully")
             self.update()  # Force update of the window
         except FrameError as e:
-            logger.error(f"022 Frame error in welcome method: {e}", exc_info=True)
-            raise FrameError(f"023 Failed to initialize welcome view due to frame error: {e}") from e
+            logger.error(f"Frame error in welcome method: {e}", exc_info=True)
+            raise FrameError(f"Failed to initialize welcome view due to frame error: {e}") from e
         except UIElementError as e:
-            logger.error(f"024 UI element error in welcome method: {e}", exc_info=True)
-            raise UIElementError(f"025 Failed to initialize welcome view due to UI element error: {e}") from e
+            logger.error(f"UI element error in welcome method: {e}", exc_info=True)
+            raise UIElementError(f"Failed to initialize welcome view due to UI element error: {e}") from e
         except Exception as e:
-            logger.error(f"026 Unexpected error in welcome method: {e}", exc_info=True)
-            raise ViewError(f"027 Unexpected error while initializing welcome view: {e}") from e
+            logger.error(f"Unexpected error in welcome method: {e}", exc_info=True)
+            raise ViewError(f"Unexpected error while initializing welcome view: {e}") from e
 
     ####################################################################################################################
     """ SPECIFIC VIEW OF SATOCHIP UTIL FOR MANAGE SETTINGS """
@@ -2301,13 +2305,13 @@ class View(customtkinter.CTk):
         @log_method
         def _create_secrets_header():
             try:
-                logger.info("005 Creating secrets header")
-                self.header = self._create_an_header("My Secrets", "secrets_icon_ws.png")
+                logger.info("Creating secrets header")
+                self.header = self._create_an_header("My secrets", "secrets_icon_ws.png")
                 self.header.place(relx=0.03, rely=0.08, anchor="nw")
-                logger.log(SUCCESS, "006 Secrets header created successfully")
+                logger.log(SUCCESS, "Secrets header created successfully")
             except Exception as e:
-                logger.error(f"007 Error creating secrets header: {e}", exc_info=True)
-                raise UIElementError(f"008 Failed to create secrets header: {e}") from e
+                logger.error(f"Error creating secrets header: {e}", exc_info=True)
+                raise UIElementError(f"Failed to create secrets header: {e}") from e
 
         @log_method
         def _create_secrets_table(secrets_data):
@@ -2321,13 +2325,13 @@ class View(customtkinter.CTk):
 
             def _show_secret_details(secret):
                 try:
-                    logger.info(f"009 Showing details for secret ID: {secret['id']}")
+                    logger.info(f"Showing details for secret ID: {secret['id']}")
                     self._create_frame()
 
                     secret_details = self.controller.retrieve_details_about_secret_selected(secret['id'])
-                    logger.log(SUCCESS, f"010 Secret details retrieved: {secret_details}")
+                    logger.log(SUCCESS, f"Secret details retrieved: {secret_details}")
 
-                    self.header = self._create_an_header("Secret Details", "secrets_icon_ws.png")
+                    self.header = self._create_an_header("Secret details", "secrets_icon_ws.png")
                     self.header.place(relx=0.03, rely=0.08, anchor="nw")
 
                     self.create_seedkeeper_menu()
@@ -2351,7 +2355,7 @@ class View(customtkinter.CTk):
                     raise SecretFrameCreationError("Error displaying secret details") from e
 
             try:
-                logger.info("014 Creating secrets table")
+                logger.info("Creating secrets table")
 
                 # Introduce table
                 label_text = self._create_label(text="Click on a secret to manage it:")
@@ -3675,7 +3679,7 @@ class View(customtkinter.CTk):
             logs_details
     ):
         try:
-            logger.info("001 Starting view_logs_details method")
+            logger.info("Starting view_logs_details method")
 
             @log_method
             def _create_logs_frame():
@@ -3690,8 +3694,8 @@ class View(customtkinter.CTk):
             @log_method
             def _create_logs_header():
                 try:
-                    logger.info("006 Creating logs header")
-                    self.header = self._create_an_header("Logs History", "secrets_icon_ws.png")
+                    logger.info("Creating logs header")
+                    self.header = self._create_an_header("Logs history", "secrets_icon_ws.png")
                     self.header.place(relx=0.03, rely=0.08, anchor="nw")
                     logger.log(SUCCESS, "007 Logs header created successfully")
                 except Exception as e:
