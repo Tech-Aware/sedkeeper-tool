@@ -3087,6 +3087,7 @@ class View(customtkinter.CTk):
                             logger.info("074 Creating generate login/password content")
 
                             # Label and entry creation
+                            # création des labels et des entrées
                             label = self._create_label("Label*:")
                             label.place(relx=0.04, rely=0.20, anchor="nw")
 
@@ -3094,7 +3095,7 @@ class View(customtkinter.CTk):
                             self.generate_label_name.place(relx=0.12, rely=0.195, anchor="nw")
                             self.generate_label_name.configure(width=400)
 
-                            self.generate_login = self._create_label("Login*:")
+                            self.generate_login = self._create_label("Login:")
                             self.generate_login.place(relx=0.04, rely=0.32, anchor="nw")
 
                             self.generate_login_name = self._create_entry()
@@ -3112,6 +3113,7 @@ class View(customtkinter.CTk):
                             self.slider_moved = False
 
                             # Slide bar creation
+                            # Création de la slide bar
                             @log_method
                             def _length_slider_event(value):
                                 try:
@@ -3151,6 +3153,7 @@ class View(customtkinter.CTk):
                             logger.debug("079 Slider and length labels created successfully")
 
                             # Checkbox creation
+                            # Création de la check box
                             characters_used = self._create_label("Characters used: ")
                             characters_used.place(relx=0.04, rely=0.6)
 
@@ -3241,17 +3244,13 @@ class View(customtkinter.CTk):
 
                             if not label:
                                 logger.warning("No label provide for password encryption.")
-                                raise ValueError("Please, provide a label for password encryption")
-
-                            if not login:
-                                logger.warning("No login provide for password encryption")
-                                raise ValueError("Please, provide a login for password encryption")
+                                raise ValueError("The label field is mandatory.")
 
                             if password:
                                 id, fingerprint = self.controller.import_password(label, login, password, url)
                                 self.show("SUCCESS",
                                           f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
-                                          "Ok", None, "./pictures_db/generate_icon_ws.png")
+                                          "Ok", self.show_view_my_secrets, "./pictures_db/generate_icon_ws.png")
                                 logger.log(SUCCESS, "058 Password saved to card successfully")
                             else:
                                 logger.warning("089 No password to save")
