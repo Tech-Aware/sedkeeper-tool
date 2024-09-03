@@ -3203,7 +3203,7 @@ class View(customtkinter.CTk):
 
                             logger.debug("083 Checkboxes created successfully")
 
-                            password_label = self._create_label("Generated Password:")
+                            password_label = self._create_label("Generated password:")
                             password_label.place(relx=0.04, rely=0.67, anchor="nw")
 
                             self.password_text_box = customtkinter.CTkTextbox(self, corner_radius=20,
