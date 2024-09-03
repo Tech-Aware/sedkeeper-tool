@@ -2056,7 +2056,7 @@ class View(customtkinter.CTk):
                     label = self._create_label(text)
                     if is_bold:
                         label.configure(font=self._make_text_bold())
-                    label.place(relx=0.33, rely=rely, anchor="w")
+                    label.place(relx=0.045, rely=rely, anchor="w")
 
             @log_method
             def _create_certificate_radio_buttons():
