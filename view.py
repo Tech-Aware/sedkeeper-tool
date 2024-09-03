@@ -2531,15 +2531,15 @@ class View(customtkinter.CTk):
                     try:
                         label = self._create_label(label_text)
                         label.place(relx=0.045, rely=0.2 + i * 0.15, anchor="w")
-                        logger.debug(f"002 Created label: {label_text}")
+                        logger.debug(f"Created label: {label_text}")
 
                         entry = self._create_entry()
                         entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
                         entries[label_text.lower()[:-1]] = entry
-                        logger.debug(f"003 Created entry for: {label_text}")
+                        logger.debug(f"Created entry for: {label_text}")
                     except Exception as e:
-                        logger.error(f"004 Error creating label or entry for {label_text}: {e}", exc_info=True)
-                        raise UIElementError(f"005 Failed to create label or entry for {label_text}: {e}") from e
+                        logger.error(f"Error creating label or entry for {label_text}: {e}", exc_info=True)
+                        raise UIElementError(f"Failed to create label or entry for {label_text}: {e}") from e
 
                 # Set values to label and mnemonic type
                 entries['label'].insert(0, secret_details['label'])
@@ -2548,7 +2548,7 @@ class View(customtkinter.CTk):
                 # lock possibilities to wright into entries
                 entries['label'].configure(state='disabled')
                 entries['mnemonic type'].configure(state='disabled')
-                logger.debug("006 Entry values set")
+                logger.debug("Entry values set")
 
                 try:
                     xpub_button = self._create_button(text="Xpub",
@@ -2558,10 +2558,10 @@ class View(customtkinter.CTk):
                     seedqr_button = self._create_button(text="SeedQR",
                                                         command=lambda: None)  # self._show_seedqr(secret['id']))
                     seedqr_button.place(relx=0.78, rely=0.53, anchor="se")
-                    logger.debug("007 Xpub and SeedQR buttons created")
+                    logger.debug("Xpub and SeedQR buttons created")
                 except Exception as e:
-                    logger.error(f"008 Error creating Xpub and SeedQR buttons: {e}", exc_info=True)
-                    raise UIElementError(f"009 Failed to create Xpub and SeedQR buttons: {e}") from e
+                    logger.error(f"Error creating Xpub and SeedQR buttons: {e}", exc_info=True)
+                    raise UIElementError(f"Failed to create Xpub and SeedQR buttons: {e}") from e
 
                 # Decode seed to mnemonic
                 try:
@@ -2685,7 +2685,7 @@ class View(customtkinter.CTk):
                 self.secret_2FA_entry = self._create_entry(show_option="*")
                 self.secret_2FA_entry.place(relx=0.045, rely=0.37)
                 self.secret_2FA_entry.configure(width=450)
-                self.secret_2FA_entry.insert(0, secret_details['secret'])
+                self.secret_2FA_entry.insert(0, secret_details['secret'][2:])
 
                 def _toggle_2FA_visibility(secret_2FA_entry):
                     try:
@@ -2699,8 +2699,8 @@ class View(customtkinter.CTk):
                             f"{'hidden' if (secret_2FA_new_state) == '*' else 'visible'}"
                         )
                     except Exception as e:
-                        logger.error(f"018 Error toggling password visibility: {e}", exc_info=True)
-                        raise UIElementError(f"019 Failed to toggle password visibility: {e}") from e
+                        logger.error(f"Error toggling password visibility: {e}", exc_info=True)
+                        raise UIElementError(f"Failed to toggle password visibility: {e}") from e
 
                 # Create action buttons
                 try:
@@ -2712,10 +2712,10 @@ class View(customtkinter.CTk):
                     delete_button = self._create_button(text="Delete secret",
                                                         command=lambda: None)  # self._delete_secret(secret['id']))
                     delete_button.place(relx=0.75, rely=0.98, anchor="se")
-                    logger.debug("010 Action buttons created")
+                    logger.debug("Action buttons created")
                 except Exception as e:
-                    logger.error(f"011 Error creating action buttons: {e}", exc_info=True)
-                    raise UIElementError(f"012 Failed to create action buttons: {e}") from e
+                    logger.error(f"Error creating action buttons: {e}", exc_info=True)
+                    raise UIElementError(f"Failed to create action buttons: {e}") from e
                 logger.log(SUCCESS, "Generic secret frame created")
             except Exception as e:
                 logger.error(f"Error creating generic secret frame: {e}", exc_info=True)
