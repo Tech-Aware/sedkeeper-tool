@@ -2960,8 +2960,7 @@ class View(customtkinter.CTk):
                                 id, fingerprint = self.controller.import_masterseed(label, mnemonic)
 
                             self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerprint: {fingerprint}",
-                                      "Ok", None,
-                                      "./pictures_db_generate_icon_ws.png")
+                                      "Ok", self.show_view_my_secrets, "./pictures_db/generate_icon_ws.png")
                             logger.log(SUCCESS, "012 Masterseed saved to card successfully")
 
                         except ValueError as e:
