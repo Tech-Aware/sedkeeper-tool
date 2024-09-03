@@ -3463,8 +3463,11 @@ class View(customtkinter.CTk):
 
                             # Vérification que la mnemonic est fournie
                             if not mnemonic:
-                                logger.warning("022 No mnemonic to save")
-                                raise ValueError("023 No mnemonic provided")
+                                logger.warning("No mnemonic to save")
+                                raise ValueError("Mnemonic field is mandatory.")
+                            elif not label:
+                                logger.warning("No label provide")
+                                raise ValueError("Label field is mandatory.")
 
                             # Vérification du nombre de mots dans la mnemonic
                             actual_word_count = len(mnemonic.split())
@@ -3487,13 +3490,12 @@ class View(customtkinter.CTk):
 
                             # Affichage du succès
                             self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerprint: {fingerprint}",
-                                      "Ok", None,
-                                      "./pictures_db_generate_icon_ws.png")
+                                      "Ok", self.show_view_my_secrets, "./pictures_db/import_icon_ws.png")
                             logger.log(SUCCESS, "026 Masterseed saved to card successfully")
 
                         except ValueError as e:
                             logger.error(f"027 Error saving mnemonic to card: {e}", exc_info=True)
-                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/generate_icon_ws.png")
+                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/import_icon_ws.png")
                             raise UIElementError(f"028 Failed to save mnemonic to card: {e}") from e
                         except Exception as e:
                             logger.error(f"029 Unexpected error saving mnemonic to card: {e}", exc_info=True)
@@ -3542,7 +3544,7 @@ class View(customtkinter.CTk):
                         try:
                             logger.info("050 Creating import login/password widgets")
                             # Label and entry creation
-                            label = self._create_label("Label:")
+                            label = self._create_label("Label*:")
                             label.place(relx=0.04, rely=0.20, anchor="nw")
 
                             self.password_label_name = self._create_entry()
@@ -3563,9 +3565,9 @@ class View(customtkinter.CTk):
                             self.password_url_name.place(relx=0.12, rely=0.438, anchor="nw")
                             self.password_url_name.configure(width=400)
 
-                            logger.debug("051 Labels and entries created successfully")
+                            logger.debug("Labels and entries created successfully")
 
-                            password_label = self._create_label("Password to import:")
+                            password_label = self._create_label("Password to import*:")
                             password_label.place(relx=0.04, rely=0.57, anchor="nw")
 
                             self.password_text_box = customtkinter.CTkTextbox(self, corner_radius=20,
@@ -3586,7 +3588,7 @@ class View(customtkinter.CTk):
                                                               command=self.show_view_import_secret)
                             back_button.place(relx=0.65, rely=0.93, anchor="center")
 
-                            logger.log(SUCCESS, "052 Import login/password widgets created successfully")
+                            logger.log(SUCCESS, "Import login/password widgets created successfully")
                         except Exception as e:
                             logger.error(f"053 Error creating import login/password widgets: {e}", exc_info=True)
                             raise UIElementError(f"054 Failed to create import login/password widgets: {e}") from e
@@ -3594,7 +3596,7 @@ class View(customtkinter.CTk):
                     @log_method
                     def _save_password_to_import_on_card():
                         try:
-                            logger.info("055 Saving password to card")
+                            logger.info("Saving password to card")
                             label = self.password_label_name.get()
                             login = self.password_login_name.get()
                             url = self.password_url_name.get()
@@ -3602,21 +3604,17 @@ class View(customtkinter.CTk):
 
                             if not label:
                                 logger.warning("No label provide for password encryption.")
-                                raise ValueError("Please, provide a label for password encryption")
-
-                            if not login:
-                                logger.warning("No login provide for password encryption")
-                                raise ValueError("Please, provide a login for password encryption")
+                                raise ValueError("Label field is mandatory")
 
                             if not password:
                                 logger.warning("No password provide for encryption")
-                                raise ValueError("Please, provide a password for encryption")
+                                raise ValueError("Password field is mandatory")
 
                             else:
                                 id, fingerprint = self.controller.import_password(label, login, password, url)
                                 self.show("SUCCESS",
                                           f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
-                                          "Ok", None, "./pictures_db/import_icon_ws.png")
+                                          "Ok", self.show_view_my_secrets, "./pictures_db/import_icon_ws.png")
                                 logger.log(SUCCESS, "058 Password saved to card successfully")
 
                         except ValueError as e:
