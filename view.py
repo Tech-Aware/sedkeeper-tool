@@ -2811,36 +2811,36 @@ class View(customtkinter.CTk):
             @log_method
             def _show_generate_mnemonic():
                 try:
-                    logger.info("020 Starting _show_generate_mnemonic")
+                    logger.info("Starting _show_generate_mnemonic")
 
                     @log_method
                     def _generate_mnemonic_frame():
                         try:
-                            logger.info("021 Creating generate mnemonic frame")
+                            logger.info("Creating generate mnemonic frame")
                             self._create_frame()
-                            logger.log(SUCCESS, "022 Generate mnemonic frame created successfully")
+                            logger.log(SUCCESS, "Generate mnemonic frame created successfully")
                         except Exception as e:
-                            logger.error(f"023 Error creating generate mnemonic frame: {e}", exc_info=True)
-                            raise FrameCreationError(f"024 Failed to create generate mnemonic frame: {e}") from e
+                            logger.error(f"Error creating generate mnemonic frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"Failed to create generate mnemonic frame: {e}") from e
 
                     @log_method
                     def _generate_mnemonic_header():
                         try:
-                            logger.info("025 Creating generate mnemonic header")
+                            logger.info("Creating generate mnemonic header")
                             header_text = "Generate seedphrase"
                             self.header = self._create_an_header(header_text, "generate_icon_ws.png")
                             self.header.place(relx=0.03, rely=0.08, anchor="nw")
-                            logger.log(SUCCESS, "026 Generate mnemonic header created successfully")
+                            logger.log(SUCCESS, "Generate mnemonic header created successfully")
                         except Exception as e:
-                            logger.error(f"027 Error creating generate mnemonic header: {e}", exc_info=True)
-                            raise UIElementError(f"028 Failed to create generate mnemonic header: {e}") from e
+                            logger.error(f"Error creating generate mnemonic header: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create generate mnemonic header: {e}") from e
 
                     @log_method
                     def _generate_mnemonic_widgets():
                         try:
-                            logger.info("029 Creating generate mnemonic content")
+                            logger.info("Creating generate mnemonic content")
 
-                            label = self._create_label("Label:")
+                            label = self._create_label("Label*:")
                             label.place(relx=0.05, rely=0.20, anchor="nw")
 
                             self.mnemonic_label_name = self._create_entry()
@@ -2892,65 +2892,68 @@ class View(customtkinter.CTk):
                             back_button = self._create_button("Back", command=self.show_view_generate_secret)
                             back_button.place(relx=0.65, rely=0.93, anchor="center")
 
-                            logger.log(SUCCESS, "030 Generate mnemonic content created successfully")
+                            logger.log(SUCCESS, "Generate mnemonic content created successfully")
                         except Exception as e:
-                            logger.error(f"031 Error creating generate mnemonic content: {e}", exc_info=True)
-                            raise UIElementError(f"032 Failed to create generate mnemonic content: {e}") from e
+                            logger.error(f"Error creating generate mnemonic content: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create generate mnemonic content: {e}") from e
 
                     @log_method
                     def _update_mnemonic():
                         try:
-                            logger.info("033 Updating mnemonic")
+                            logger.info("Updating mnemonic")
                             _generate_new_mnemonic()
-                            logger.log(SUCCESS, "034 Mnemonic updated successfully")
+                            logger.log(SUCCESS, "Mnemonic updated successfully")
                         except Exception as e:
-                            logger.error(f"035 Error updating mnemonic: {e}", exc_info=True)
-                            raise UIElementError(f"036 Failed to update mnemonic: {e}") from e
+                            logger.error(f"Error updating mnemonic: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to update mnemonic: {e}") from e
 
                     @log_method
                     def _generate_new_mnemonic():
                         try:
-                            logger.info("037 Generating new mnemonic")
+                            logger.info("Generating new mnemonic")
                             self.mnemonic_textbox.configure(state='normal')
                             mnemonic_length = int(self.radio_value.get())
                             mnemonic = self.controller.generate_random_seed(mnemonic_length)
                             self.mnemonic_textbox.delete("1.0", customtkinter.END)
                             self.mnemonic_textbox.insert("1.0", mnemonic)
                             self.mnemonic_textbox.configure(state='disabled')
-                            logger.log(SUCCESS, "038 New mnemonic generated successfully")
+                            logger.log(SUCCESS, "New mnemonic generated successfully")
                         except Exception as e:
-                            logger.error(f"039 Error generating mnemonic: {e}", exc_info=True)
-                            raise UIElementError(f"040 Failed to generate mnemonic: {e}") from e
+                            logger.error(f"Error generating mnemonic: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to generate mnemonic: {e}") from e
 
                     @log_method
                     def _toggle_passphrase():
                         try:
-                            logger.info("041 Toggling passphrase")
+                            logger.info("Toggling passphrase")
                             if self.use_passphrase.get():
                                 self.passphrase_entry.configure(state="normal")
-                                logger.debug("042 Passphrase entry enabled")
+                                logger.debug("Passphrase entry enabled")
                             else:
                                 self.passphrase_entry.configure(state="disabled")
-                                logger.debug("043 Passphrase entry disabled")
+                                logger.debug("Passphrase entry disabled")
                         except Exception as e:
-                            logger.error(f"044 Error toggling passphrase: {e}", exc_info=True)
-                            raise UIElementError(f"045 Failed to toggle passphrase: {e}") from e
+                            logger.error(f"Error toggling passphrase: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to toggle passphrase: {e}") from e
 
                     @log_method
                     def _save_mnemonic_generated_on_card():
                         try:
-                            logger.info("008 Saving mnemonic to card")
+                            logger.info("Saving mnemonic to card")
                             label = self.mnemonic_label_name.get()
                             mnemonic = self.mnemonic_textbox.get("1.0", customtkinter.END).strip()
                             passphrase = self.passphrase_entry.get() if self.use_passphrase.get() else None
 
                             if not mnemonic:
-                                logger.warning("009 No mnemonic to save")
-                                raise ValueError("010 No mnemonic provided")
+                                logger.warning("No mnemonic to save")
+                                raise ValueError("Mnemonic field is mandatory")
+                            if not label:
+                                logger.warning("No label provide")
+                                raise ValueError("Label field is mandatory")
 
                             # Vérification supplémentaire pour la passphrase
                             if self.use_passphrase.get() and not passphrase:
-                                logger.warning("011 Passphrase checkbox is checked but no passphrase provided")
+                                logger.warning("Passphrase checkbox is checked but no passphrase provided")
                                 raise ValueError("Passphrase checked but not provided.")
 
                             if passphrase:
@@ -2961,25 +2964,25 @@ class View(customtkinter.CTk):
 
                             self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerprint: {fingerprint}",
                                       "Ok", self.show_view_my_secrets, "./pictures_db/generate_icon_ws.png")
-                            logger.log(SUCCESS, "012 Masterseed saved to card successfully")
+                            logger.log(SUCCESS, "Masterseed saved to card successfully")
 
                         except ValueError as e:
-                            logger.error(f"013 Validation error saving mnemonic to card: {str(e)}")
+                            logger.error(f"Validation error saving mnemonic to card: {str(e)}")
                             self.show("ERROR", str(e), "Ok", None,
-                                      "./pictures_db_generate_icon_ws.png")
+                                      "./pictures_db/generate_icon_ws.png")
                         except ControllerError as e:
-                            logger.error(f"015 Controller error saving mnemonic to card: {str(e)}")
+                            logger.error(f"Controller error saving mnemonic to card: {str(e)}")
                             self.show("ERROR", f"Failed to save mnemonic: {str(e)}", "Ok", None,
-                                      "./pictures_db_generate_icon_ws.png")
+                                      "./pictures_db/generate_icon_ws.png")
                         except SeedkeeperError as e:
-                            logger.error(f"014 SeedKeeper error saving mnemonic to card: {str(e)}")
+                            logger.error(f"SeedKeeper error saving mnemonic to card: {str(e)}")
                             self.show("ERROR", f"Failed to save mnemonic: {str(e)}", "Ok", None,
-                                      "./pictures_db_generate_icon_ws.png")
+                                      "./pictures_db/generate_icon_ws.png")
                         except Exception as e:
-                            logger.error(f"016 Unexpected error saving mnemonic to card: {str(e)}")
+                            logger.error(f"Unexpected error saving mnemonic to card: {str(e)}")
                             self.show("ERROR", "An unexpected error occurred while saving the mnemonic",
                                       "Ok", None,
-                                      "./pictures_db_generate_icon_ws.png")
+                                      "./pictures_db/generate_icon_ws.png")
 
                     self._clear_current_frame()
                     _generate_mnemonic_frame()
@@ -2995,29 +2998,29 @@ class View(customtkinter.CTk):
             @log_method
             def _show_generate_password():
                 try:
-                    logger.info("057 Starting _show_generate_password method")
+                    logger.info("Starting _show_generate_password method")
 
                     @log_method
                     def _create_generate_password_frame():
                         try:
-                            logger.info("058 Creating generate login/password frame")
+                            logger.info("Creating generate login/password frame")
                             self._create_frame()
-                            logger.log(SUCCESS, "059 Generate login/password frame created successfully")
+                            logger.log(SUCCESS, "Generate login/password frame created successfully")
                         except Exception as e:
-                            logger.error(f"060 Error creating generate login/password frame: {e}", exc_info=True)
-                            raise FrameCreationError(f"061 Failed to create generate login/password frame: {e}") from e
+                            logger.error(f"Error creating generate login/password frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"Failed to create generate login/password frame: {e}") from e
 
                     @log_method
                     def _create_generate_password_header():
                         try:
-                            logger.info("062 Creating generate login/password header")
+                            logger.info("Creating generate login/password header")
                             header_text = "Generate login/password"
                             self.header = self._create_an_header(header_text, "generate_icon_ws.png")
                             self.header.place(relx=0.03, rely=0.08, anchor="nw")
                             logger.log(SUCCESS, "063 Generate login/password header created successfully")
                         except Exception as e:
-                            logger.error(f"064 Error creating generate login/password header: {e}", exc_info=True)
-                            raise UIElementError(f"065 Failed to create generate login/password header: {e}") from e
+                            logger.error(f"Error creating generate login/password header: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create generate login/password header: {e}") from e
 
                     @log_method
                     def _generate_new_password():
@@ -3029,10 +3032,12 @@ class View(customtkinter.CTk):
                                 raise ValueError("Adjust the slider to select the password length.")
 
                             # Récupération de la longueur sélectionnée
+                            # retrieving the length selected by user
                             password_length = int(self.length_slider.get())
                             print(password_length)
 
                             # Récupération des types de caractères sélectionnés
+                            # retrieving characters selected in checkbox
                             char_pool = ""
                             if self.var_abc.get():
                                 char_pool += "abcdefghijklmnopqrstuvwxyz"
@@ -3049,36 +3054,39 @@ class View(customtkinter.CTk):
                                     "No character sets selected.\nPlease select at least one character set.")
 
                             # Génération du mot de passe
+                            # password generation
                             generated_password = ''.join(random.choice(char_pool) for _ in range(password_length))
 
                             # Centrer le mot de passe dans la boîte de texte
+                            # adjust alignement of text into text_boxw
                             textbox_width = 100
                             centered_text = generated_password.center(textbox_width)
 
                             # Affichage du mot de passe dans la boîte de texte
+                            # displaying password into text box
                             self.password_text_box.configure(state='normal')
                             self.password_text_box.delete("1.0", customtkinter.END)
                             self.password_text_box.insert("1.0", centered_text)
                             self.password_text_box.configure(state='disabled')
 
-                            logger.log(SUCCESS, "067 New login/password generated successfully")
+                            logger.log(SUCCESS, "New login/password generated successfully")
                         except ValueError as e:
-                            logger.error(f"068 Error generating login/password: {e}", exc_info=True)
+                            logger.error(f"Error generating login/password: {e}", exc_info=True)
                             self.show("ERROR", str(e), "Ok", None, "./pictures_db/generate_icon_ws.png")
-                            raise UIElementError(f"069 Failed to generate login/password: {e}") from e
+                            raise UIElementError(f"Failed to generate login/password: {e}") from e
                         except Exception as e:
-                            logger.error(f"070 Error generating login/password: {e}", exc_info=True)
-                            raise UIElementError(f"071 Failed to generate login/password: {e}") from e
+                            logger.error(f"Error generating login/password: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to generate login/password: {e}") from e
 
                     @log_method
                     def _update_password():
                         try:
-                            logger.info("070 Updating password")
+                            logger.info("Updating password")
                             _generate_new_password()
-                            logger.log(SUCCESS, "071 Password updated successfully")
+                            logger.log(SUCCESS, "Password updated successfully")
                         except Exception as e:
-                            logger.error(f"072 Error updating password: {e}", exc_info=True)
-                            raise UIElementError(f"073 Failed to update password: {e}") from e
+                            logger.error(f"Error updating password: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to update password: {e}") from e
 
                     @log_method
                     def _create_generate_password_content():
@@ -3108,7 +3116,7 @@ class View(customtkinter.CTk):
                             self.generate_url_name.place(relx=0.12, rely=0.438, anchor="nw")
                             self.generate_url_name.configure(width=400)
 
-                            logger.debug("075 Labels and entries created successfully")
+                            logger.debug("Labels and entries created successfully")
                             self.slider_moved = False
 
                             # Slide bar creation
@@ -3235,7 +3243,7 @@ class View(customtkinter.CTk):
                     @log_method
                     def _save_password_to_card():
                         try:
-                            logger.info("087 Saving login/password to card")
+                            logger.info("Saving login/password to card")
                             label = self.generate_label_name.get()
                             login = self.generate_login_name.get()
                             url = self.generate_url_name.get()
@@ -3250,17 +3258,17 @@ class View(customtkinter.CTk):
                                 self.show("SUCCESS",
                                           f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
                                           "Ok", self.show_view_my_secrets, "./pictures_db/generate_icon_ws.png")
-                                logger.log(SUCCESS, "058 Password saved to card successfully")
+                                logger.log(SUCCESS, "Password saved to card successfully")
                             else:
-                                logger.warning("089 No password to save")
-                                raise ValueError("090 No password generated")
+                                logger.warning("No password to save")
+                                raise ValueError("No password generated")
                         except ValueError as e:
-                            logger.error(f"091 Error saving login/password to card: {e}", exc_info=True)
+                            logger.error(f"Error saving login/password to card: {e}", exc_info=True)
                             self.show("ERROR", str(e), "Ok", None, "./pictures_db/generate_icon_ws.png")
-                            raise UIElementError(f"092 Failed to save login/password to card: {e}") from e
+                            raise UIElementError(f"Failed to save login/password to card: {e}") from e
                         except Exception as e:
-                            logger.error(f"093 Unexpected error saving login/password to card: {e}", exc_info=True)
-                            raise UIElementError(f"094 Unexpected error saving login/password to card: {e}") from e
+                            logger.error(f"Unexpected error saving login/password to card: {e}", exc_info=True)
+                            raise UIElementError(f"Unexpected error saving login/password to card: {e}") from e
 
                     self._clear_current_frame()
                     _create_generate_password_frame()
@@ -3274,22 +3282,22 @@ class View(customtkinter.CTk):
                     logger.error(f"096 Unexpected error in _show_generate_password: {e}", exc_info=True)
                     raise ViewError(f"097 Failed to show generate login/password view: {e}") from e
 
-            logger.info("099 Creating generate secret view")
+            logger.info("Creating generate secret view")
 
             _create_generate_secret_selection_frame()
             self.create_seedkeeper_menu()
-            logger.log(SUCCESS, "100 Generate secret view created successfully")
+            logger.log(SUCCESS, "Generate secret view created successfully")
         except (FrameCreationError, UIElementError) as e:
-            logger.error(f"101 Error in generate_secret: {e}", exc_info=True)
-            raise ViewError(f"102 Failed to create generate secret view: {e}") from e
+            logger.error(f"Error in generate_secret: {e}", exc_info=True)
+            raise ViewError(f"Failed to create generate secret view: {e}") from e
         except ViewError as ve:
-            logger.error(f"105 View error in generate_secret: {ve}", exc_info=True)
+            logger.error(f"View error in generate_secret: {ve}", exc_info=True)
             self.show("ERROR", str(ve), "Ok")
         except Exception as e:
-            logger.error(f"103 Unexpected error in generate_secret: {e}", exc_info=True)
-            raise ViewError(f"104 Unexpected error during generate secret view creation: {e}")
+            logger.error(f"Unexpected error in generate_secret: {e}", exc_info=True)
+            raise ViewError(f"Unexpected error during generate secret view creation: {e}")
         finally:
-            logger.info("107 Exiting generate_secret method")
+            logger.info("Exiting generate_secret method")
 
     @log_method
     def view_import_secret(self):
@@ -3299,23 +3307,23 @@ class View(customtkinter.CTk):
                 @log_method
                 def _on_next_clicked():
                     try:
-                        logger.info("001 Next button clicked")
+                        logger.info("Next button clicked")
                         selected_type = self.secret_type.get()
                         if selected_type == "Mnemonic seedphrase":
-                            logger.debug("002 Mnemonic seedphrase selected")
+                            logger.debug("Mnemonic seedphrase selected")
                             _show_import_mnemonic()
                         elif selected_type == "Login/password":
-                            logger.debug("003 Couple login/password selected")
+                            logger.debug("Couple login/password selected")
                             _show_import_password()
                         else:
-                            logger.warning("004 No secret type selected")
+                            logger.warning("No secret type selected")
                             self.show("ERROR", "Please select a secret type", "Ok")
                     except Exception as e:
-                        logger.error(f"005 Error in _on_next_clicked: {e}", exc_info=True)
-                        raise UIElementError(f"006 Failed to process next button click: {e}") from e
+                        logger.error(f"Error in _on_next_clicked: {e}", exc_info=True)
+                        raise UIElementError(f"Failed to process next button click: {e}") from e
 
                 try:
-                    logger.info("007 Creating initial selection frame for import secret")
+                    logger.info("Creating initial selection frame for import secret")
                     self._create_frame()
 
                     self.header = self._create_an_header("Import secret", "import_icon_ws.png")
@@ -3342,44 +3350,44 @@ class View(customtkinter.CTk):
                     next_button = self._create_button("Next", command=_on_next_clicked)
                     next_button.place(relx=0.95, rely=0.95, anchor="se")
 
-                    logger.log(SUCCESS, "008 Initial selection frame created successfully")
+                    logger.log(SUCCESS, "Initial selection frame created successfully")
                 except Exception as e:
-                    logger.error(f"009 Error creating initial selection frame: {e}", exc_info=True)
-                    raise FrameCreationError(f"010 Failed to create initial selection frame: {e}") from e
+                    logger.error(f"Error creating initial selection frame: {e}", exc_info=True)
+                    raise FrameCreationError(f"Failed to create initial selection frame: {e}") from e
 
             @log_method
             def _show_import_mnemonic():
                 try:
-                    logger.info("001 Starting _show_import_mnemonic")
+                    logger.info("Starting _show_import_mnemonic")
 
                     @log_method
                     def _import_mnemonic_frame():
                         try:
-                            logger.info("002 Creating import mnemonic frame")
+                            logger.info("Creating import mnemonic frame")
                             self._create_frame()
-                            logger.log(SUCCESS, "003 Import mnemonic frame created successfully")
+                            logger.log(SUCCESS, "Import mnemonic frame created successfully")
                         except Exception as e:
-                            logger.error(f"004 Error creating import mnemonic frame: {e}", exc_info=True)
-                            raise FrameCreationError(f"005 Failed to create import mnemonic frame: {e}") from e
+                            logger.error(f"Error creating import mnemonic frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"Failed to create import mnemonic frame: {e}") from e
 
                     @log_method
                     def _import_mnemonic_header():
                         try:
-                            logger.info("006 Creating import mnemonic header")
+                            logger.info("Creating import mnemonic header")
                             header_text = "Import seedphrase"
                             self.header = self._create_an_header(header_text, "import_icon_ws.png")
                             self.header.place(relx=0.03, rely=0.08, anchor="nw")
-                            logger.log(SUCCESS, "007 Import mnemonic header created successfully")
+                            logger.log(SUCCESS, "Import mnemonic header created successfully")
                         except Exception as e:
-                            logger.error(f"008 Error creating import mnemonic header: {e}", exc_info=True)
-                            raise UIElementError(f"009 Failed to create import mnemonic header: {e}") from e
+                            logger.error(f"Error creating import mnemonic header: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create import mnemonic header: {e}") from e
 
                     @log_method
                     def _import_mnemonic_widgets():
                         try:
-                            logger.info("010 Creating import mnemonic content")
+                            logger.info("Creating import mnemonic content")
 
-                            self.import_label = self._create_label("Label:")
+                            self.import_label = self._create_label("Label*:")
                             self.import_label.place(relx=0.05, rely=0.20, anchor="nw")
 
                             self.import_label_name = self._create_entry()
@@ -3431,24 +3439,24 @@ class View(customtkinter.CTk):
                             self.import_back_button = self._create_button("Back", command=lambda: [self.show_view_import_secret()])
                             self.import_back_button.place(relx=0.65, rely=0.93, anchor="center")
 
-                            logger.log(SUCCESS, "011 Import mnemonic content created successfully")
+                            logger.log(SUCCESS, "Import mnemonic content created successfully")
                         except Exception as e:
-                            logger.error(f"012 Error creating import mnemonic content: {e}", exc_info=True)
-                            raise UIElementError(f"013 Failed to create import mnemonic content: {e}") from e
+                            logger.error(f"Error creating import mnemonic content: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create import mnemonic content: {e}") from e
 
                     @log_method
                     def _toggle_passphrase_to_import():
                         try:
-                            logger.info("014 Toggling passphrase")
+                            logger.info("Toggling passphrase")
                             if self.import_use_passphrase.get():
                                 self.import_passphrase_entry.configure(state="normal")
-                                logger.debug("015 Passphrase entry enabled")
+                                logger.debug("Passphrase entry enabled")
                             else:
                                 self.import_passphrase_entry.configure(state="disabled")
-                                logger.debug("016 Passphrase entry disabled")
+                                logger.debug("Passphrase entry disabled")
                         except Exception as e:
-                            logger.error(f"017 Error toggling passphrase: {e}", exc_info=True)
-                            raise UIElementError(f"018 Failed to toggle passphrase: {e}") from e
+                            logger.error(f"Error toggling passphrase: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to toggle passphrase: {e}") from e
 
                     @log_method
                     def _save_mnemonic_to_import_on_card():
@@ -3473,13 +3481,13 @@ class View(customtkinter.CTk):
                             actual_word_count = len(mnemonic.split())
                             if actual_word_count != selected_word_count:
                                 logger.warning(
-                                    f"024 Mnemonic word count does not match the selected count: expected {selected_word_count}, got {actual_word_count}")
+                                    f"Mnemonic word count does not match the selected count: expected {selected_word_count}, got {actual_word_count}")
                                 raise ValueError(
                                     f"Selected {selected_word_count}-word mnemonic, but {actual_word_count} provided.")
 
                             # Vérification supplémentaire pour la passphrase
                             if self.import_use_passphrase.get() and not passphrase:
-                                logger.warning("025 Passphrase checkbox is checked but no passphrase provided")
+                                logger.warning("Passphrase checkbox is checked but no passphrase provided")
                                 raise ValueError("Passphrase checked but not provided.")
 
                             # Import de la masterseed avec ou sans passphrase
@@ -3491,15 +3499,15 @@ class View(customtkinter.CTk):
                             # Affichage du succès
                             self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerprint: {fingerprint}",
                                       "Ok", self.show_view_my_secrets, "./pictures_db/import_icon_ws.png")
-                            logger.log(SUCCESS, "026 Masterseed saved to card successfully")
+                            logger.log(SUCCESS, "Masterseed saved to card successfully")
 
                         except ValueError as e:
-                            logger.error(f"027 Error saving mnemonic to card: {e}", exc_info=True)
+                            logger.error(f"Error saving mnemonic to card: {e}", exc_info=True)
                             self.show("ERROR", str(e), "Ok", None, "./pictures_db/import_icon_ws.png")
-                            raise UIElementError(f"028 Failed to save mnemonic to card: {e}") from e
+                            raise UIElementError(f"Failed to save mnemonic to card: {e}") from e
                         except Exception as e:
-                            logger.error(f"029 Unexpected error saving mnemonic to card: {e}", exc_info=True)
-                            raise UIElementError(f"030 Failed to save mnemonic to card: {e}") from e
+                            logger.error(f"Unexpected error saving mnemonic to card: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to save mnemonic to card: {e}") from e
 
                     self._clear_current_frame()
                     _import_mnemonic_frame()
@@ -3515,34 +3523,34 @@ class View(customtkinter.CTk):
             @log_method
             def _show_import_password():
                 try:
-                    logger.info("041 Starting _show_import_password method")
+                    logger.info("Starting _show_import_password method")
 
                     @log_method
                     def _import_password_frame():
                         try:
-                            logger.info("042 Creating import login/password frame")
+                            logger.info("Creating import login/password frame")
                             self._create_frame()
-                            logger.log(SUCCESS, "043 Import login/password frame created successfully")
+                            logger.log(SUCCESS, "Import login/password frame created successfully")
                         except Exception as e:
-                            logger.error(f"044 Error creating import login/password frame: {e}", exc_info=True)
-                            raise FrameCreationError(f"045 Failed to create import login/password frame: {e}") from e
+                            logger.error(f"Error creating import login/password frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"Failed to create import login/password frame: {e}") from e
 
                     @log_method
                     def _import_password_header():
                         try:
-                            logger.info("046 Creating import login/password header")
+                            logger.info("Creating import login/password header")
                             header_text = "Import couple login/password"
                             self.header = self._create_an_header(header_text, "import_icon_ws.png")
                             self.header.place(relx=0.03, rely=0.08, anchor="nw")
-                            logger.log(SUCCESS, "047 Import login/password header created successfully")
+                            logger.log(SUCCESS, "Import login/password header created successfully")
                         except Exception as e:
-                            logger.error(f"048 Error creating import login/password header: {e}", exc_info=True)
-                            raise UIElementError(f"049 Failed to create import login/password header: {e}") from e
+                            logger.error(f"Error creating import login/password header: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create import login/password header: {e}") from e
 
                     @log_method
                     def _import_password_widgets():
                         try:
-                            logger.info("050 Creating import login/password widgets")
+                            logger.info("Creating import login/password widgets")
                             # Label and entry creation
                             label = self._create_label("Label*:")
                             label.place(relx=0.04, rely=0.20, anchor="nw")
@@ -3590,8 +3598,8 @@ class View(customtkinter.CTk):
 
                             logger.log(SUCCESS, "Import login/password widgets created successfully")
                         except Exception as e:
-                            logger.error(f"053 Error creating import login/password widgets: {e}", exc_info=True)
-                            raise UIElementError(f"054 Failed to create import login/password widgets: {e}") from e
+                            logger.error(f"Error creating import login/password widgets: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create import login/password widgets: {e}") from e
 
                     @log_method
                     def _save_password_to_import_on_card():
