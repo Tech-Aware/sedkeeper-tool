@@ -2320,6 +2320,7 @@ class View(customtkinter.CTk):
 
         @log_method
         def _create_secrets_table(secrets_data):
+            print(f"secret data: {secrets_data}")
             def _on_mouse_on_secret(event, buttons):
                 for button in buttons:
                     button.configure(fg_color=HIGHLIGHT_COLOR, cursor="hand2")
@@ -2328,12 +2329,20 @@ class View(customtkinter.CTk):
                 for button in buttons:
                     button.configure(fg_color=button.default_color)
 
-            def _show_secret_details(secret):
+            def _show_secret_details(secret_id):
                 try:
-                    logger.info(f"Showing details for secret ID: {secret['id']}")
+                    logger.info(f"Showing details for secret ID: {secret_id['id']}")
                     self._create_frame()
+                    print(f"secret: {secret_id}")
 
-                    secret_details = self.controller.retrieve_details_about_secret_selected(secret['id'])
+                    secret_details = {}
+                    if secret_id['export_rights'] == '0x2':
+                        secret_details['type'] = secret_id['type']
+                        secret_details['label'] = secret_id['label']
+                        secret_details['secret'] = 'Export failed: export not allowed by SeedKeeper policy.'
+                    else:
+                        secret_details = self.controller.retrieve_details_about_secret_selected(secret_id['id'])
+                    print(f"secret id details: {secret_details}")
                     logger.log(SUCCESS, f"Secret details retrieved: {secret_details}")
 
                     self.header = self._create_an_header("Secret details", "secrets_icon_ws.png")
@@ -2341,20 +2350,20 @@ class View(customtkinter.CTk):
 
                     self.create_seedkeeper_menu()
 
-                    if secret['type'] == 'Password':
+                    if secret_id['type'] == 'Password':
                         _create_password_secret_frame(secret_details)
-                    elif secret['type'] == 'Masterseed':
+                    elif secret_id['type'] == 'Masterseed':
                         _create_masterseed_secret_frame(secret_details)
-                    elif secret['type'] == '2FA secret':
+                    elif secret_id['type'] == '2FA secret':
                         _create_2FA_secret_frame(secret_details)
                     else:
-                        logger.warning(f"011 Unsupported secret type: {secret['type']}")
+                        logger.warning(f"011 Unsupported secret type: {secret_id['type']}")
                         _create_generic_secret_frame(secret_details)
 
                     back_button = self._create_button(text="Back", command=self.show_view_my_secrets)
                     back_button.place(relx=0.95, rely=0.98, anchor="se")
 
-                    logger.log(SUCCESS, f"012 Secret details displayed for ID: {secret['id']}")
+                    logger.log(SUCCESS, f"012 Secret details displayed for ID: {secret_id['id']}")
                 except Exception as e:
                     logger.error(f"013 Error displaying secret details: {e}", exc_info=True)
                     raise SecretFrameCreationError("Error displaying secret details") from e
@@ -2530,7 +2539,7 @@ class View(customtkinter.CTk):
         @log_method
         def _create_masterseed_secret_frame(secret_details):
             try:
-                print(secret_details)
+                print(f"masterseed_secret_details: {secret_details}")
                 logger.info("001 Creating mnemonic secret frame")
                 # Create labels and entry fields
                 labels = ['Label:', 'Mnemonic type:']
@@ -2572,15 +2581,19 @@ class View(customtkinter.CTk):
                     logger.error(f"Error creating Xpub and SeedQR buttons: {e}", exc_info=True)
                     raise UIElementError(f"Failed to create Xpub and SeedQR buttons: {e}") from e
 
-                # Decode seed to mnemonic
-                try:
-                    logger.debug("Decoding seed to mnemonic words")
-                    secret = self.controller.decode_masterseed(secret_details['secret'])
-                    mnemonic = secret['mnemonic']
-                    passphrase = secret['passphrase']
-                except Exception as e:
-                    logger.error(f"Error decoding Masterseed: {e}", exc_info=True)
-                    raise ControllerError(f"015 Failed to decode Masterseed: {e}") from e
+                if secret_details['secret'] != "Export failed: export not allowed by SeedKeeper policy.":
+                    # Decode seed to mnemonic
+                    try:
+                        logger.debug("Decoding seed to mnemonic words")
+                        secret = self.controller.decode_masterseed(secret_details['secret'])
+                        mnemonic = secret['mnemonic']
+                        passphrase = secret['passphrase']
+                    except Exception as e:
+                        logger.error(f"Error decoding Masterseed: {e}", exc_info=True)
+                        raise ControllerError(f"015 Failed to decode Masterseed: {e}") from e
+                else:
+                    mnemonic = secret_details['secret']
+                    passphrase = secret_details['secret']
 
                 # Create passphrase field
                 try:
@@ -2682,7 +2695,7 @@ class View(customtkinter.CTk):
         @log_method
         def _create_2FA_secret_frame(secret_details):
             try:
-                print(secret_details)
+                print(f"2FA secret details: {secret_details}")
                 self.label_2FA = self._create_label('Label:')
                 self.label_2FA.place(relx=0.045, rely=0.2)
                 self.label_2FA_entry = self._create_entry()

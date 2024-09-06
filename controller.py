@@ -368,15 +368,22 @@ class Controller:
             0xB0: '2FA secret'
         }
 
+        for i in headers:
+            print(i)
+
         formatted_headers = []
         for header in headers:
             formatted_header = {
                 'id': int(header['id']),  # Convertir l'ID en entier
                 'type': dic_type.get(header['type'], hex(header['type'])),
+                'subtype': dic_type.get(header['subtype'], hex(header['subtype'])),
+                'origin': dic_type.get(header['origin'], hex(header['origin'])),
+                'export_rights': dic_type.get(header['export_rights'], hex(header['export_rights'])),
                 'label': header['label']
             }
             formatted_headers.append(formatted_header)
 
+        print(f"Formated headers: {formatted_headers}")
         return {
             'num_secrets': len(headers),
             'headers': formatted_headers
@@ -412,10 +419,13 @@ class Controller:
 
         try:
             logger.info(f"007 Retrieving details for secret ID: {secret_id}")
+
             secret_details = self.cc.seedkeeper_export_secret(secret_id)
+            print(f"secret details: {secret_details}")
             logger.debug("008 Secret details exported from card")
 
             processed_secret = process_secret(secret_details['type'], secret_details['secret'])
+            print(f"Processed secret: {processed_secret}")
 
             formatted_details = {
                 'label': secret_details['label'],
@@ -493,7 +503,6 @@ class Controller:
             else:
                 self.view.show('ERROR', 'Error when importing seed to Satochip!', 'Ok', None,
                                "./pictures_db/icon_seed_popup.jpg")
-
 
     def get_logs(self):
         logger.debug('In get_logs')
@@ -691,10 +700,11 @@ class Controller:
     def decode_masterseed(self, seed_hex: str):
         try:
             logger.info("001 Starting masterseed decoding process")
-
             # Convertir la chaîne hexadécimale en bytes
             try:
+                print(f"seed hex: {seed_hex}")
                 secret_bytes = binascii.unhexlify(seed_hex)
+                print(f"seed bytes: {secret_bytes}")
             except binascii.Error:
                 raise ValueError("002 Invalid hexadecimal string provided")
 
