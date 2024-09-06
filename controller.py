@@ -19,11 +19,28 @@ logger = get_logger(__name__)
 
 
 class Controller:
+    dic_type = {
+        0x10: 'Masterseed',
+        0x30: 'BIP39 mnemonic',
+        0x40: 'Electrum mnemonic',
+        0x50: 'Shamir Secret Share',
+        0x60: 'Private Key',
+        0x70: 'Public Key',
+        0x71: 'Authenticated Public Key',
+        0x80: 'Symmetric Key',
+        0x90: 'Password',
+        0x91: 'Master Password',
+        0xA0: 'Certificate',
+        0xB0: '2FA secret',
+        0xC0: 'Bitcoin Descriptor'
+    }
+
     @log_method
     def __init__(self, cc, view, loglevel=logging.INFO):
         logger.setLevel(loglevel)
         self.view = view
         self.view.controller = self
+        self.truststore={}
 
         try:
             self.cc = CardConnector(self, loglevel=loglevel)
@@ -358,32 +375,20 @@ class Controller:
             raise ControllerError(f"Failed to retrieve secrets: {e}")
 
     def _format_secret_headers(self, headers: List[Dict[str, Any]]) -> Dict[str, Any]:
-        dic_type = {
-            0x30: 'BIP39 mnemonic',
-            0x40: 'Electrum mnemonic',
-            0x10: 'Masterseed',
-            0x70: 'Public Key',
-            0x90: 'Password',
-            0xA0: 'Authentikey certificate',
-            0xB0: '2FA secret'
-        }
-
-        for i in headers:
-            print(i)
 
         formatted_headers = []
         for header in headers:
             formatted_header = {
                 'id': int(header['id']),  # Convertir l'ID en entier
-                'type': dic_type.get(header['type'], hex(header['type'])),
-                'subtype': dic_type.get(header['subtype'], hex(header['subtype'])),
-                'origin': dic_type.get(header['origin'], hex(header['origin'])),
-                'export_rights': dic_type.get(header['export_rights'], hex(header['export_rights'])),
+                'type': Controller.dic_type.get(header['type'], hex(header['type'])),
+                'subtype': Controller.dic_type.get(header['subtype'], hex(header['subtype'])),
+                'origin': Controller.dic_type.get(header['origin'], hex(header['origin'])),
+                'export_rights': Controller.dic_type.get(header['export_rights'], hex(header['export_rights'])),
                 'label': header['label']
             }
             formatted_headers.append(formatted_header)
 
-        print(f"Formated headers: {formatted_headers}")
+        logger.debug(f"Formated headers: {formatted_headers}")
         return {
             'num_secrets': len(headers),
             'headers': formatted_headers
@@ -391,15 +396,6 @@ class Controller:
 
     @log_method
     def retrieve_details_about_secret_selected(self, secret_id):
-        dic_type = {
-            0x30: 'BIP39 mnemonic',
-            0x40: 'Electrum mnemonic',
-            0x10: 'Masterseed',
-            0x70: 'Public Key',
-            0x90: 'Password',
-            0xA0: 'Authentikey certificate',
-            0xB0: '2FA secret'
-        }
 
         def process_secret(secret_type, secret_value):
             try:
@@ -421,15 +417,15 @@ class Controller:
             logger.info(f"007 Retrieving details for secret ID: {secret_id}")
 
             secret_details = self.cc.seedkeeper_export_secret(secret_id)
-            print(f"secret details: {secret_details}")
+            logger.debug(f"secret details: {secret_details}")
             logger.debug("008 Secret details exported from card")
 
             processed_secret = process_secret(secret_details['type'], secret_details['secret'])
-            print(f"Processed secret: {processed_secret}")
+            logger.debug(f"Processed secret: {processed_secret}")
 
             formatted_details = {
                 'label': secret_details['label'],
-                'type': dic_type.get(secret_details['type'], hex(secret_details['type'])),
+                'type': Controller.dic_type.get(secret_details['type'], hex(secret_details['type'])),
                 'secret': processed_secret
             }
 
@@ -555,9 +551,9 @@ class Controller:
         json_string = json.dumps(json_logs)
         logger.debug(f"JSON formatted logs: {json_string}")
 
-        print(json_logs)
-        print(nbtotal_logs)
-        print(nbavail_logs)
+        logger.debug(json_logs)
+        logger.debug(nbtotal_logs)
+        logger.debug(nbavail_logs)
 
         return nbtotal_logs, nbavail_logs, json_logs
 
@@ -598,7 +594,7 @@ class Controller:
     def import_masterseed(self, label: str, mnemonic: str, passphrase: Optional[str] = None):
         try:
             logger.info("001 Starting masterseed import process")
-            print(mnemonic)
+            logger.debug(mnemonic)
 
             # Vérifier la validité du mnemonic
             MNEMONIC = Mnemonic("english")
@@ -606,7 +602,7 @@ class Controller:
                 raise ValueError("002 Invalid mnemonic")
 
             is_valid = MNEMONIC.check(mnemonic)
-            print(f"Mnemonic is valid: {is_valid}")
+            logger.debug(f"Mnemonic is valid: {is_valid}")
 
             # S'assurer que passphrase est une chaîne de caractères ou None
             if passphrase:
@@ -700,11 +696,13 @@ class Controller:
     def decode_masterseed(self, seed_hex: str):
         try:
             logger.info("001 Starting masterseed decoding process")
+
             # Convertir la chaîne hexadécimale en bytes
+            # convert hex chain into bytes
             try:
-                print(f"seed hex: {seed_hex}")
+                logger.debug(f"seed hex: {seed_hex}")
                 secret_bytes = binascii.unhexlify(seed_hex)
-                print(f"seed bytes: {secret_bytes}")
+                logger.debug(f"seed bytes: {secret_bytes}")
             except binascii.Error:
                 raise ValueError("002 Invalid hexadecimal string provided")
 
@@ -712,7 +710,7 @@ class Controller:
             try:
                 decoded_secret = secret_bytes.decode('utf-8')
             except UnicodeDecodeError:
-                raise ValueError("003 Unable to decode secret to UTF-8")
+                decoded_secret = seed_hex[2:]
 
             # Initialiser le dictionnaire de résultats
             result = {
@@ -749,3 +747,56 @@ class Controller:
         except Exception as e:
             logger.error(f"006 Unexpected error during masterseed decoding: {str(e)}")
             raise ControllerError(f"007 Failed to decode masterseed: {str(e)}") from e
+
+    def get_secret_header_list(self):
+        # get a list of all the secrets & pubkeys available
+        # dic_type= {0x30:'BIP39 mnemonic', 0x40:'Electrum mnemonic', 0x10:'Masterseed', 0x70:'Public Key', 0x90:'Password'}
+        label_list = []
+        id_list = []
+        label_pubkey_list = ['None (export to plaintext)']
+        id_pubkey_list = [None]
+        fingerprint_pubkey_list = []
+        try:
+            headers = self.cc.seedkeeper_list_secret_headers()
+            for header_dic in headers:
+                label_list.append(Controller.dic_type.get(header_dic['type'], hex(header_dic['type'])) + ': ' + header_dic[
+                    'fingerprint'] + ': ' + header_dic['label'])
+                id_list.append(header_dic['id'])
+                if header_dic['type'] == 0x70:
+                    pubkey_dic = self.cc.seedkeeper_export_secret(header_dic['id'],
+                                                                  None)  # export pubkey in plain #todo: compressed form?
+                    pubkey = pubkey_dic['secret'][2:10]  # [0:2] is the pubkey size in hex
+                    label_pubkey_list.append('In SeedKeeper: ' + header_dic['fingerprint'] + ': ' + header_dic[
+                        'label'] + ': ' + pubkey + '...')
+                    id_pubkey_list.append(header_dic['id'])
+                    fingerprint_pubkey_list.append(header_dic['fingerprint'])
+        except Exception as ex:
+            logger.error(f"Error during secret header listing: {ex}")
+            # self.show_error(f'Error during secret export: {ex}')
+            # return None
+
+        # add authentikeys from Truststore
+        label_authentikey_list, authentikey_list = self.get_truststore_list(fingerprint_pubkey_list)
+        label_pubkey_list.extend(label_authentikey_list)
+        id_pubkey_list.extend(authentikey_list)
+
+        return label_list, id_list, label_pubkey_list, id_pubkey_list
+
+    def get_truststore_list(self, fingerprint_list=[]):
+        # get list of authentikeys from TrustStore, whose fingerprint is not already in fingerprint_list
+        label_authentikey_list = []
+        authentikey_list = []
+        for authentikey, dic_info in self.truststore.items():
+            if authentikey == self.cc.parser.authentikey.get_public_key_bytes(
+                    False).hex():  # self.authentikey.get_public_key_bytes(False).hex():
+                continue  # skip own authentikey
+            card_label = dic_info['card_label']
+            fingerprint = dic_info['fingerprint']
+            authentikey_comp = dic_info['authentikey_comp']
+            if fingerprint not in fingerprint_list:  # skip authentikey already in device
+                keyvalue = 'In Truststore: ' + fingerprint + ': ' + card_label + ' authentikey' + ": " + authentikey_comp[
+                                                                                                         0:8] + "..."
+                label_authentikey_list.append(keyvalue)
+                authentikey_list.append(authentikey)
+
+        return label_authentikey_list, authentikey_list

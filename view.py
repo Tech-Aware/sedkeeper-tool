@@ -1297,6 +1297,8 @@ class View(customtkinter.CTk):
             self._clear_current_frame()
             logger.debug("002 Welcome frame cleared")
             secrets_data = self.controller.retrieve_secrets_stored_into_the_card()
+            for header in secrets_data['headers']:
+                logger.debug(f"Header: {header}")
             logger.debug("003 Secrets data retrieved from card")
             self.view_my_secrets(secrets_data)
             logger.log(SUCCESS, "004 Secrets displayed successfully")
@@ -2320,7 +2322,7 @@ class View(customtkinter.CTk):
 
         @log_method
         def _create_secrets_table(secrets_data):
-            print(f"secret data: {secrets_data}")
+            logger.debug(f"secret data: {secrets_data}")
             def _on_mouse_on_secret(event, buttons):
                 for button in buttons:
                     button.configure(fg_color=HIGHLIGHT_COLOR, cursor="hand2")
@@ -2329,20 +2331,22 @@ class View(customtkinter.CTk):
                 for button in buttons:
                     button.configure(fg_color=button.default_color)
 
-            def _show_secret_details(secret_id):
+            def _show_secret_details(secret):
                 try:
-                    logger.info(f"Showing details for secret ID: {secret_id['id']}")
+                    logger.info(f"Showing details for secret ID: {secret['id']}")
                     self._create_frame()
-                    print(f"secret: {secret_id}")
+                    logger.debug(f"secret: {secret}")
 
                     secret_details = {}
-                    if secret_id['export_rights'] == '0x2':
-                        secret_details['type'] = secret_id['type']
-                        secret_details['label'] = secret_id['label']
+                    if secret['export_rights'] == '0x2':
+                        secret_details['type'] = secret['type']
+                        secret_details['label'] = secret['label']
                         secret_details['secret'] = 'Export failed: export not allowed by SeedKeeper policy.'
+                        logger.debug(f"secret id details: {secret_details}")
                     else:
-                        secret_details = self.controller.retrieve_details_about_secret_selected(secret_id['id'])
-                    print(f"secret id details: {secret_details}")
+                        secret_details = self.controller.retrieve_details_about_secret_selected(secret['id'])
+                        secret_details['id'] = secret['id']
+                        logger.debug(f"secret id details: {secret_details} for id: {secret_details['id']}")
                     logger.log(SUCCESS, f"Secret details retrieved: {secret_details}")
 
                     self.header = self._create_an_header("Secret details", "secrets_icon_ws.png")
@@ -2350,20 +2354,20 @@ class View(customtkinter.CTk):
 
                     self.create_seedkeeper_menu()
 
-                    if secret_id['type'] == 'Password':
+                    if secret['type'] == 'Password':
                         _create_password_secret_frame(secret_details)
-                    elif secret_id['type'] == 'Masterseed':
+                    elif secret['type'] == 'Masterseed':
                         _create_masterseed_secret_frame(secret_details)
-                    elif secret_id['type'] == '2FA secret':
+                    elif secret['type'] == '2FA secret':
                         _create_2FA_secret_frame(secret_details)
                     else:
-                        logger.warning(f"011 Unsupported secret type: {secret_id['type']}")
+                        logger.warning(f"011 Unsupported secret type: {secret['type']}")
                         _create_generic_secret_frame(secret_details)
 
                     back_button = self._create_button(text="Back", command=self.show_view_my_secrets)
                     back_button.place(relx=0.95, rely=0.98, anchor="se")
 
-                    logger.log(SUCCESS, f"012 Secret details displayed for ID: {secret_id['id']}")
+                    logger.log(SUCCESS, f"012 Secret details displayed for ID: {secret['id']}")
                 except Exception as e:
                     logger.error(f"013 Error displaying secret details: {e}", exc_info=True)
                     raise SecretFrameCreationError("Error displaying secret details") from e
@@ -2524,7 +2528,7 @@ class View(customtkinter.CTk):
                     show_button.place(relx=0.9, rely=0.8, anchor="se")
 
                     delete_button = self._create_button(text="Delete secret",
-                                                        command=lambda: None)  # self._delete_secret(secret['id']))
+                                                        command=lambda: self.controller.cc.seedkeeper_reset_secret(secret_details['id']))  # self._delete_secret(secret['id']))
                     delete_button.place(relx=0.75, rely=0.98, anchor="se")
                     logger.debug("010 Action buttons created")
                 except Exception as e:
@@ -2539,7 +2543,7 @@ class View(customtkinter.CTk):
         @log_method
         def _create_masterseed_secret_frame(secret_details):
             try:
-                print(f"masterseed_secret_details: {secret_details}")
+                logger.debug(f"masterseed_secret_details: {secret_details}")
                 logger.info("001 Creating mnemonic secret frame")
                 # Create labels and entry fields
                 labels = ['Label:', 'Mnemonic type:']
@@ -2632,7 +2636,7 @@ class View(customtkinter.CTk):
                         current_text = entry.get()
 
                         if current_text == '*' * len(original_text):
-                            # if entry contains only stars, print origina text
+                            # if entry contains only stars, logger.debug origina text
                             entry.delete(0, "end")
                             entry.insert(0, original_text)
                             logger.log(SUCCESS, "021 Passphrase visibility toggled to visible")
@@ -2695,7 +2699,7 @@ class View(customtkinter.CTk):
         @log_method
         def _create_2FA_secret_frame(secret_details):
             try:
-                print(f"2FA secret details: {secret_details}")
+                logger.debug(f"2FA secret details: {secret_details}")
                 self.label_2FA = self._create_label('Label:')
                 self.label_2FA.place(relx=0.045, rely=0.2)
                 self.label_2FA_entry = self._create_entry()
@@ -2979,12 +2983,12 @@ class View(customtkinter.CTk):
                                 raise ValueError("Passphrase checked but not provided.")
 
                             if passphrase:
-                                id, fingerprint = self.controller.import_masterseed(label, mnemonic, passphrase)
+                                id, fingerlogger.debug = self.controller.import_masterseed(label, mnemonic, passphrase)
 
                             else:
-                                id, fingerprint = self.controller.import_masterseed(label, mnemonic)
+                                id, fingerlogger.debug = self.controller.import_masterseed(label, mnemonic)
 
-                            self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerprint: {fingerprint}",
+                            self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerlogger.debug: {fingerlogger.debug}",
                                       "Ok", self.show_view_my_secrets, "./pictures_db/generate_icon_ws.png")
                             logger.log(SUCCESS, "Masterseed saved to card successfully")
 
@@ -3056,7 +3060,7 @@ class View(customtkinter.CTk):
                             # Récupération de la longueur sélectionnée
                             # retrieving the length selected by user
                             password_length = int(self.length_slider.get())
-                            print(password_length)
+                            logger.debug(password_length)
 
                             # Récupération des types de caractères sélectionnés
                             # retrieving characters selected in checkbox
@@ -3276,9 +3280,9 @@ class View(customtkinter.CTk):
                                 raise ValueError("The label field is mandatory.")
 
                             if password:
-                                id, fingerprint = self.controller.import_password(label, login, password, url)
+                                id, fingerlogger.debug = self.controller.import_password(label, login, password, url)
                                 self.show("SUCCESS",
-                                          f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
+                                          f"Password saved successfully\nID: {id}\nFingerlogger.debug: {fingerlogger.debug}",
                                           "Ok", self.show_view_my_secrets, "./pictures_db/generate_icon_ws.png")
                                 logger.log(SUCCESS, "Password saved to card successfully")
                             else:
@@ -3514,12 +3518,12 @@ class View(customtkinter.CTk):
 
                             # Import de la masterseed avec ou sans passphrase
                             if passphrase:
-                                id, fingerprint = self.controller.import_masterseed(label, mnemonic, passphrase)
+                                id, fingerlogger.debug = self.controller.import_masterseed(label, mnemonic, passphrase)
                             else:
-                                id, fingerprint = self.controller.import_masterseed(label, mnemonic)
+                                id, fingerlogger.debug = self.controller.import_masterseed(label, mnemonic)
 
                             # Affichage du succès
-                            self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerprint: {fingerprint}",
+                            self.show("SUCCESS", f"Masterseed saved successfully\nID: {id}\nFingerlogger.debug: {fingerlogger.debug}",
                                       "Ok", self.show_view_my_secrets, "./pictures_db/import_icon_ws.png")
                             logger.log(SUCCESS, "Masterseed saved to card successfully")
 
@@ -3641,9 +3645,9 @@ class View(customtkinter.CTk):
                                 raise ValueError("Password field is mandatory")
 
                             else:
-                                id, fingerprint = self.controller.import_password(label, login, password, url)
+                                id, fingerlogger.debug = self.controller.import_password(label, login, password, url)
                                 self.show("SUCCESS",
-                                          f"Password saved successfully\nID: {id}\nFingerprint: {fingerprint}",
+                                          f"Password saved successfully\nID: {id}\nFingerlogger.debug: {fingerlogger.debug}",
                                           "Ok", self.show_view_my_secrets, "./pictures_db/import_icon_ws.png")
                                 logger.log(SUCCESS, "058 Password saved to card successfully")
 

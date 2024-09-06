@@ -57,6 +57,13 @@ def configure_view(view: View) -> None:
     view.resizable(False, False)
     view.title("Seedkeeper Tool")
 
+    # Add these lines to set the window icon
+    icon_path = os.path.join(get_application_path(), "satochip_utils.ico")
+    if os.path.exists(icon_path):
+        view.iconbitmap(icon_path)
+    else:
+        logger.warning(f"Icon file not found: {icon_path}")
+
 
 def main() -> NoReturn:
     """Main function to run the Seedkeeper Tool."""
@@ -75,7 +82,7 @@ def main() -> NoReturn:
         configure_view(view)
 
         logger.info("Displaying welcome screen")
-        view.welcome()  # Removed cert_dir_missing argument
+        view.view_welcome()  # Removed cert_dir_missing argument
 
         logger.info("Starting main event loop")
         view.mainloop()
@@ -89,3 +96,5 @@ def main() -> NoReturn:
 
 if __name__ == '__main__':
     main()
+
+
