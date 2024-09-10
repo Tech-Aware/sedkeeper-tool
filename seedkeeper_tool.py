@@ -67,7 +67,10 @@ def configure_view(view: View) -> None:
 
 def main() -> NoReturn:
     """Main function to run the Seedkeeper Tool."""
-    setup_logging()
+    verbose_mode = setup_logging()
+    logger = get_logger(__name__)
+
+    logger.debug("Starting Seedkeeper Tool in verbose mode" if verbose_mode else "Starting Seedkeeper Tool")
     logger.info("Starting Seedkeeper Tool")
 
     try:
