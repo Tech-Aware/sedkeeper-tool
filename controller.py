@@ -13,8 +13,9 @@ from pysatochip.CardConnector import (CardConnector, CardNotPresentError, PinReq
                                                  UninitializedSeedError, ApduError, SeedKeeperError,
 )
 
-from log_config import get_logger, SUCCESS, setup_logging, log_method
+from log_config import log_method
 from exceptions import *
+
 logger = get_logger(__name__)
 
 
@@ -36,8 +37,7 @@ class Controller:
     }
 
     @log_method
-    def __init__(self, cc, view, loglevel=logging.INFO):
-        logger.setLevel(loglevel)
+    def __init__(self, cc, view, loglevel=logger.setLevel(logging.DEBUG)):
         self.view = view
         self.view.controller = self
         self.truststore={}
@@ -399,45 +399,40 @@ class Controller:
 
         def process_secret(secret_type, secret_value):
             try:
-                logger.info("001 Processing secret")
-                if secret_type == 0x10:  # Masterseed
-                    logger.info("002 Processing Masterseed")
-                    return f"{secret_value}"
-                elif secret_type in [0x30, 0x40]:  # BIP39 or Electrum mnemonicexit
-                    logger.info("003 Processing mnemonic")
-                    return f"{secret_value}"
-                else:
-                    logger.info("004 Processing other type of secret")
-                    return f"{secret_value}"
+                logger.info("Processing secret")
+                for type in Controller.dic_type:
+                    if type == secret_type:
+                        return f"{secret_value}"
             except Exception as e:
-                logger.error(f"005 Error processing secret: {e}", exc_info=True)
+                logger.error(f"Error processing secret: {e}", exc_info=True)
                 raise SecretProcessingError(f"006 Failed to process secret: {e}") from e
 
         try:
-            logger.info(f"007 Retrieving details for secret ID: {secret_id}")
-
+            logger.info(f"Retrieving details for secret ID: {secret_id}")
             secret_details = self.cc.seedkeeper_export_secret(secret_id)
             logger.debug(f"secret details: {secret_details}")
-            logger.debug("008 Secret details exported from card")
+            logger.debug("Secret details exported from card")
 
             processed_secret = process_secret(secret_details['type'], secret_details['secret'])
-            logger.debug(f"Processed secret: {processed_secret}")
+            logger.info(f"Processed secret: {processed_secret}")
 
             formatted_details = {
                 'label': secret_details['label'],
                 'type': Controller.dic_type.get(secret_details['type'], hex(secret_details['type'])),
+                'subtype': secret_details['subtype'],
+                'export_rights': hex(secret_details['export_rights']),
                 'secret': processed_secret
             }
 
-            logger.log(SUCCESS, f"009 Secret details retrieved and processed successfully")
+            logger.log(SUCCESS, f"Secret details retrieved and processed successfully: {formatted_details}")
             return formatted_details
 
         except SecretProcessingError as e:
-            logger.error(f"010 Error processing secret: {e}", exc_info=True)
-            raise SecretRetrievalError(f"011 Failed to process secret: {e}") from e
+            logger.error(f"Error processing secret: {e}", exc_info=True)
+            raise SecretRetrievalError(f"Failed to process secret: {e}") from e
         except Exception as e:
-            logger.error(f"012 Error retrieving secret details: {e}", exc_info=True)
-            raise SecretRetrievalError(f"013 Failed to retrieve secret details: {e}") from e
+            logger.error(f"Error retrieving secret details: {e}", exc_info=True)
+            raise SecretRetrievalError(f"Failed to retrieve secret details: {e}") from e
 
     ####################################################################################################################
     """ GENERATE SECRETS """
@@ -445,34 +440,34 @@ class Controller:
     @log_method
     def generate_random_seed(self, mnemonic_length):
         try:
-            logger.info(f"001 Generating random seed of length {mnemonic_length}")
+            logger.info(f"Generating random seed of length {mnemonic_length}")
             strength = 128 if mnemonic_length == 12 else 256
             mnemonic = Mnemonic("english").generate(strength=strength)
-            logger.log(SUCCESS, f"002 Random seed of length {mnemonic_length} generated successfully")
+            logger.log(SUCCESS, f"Random seed of length {mnemonic_length} generated successfully")
             return mnemonic
         except Exception as e:
-            logger.error(f"003 Error generating random seed: {e}", exc_info=True)
-            raise ControllerError(f"004 Failed to generate random seed: {e}")
+            logger.error(f"Error generating random seed: {e}", exc_info=True)
+            raise ControllerError(f"Failed to generate random seed: {e}")
 
     @log_method
     def import_seed(self, mnemonic, passphrase=None):
         try:
-            logger.info("001 Importing seed")
+            logger.info("Importing seed")
             MNEMONIC = Mnemonic(language="english")
             if MNEMONIC.check(mnemonic):
-                logger.info("002 Imported seed is valid")
+                logger.info("Imported seed is valid")
                 if passphrase:
                     seed = Mnemonic.to_seed(mnemonic, passphrase)
                 else:
                     seed = Mnemonic.to_seed(mnemonic)
                 self.card_setup_native_seed(seed)
-                logger.log(SUCCESS, "003 Seed imported successfully")
+                logger.log(SUCCESS, "Seed imported successfully")
             else:
-                logger.warning("004 Imported seed is invalid")
+                logger.warning("Imported seed is invalid")
                 self.view.show('WARNING', "Invalid BIP39 seedphrase, please retry.", 'Ok', None,
                                "./pictures_db/generate_icon_ws.png")
         except Exception as e:
-            logger.error(f"005 Error importing seed: {e}", exc_info=True)
+            logger.error(f"Error importing seed: {e}", exc_info=True)
             self.view.show("ERROR", "Failed to import seed", "Ok", None, "./pictures_db/generate_icon_ws.png")
 
     @log_method
@@ -560,7 +555,7 @@ class Controller:
     @log_method
     def import_password(self, label: str, login: str, password: str, url: str = None):
         try:
-            logger.info("001 Starting password import process")
+            logger.info("Starting password import process")
 
             # Préparer les données pour l'importation
             secret_type = 0x90  # Type pour mot de passe
@@ -579,60 +574,74 @@ class Controller:
             # Appeler la méthode d'importation de secret
             id, fingerprint = self.cc.seedkeeper_import_secret(secret_dic)
 
-            logger.log(SUCCESS, f"002 Password imported successfully with id: {id} and fingerprint: {fingerprint}")
+            logger.log(SUCCESS, f"Password imported successfully with id: {id} and fingerprint: {fingerprint}")
 
             return id, fingerprint
 
         except SeedKeeperError as e:
-            logger.error(f"003 SeedKeeper error during password import: {str(e)}")
+            logger.error(f"SeedKeeper error during password import: {str(e)}")
             raise
         except Exception as e:
-            logger.error(f"004 Unexpected error during password import: {str(e)}")
-            raise ControllerError(f"005 Failed to import password: {str(e)}") from e
+            logger.error(f"Unexpected error during password import: {str(e)}")
+            raise ControllerError(f"Failed to import password: {str(e)}") from e
 
     @log_method
     def import_masterseed(self, label: str, mnemonic: str, passphrase: Optional[str] = None):
         try:
             logger.info("001 Starting masterseed import process")
-            logger.debug(mnemonic)
 
-            # Vérifier la validité du mnemonic
+            # Validate the mnemonic
+            mnemonic = mnemonic.strip()
+            word_count = len(mnemonic.split())
+            if word_count not in [12, 24]:
+                raise ValueError(f"002 Invalid mnemonic word count: {word_count}. Must be 12 or 24.")
+
+            # Verify mnemonic validity
             MNEMONIC = Mnemonic("english")
             if not MNEMONIC.check(mnemonic):
-                raise ValueError("002 Invalid mnemonic")
+                raise ValueError("003 Invalid mnemonic")
 
-            is_valid = MNEMONIC.check(mnemonic)
-            logger.debug(f"Mnemonic is valid: {is_valid}")
+            # Generate entropy from mnemonic
+            entropy = MNEMONIC.to_entropy(mnemonic)
 
-            # S'assurer que passphrase est une chaîne de caractères ou None
-            if passphrase:
-                mnemonic = f"mnemonic:{mnemonic}passphrase:{passphrase}"
-            else:
-                mnemonic = f"mnemonic:{mnemonic}"
+            # Generate seed
+            salt = "mnemonic" + (passphrase or "")
+            seed = hashlib.pbkdf2_hmac("sha512", mnemonic.encode("utf-8"), salt.encode("utf-8"), 2048)
 
+            # Prepare the secret data
+            wordlist_selector = 0x00  # english
+            entropy_list = list(entropy)
+            seed_list = list(seed)
+            passphrase_list = list(passphrase.encode('utf-8')) if passphrase else []
 
-            # Préparer les données pour l'importation
-            secret_type = 0x10  # Type pour masterseed
-            export_rights = 0x01  # Droits d'exportation (à ajuster selon vos besoins)
+            secret_list = (
+                    [len(seed_list)] +
+                    seed_list +
+                    [wordlist_selector] +
+                    [len(entropy_list)] +
+                    entropy_list +
+                    [len(passphrase_list)] +
+                    passphrase_list
+            )
 
-            # Créer le dictionnaire secret
+            # Prepare the header
+            secret_type = 0x10  # SECRET_TYPE_MASTER_SEED
+            export_rights = 0x01  # SECRET_EXPORT_ALLOWED
+            subtype = 0x01  # SECRET_SUBTYPE_BIP39
+
             secret_dic = {
-                'header': self.cc.make_header(secret_type, export_rights, label),
-                'secret_list': list(mnemonic.encode('utf-8'))
+                'header': self.cc.make_header(secret_type, export_rights, label, subtype=subtype),
+                'secret_list': secret_list
             }
 
-            # Appeler la méthode d'importation de secret
+            # Import the secret
             id, fingerprint = self.cc.seedkeeper_import_secret(secret_dic)
 
-            logger.log(SUCCESS, f"003 Masterseed imported successfully with id: {id} and fingerprint: {fingerprint}")
-
+            logger.log(SUCCESS, f"004 Masterseed imported successfully with id: {id} and fingerprint: {fingerprint}")
             return id, fingerprint
 
         except ValueError as e:
-            logger.error(f"004 Validation error during masterseed import: {str(e)}")
-            raise
-        except SeedKeeperError as e:
-            logger.error(f"005 SeedKeeper error during masterseed import: {str(e)}")
+            logger.error(f"005 Validation error during masterseed import: {str(e)}")
             raise
         except Exception as e:
             logger.error(f"006 Unexpected error during masterseed import: {str(e)}")
@@ -693,60 +702,124 @@ class Controller:
             raise ControllerError(f"Failed to decode secret: {str(e)}") from e
 
     @log_method
-    def decode_masterseed(self, seed_hex: str):
+    def decode_masterseed(self, secret_dict: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            logger.info("001 Starting masterseed decoding process")
+            logger.info("Starting masterseed decoding process")
+            logger.debug(f"Secret dictionary provided: {secret_dict}")
 
-            # Convertir la chaîne hexadécimale en bytes
-            # convert hex chain into bytes
-            try:
-                logger.debug(f"seed hex: {seed_hex}")
-                secret_bytes = binascii.unhexlify(seed_hex)
-                logger.debug(f"seed bytes: {secret_bytes}")
-            except binascii.Error:
-                raise ValueError("002 Invalid hexadecimal string provided")
-
-            # Décoder en UTF-8
-            try:
-                decoded_secret = secret_bytes.decode('utf-8')
-            except UnicodeDecodeError:
-                decoded_secret = seed_hex[2:]
-
-            # Initialiser le dictionnaire de résultats
-            result = {
-                'mnemonic': '',
-                'passphrase': ''
+            # Mapping des types de secrets de chaîne à valeur hexadécimale
+            secret_type_mapping = {
+                "Masterseed": 0x10,
+                "BIP39 mnemonic": 0x30,
+                "Electrum mnemonic": 0x40
             }
 
-            # Séparer les parties
-            parts = decoded_secret.split('mnemonic:')
+            result = {
+                'type': secret_type_mapping.get(secret_dict['type']),
+                'subtype': secret_dict.get('subtype', 0x00),  # Default subtype if not provided
+                'masterseed': b'',
+                'mnemonic': '',
+                'passphrase': '',
+                'entropy': b'',
+                'wordlist_selector': None
+            }
 
-            if len(parts) > 1:
-                # La mnémonique est la première partie
-                result['mnemonic'] = parts[1].split('passphrase:')[0].strip()
+            if result['type'] is None:
+                raise ValueError(f"Unsupported secret type: {secret_dict['type']}")
 
-                # Traiter le reste pour extraire la passphrase
-                remaining = parts[1].split('passphrase:')
-                if len(remaining) > 1:
-                    result['passphrase'] = remaining[1].strip()
+            logger.debug(f"Initial result dictionary: {result}")
+
+            # Convertir la chaîne hexadécimale du secret en bytes
+            try:
+                logger.debug(f"Secret_dict['secret'] before secret_bytes: {secret_dict['secret']}")
+                secret_bytes = binascii.unhexlify(secret_dict['secret'])
+                logger.debug(f"Secret bytes: {(secret_bytes)}")
+            except binascii.Error:
+                raise ValueError("Invalid hexadecimal string provided for secret")
+
+            offset = 0
+
+            if result['type'] == 0x10:  # SECRET_TYPE_MASTER_SEED
+                logger.debug(f"Decoding SECRET_TYPE_MASTER_SEED with subtype: {hex(result['subtype'])}")
+
+                if result['subtype'] in [0x00, 0x01]:  # DEFAULT or BIP39
+                    logger.debug(f"Subtype is default or BIP39: {hex(result['subtype'])}")
+                    masterseed_size = secret_bytes[offset]
+                    offset += 1
+                    result['masterseed'] = secret_bytes[offset:offset + masterseed_size]
+
+                    if result['subtype'] == 0x00: #default masterseed:
+                        result['mnemonic'] = secret_bytes[offset:].hex()
+
+
+                    logger.debug(f"The masterseed: {result['masterseed']} had been store into result_dict['masterseed']")
+                    offset += masterseed_size
+
+
+                    if result['subtype'] == 0x01:  # BIP39
+                        result['wordlist_selector'] = secret_bytes[offset]
+                        offset += 1
+
+                        entropy_size = secret_bytes[offset]
+                        offset += 1
+                        result['entropy'] = secret_bytes[offset:offset + entropy_size]
+                        offset += entropy_size
+
+                        # Génération de la mnemonic à partir de l'entropie
+                        # Mnemonic generation from entripy
+                        if result['entropy']:
+                            mnemonic_instance = Mnemonic("english")  # Utiliser le sélecteur de liste pour d'autres langues si nécessaire
+                            result['mnemonic'] = mnemonic_instance.to_mnemonic(result['entropy'])
+                            result['masterseed'] = secret_bytes[1:offset - (entropy_size + 2)].hex()
+                            logger.debug(f"Generated Mnemonic: {result['mnemonic']} {result['masterseed']}")
+
+                        logger.debug(f"secret_bytes length: {len(secret_bytes)}")
+                        logger.debug(f"offset value: {offset}")
+                        logger.debug(f"secret_bytes content: {secret_bytes.hex()}")
+
+                        passphrase_size = secret_bytes[offset]
+                        offset += 1
+                        if passphrase_size > 0:
+                            result['passphrase'] = secret_bytes[offset:offset + passphrase_size].decode('utf-8')
+                else:
+                    raise ValueError(f"Unknown subtype for SECRET_TYPE_MASTER_SEED: {hex(result['subtype'])}")
+
+            elif result['type'] in [0x30, 0x40]:  # SECRET_TYPE_BIP39_MNEMONIC or SECRET_TYPE_ELECTRUM_MNEMONIC
+                logger.debug(f"Decoding {'BIP39_MNEMONIC' if result['type'] == 0x30 else 'ELECTRUM_MNEMONIC'}")
+
+                if result['subtype'] == 0x00:  # SECRET_SUBTYPE_DEFAULT
+                    mnemonic_size = secret_bytes[offset]
+                    offset += 1
+                    result['mnemonic'] = secret_bytes[offset:offset + mnemonic_size]
+                    offset += mnemonic_size
+
+                    passphrase_size = secret_bytes[offset] if offset < len(secret_bytes) else 0
+                    offset += 1
+                    if passphrase_size > 0 and offset < len(secret_bytes):
+                        result['passphrase'] = secret_bytes[offset:offset + passphrase_size]
+                else:
+                    raise ValueError(f"Unknown subtype for BIP39/ELECTRUM_MNEMONIC: {hex(result['subtype'])}")
+
             else:
-                # Si 'mnemonic:' n'est pas trouvé, considérer tout comme texte brut
-                result['mnemonic'] = decoded_secret
+                raise ValueError(f"Unsupported secret type for masterseed: {hex(result['type'])}")
 
-            # Remplacer 'None' par une chaîne vide
-            for key in result:
-                if result[key] == 'None':
-                    result[key] = ''
+            # Vérification de la mnémonique
+            if result['mnemonic']:
+                mnemonic = result['mnemonic']
+                mnemonic_instance = Mnemonic("english")  # Nous supposons l'anglais par défaut
+                if not mnemonic_instance.check(mnemonic):
+                    logger.debug(f"Maybe mnemonic: {mnemonic} is electrum only")
 
-            logger.info("004 Masterseed successfully decoded")
+            logger.info("Masterseed successfully decoded")
+            logger.debug(f"Decoded: {result}")
             return result
 
         except ValueError as e:
-            logger.error(f"005 Validation error during masterseed decoding: {str(e)}")
+            logger.error(f"Validation error during masterseed decoding: {str(e)}")
             raise
         except Exception as e:
-            logger.error(f"006 Unexpected error during masterseed decoding: {str(e)}")
-            raise ControllerError(f"007 Failed to decode masterseed: {str(e)}") from e
+            logger.error(f"Unexpected error during masterseed decoding: {str(e)}")
+            raise ControllerError(f"Failed to decode masterseed: {str(e)}") from e
 
     def get_secret_header_list(self):
         # get a list of all the secrets & pubkeys available
