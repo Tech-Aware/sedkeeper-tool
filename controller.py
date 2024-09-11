@@ -36,6 +36,7 @@ class Controller:
         0xC0: 'Bitcoin Descriptor'
     }
 
+
     @log_method
     def __init__(self, cc, view, loglevel=logger.setLevel(logging.DEBUG)):
         self.view = view
@@ -648,26 +649,66 @@ class Controller:
             raise ControllerError(f"007 Failed to import masterseed: {str(e)}") from e
 
     @log_method
-    def decode_secret_password(self, secret_hex):
+    def decode_secret(self, secret_dict: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            logger.info("001 Starting secret decoding process")
+            logger.info("Starting secret decoding process")
+            logger.debug(f"Secret dictionary provided: {secret_dict}")
 
-            # Convertir la chaîne hexadécimale en bytes
-            secret_bytes = binascii.unhexlify(secret_hex)
-
-
-            # Décoder en UTF-8
-            decoded_secret = secret_bytes.decode('utf-8')
-
-            # Initialiser le dictionnaire de résultats
-            result = {
-                'password': '',
-                'login': '',
-                'url': ''
+            # Mapping des types de secrets
+            secret_type_mapping = {
+                "Masterseed": 0x10,
+                "BIP39 mnemonic": 0x30,
+                "Electrum mnemonic": 0x40,
+                "Password": 0x90
             }
 
+            result = {
+                'type': secret_type_mapping.get(secret_dict['type']),
+                'subtype': secret_dict.get('subtype', 0x00),  # Default subtype if not provided
+            }
+
+            if result['type'] is None:
+                raise ValueError(f"Unsupported secret type: {secret_dict['type']}")
+
+            logger.debug(f"Initial result dictionary: {result}")
+
+            # Convertir la chaîne hexadécimale du secret en bytes
+            try:
+                secret_bytes = binascii.unhexlify(secret_dict['secret'])
+                logger.debug(f"Secret bytes: {secret_bytes.hex()}")
+            except binascii.Error:
+                raise ValueError("Invalid hexadecimal string provided for secret")
+
+            if result['type'] in [0x10, 0x30, 0x40]:  # Masterseed, BIP39, or Electrum mnemonic
+                return self._decode_masterseed(result, secret_bytes)
+            elif result['type'] == 0x90:  # Password
+                return self._decode_password(result, secret_bytes)
+            else:
+                raise ValueError(f"Decoding not implemented for type: {hex(result['type'])}")
+
+        except ValueError as e:
+            logger.error(f"Validation error during secret decoding: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during secret decoding: {str(e)}")
+            raise ControllerError(f"Failed to decode secret: {str(e)}") from e
+
+    @log_method
+    def _decode_password(self, result: Dict[str, Any], secret_bytes: bytes) -> Dict[str, Any]:
+        try:
+            logger.info("Decoding password secret")
+
+            # Initialiser les champs
+            result['password'] = ''
+            result['login'] = ''
+            result['url'] = ''
+
+            # Décoder le contenu complet en UTF-8
+            full_content = secret_bytes.decode('utf-8')
+            logger.debug(f"Full decoded content: {full_content}")
+
             # Séparer les parties
-            parts = decoded_secret.split('login:')
+            parts = full_content.split('login:')
 
             if len(parts) > 1:
                 # Le mot de passe est la première partie
@@ -683,23 +724,19 @@ class Controller:
                 else:
                     result['login'] = remaining.strip()
             else:
-                # Si 'login:' n'est pas trouvé, considérer tout comme mot de passe
-                result['password'] = decoded_secret
+                # Si 'login:' n'est pas trouvé, tout est considéré comme mot de passe
+                result['password'] = full_content.strip()
 
             # Remplacer 'None' par une chaîne vide
             for key in result:
                 if result[key] == 'None':
                     result[key] = ''
 
-            logger.info("002 Secret successfully decoded")
+            logger.debug(f"Decoded password secret: {result}")
             return result
-
-        except binascii.Error as e:
-            logger.error(f"003 Error decoding hex string: {str(e)}")
-            raise ValueError("Invalid hexadecimal string") from e
         except Exception as e:
-            logger.error(f"004 Unexpected error during secret decoding: {str(e)}")
-            raise ControllerError(f"Failed to decode secret: {str(e)}") from e
+            logger.error(f"Error decoding password secret: {str(e)}")
+            raise ValueError(f"Failed to decode password secret: {str(e)}") from e
 
     @log_method
     def decode_masterseed(self, secret_dict: Dict[str, Any]) -> Dict[str, Any]:
