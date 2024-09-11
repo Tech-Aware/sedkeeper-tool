@@ -334,7 +334,7 @@ class View(customtkinter.CTk):
             size=None
     ) -> customtkinter.CTkFont:
         try:
-            logger.infos("Entering make_text_bold method")
+            logger.info("Entering make_text_bold method")
 
             logger.debug("Configuring bold font")
             try:
@@ -2303,7 +2303,7 @@ class View(customtkinter.CTk):
                 try:
                     logger.info(f"Showing details for secret ID: {secret['id']}")
                     self._create_frame()
-                    logger.debug(f"secret: {secret}")
+                    logger.debug(f"secret concerned: {secret}")
 
                     logger.debug("Managing export rights control")
                     secret_details = {}
@@ -2332,16 +2332,22 @@ class View(customtkinter.CTk):
                         _create_password_secret_frame(secret_details)
                         logger.debug(f"Frame corresponding to {secret['type']} details called")
                     elif secret['type'] == 'Masterseed':
+                        if secret_details['subtype'] > 0:
+                            print(f"this is mnemonic, subtype: {secret['subtype']}")
+                            _create_mnemonic_secret_frame(secret_details)
+                        else:
+                            _create_masterseed_secret_frame(secret_details)
+                            print(f"this is masterseed, subtype: {secret['subtype']}")
                         logger.debug(f"Secret: {secret}, with id {secret['id']} is a {secret['type']}")
                         _create_masterseed_secret_frame(secret_details)
                         logger.debug(f"Frame corresponding to {secret['type']} details called")
                     elif secret['type'] == "BIP39 mnemonic":
                         logger.debug(f"Secret: {secret}, with id {secret['id']} is a {secret['type']}")
-                        _create_masterseed_secret_frame(secret_details)
+                        _create_mnemonic_secret_frame(secret_details)
                         logger.debug(f"Frame corresponding to {secret['type']}{secret['type']} details called")
                     elif secret['type'] == 'Electrum mnemonic':
                         logger.debug(f"Secret: {secret}, with id {secret['id']} is a {secret['type']}")
-                        _create_masterseed_secret_frame(secret_details)
+                        _create_mnemonic_secret_frame(secret_details)
                         logger.debug(f"Frame corresponding to {secret['type']} details called")
                     elif secret['type'] == '2FA secret':
                         logger.debug(f"Secret: {secret}, with id {secret['id']} is a {secret['type']}")
@@ -2361,6 +2367,11 @@ class View(customtkinter.CTk):
 
             try:
                 logger.info("Creating secrets table")
+
+                subtype_dict = {
+                    '0x0': 'masterseed',
+                    '0x1': 'Mnemonic seedphrase'
+                }
 
                 # Introduce table
                 label_text = self._create_label(text="Click on a secret to manage it:")
@@ -2400,7 +2411,7 @@ class View(customtkinter.CTk):
                         text_color = TEXT_COLOR if i % 2 == 0 else BUTTON_TEXT_COLOR
 
                         buttons = []
-                        values = [secret['id'], secret['type'], secret['label']]
+                        values = [secret['id'], secret['type'] if subtype_dict.get(secret['subtype']) == 'masterseed' else subtype_dict.get(secret['subtype']), secret['label']]
                         for value, width in zip(values, header_widths):
                             cell_button = customtkinter.CTkButton(row_frame, text=value, text_color=text_color,
                                                                   fg_color=fg_color,
@@ -2464,9 +2475,9 @@ class View(customtkinter.CTk):
                     # Decode secret
                     try:
                         logger.debug("006 Decoding secret to show")
-                        self.decoded_login_password = self.controller.decode_secret_password(secret_details['secret'])
+                        self.decoded_login_password = self.controller.decode_secret(secret_details)
                         logger.log(
-                            SUCCESS, "007 login password secret decoded successfully"
+                            SUCCESS, f"login password secret decoded successfully: {self.decoded_login_password}"
                         )
                     except ValueError as e:
                         self.show("ERROR", f"Invalid secret format: {str(e)}", "Ok")
@@ -2529,6 +2540,110 @@ class View(customtkinter.CTk):
 
         @log_method
         def _create_masterseed_secret_frame(secret_details):
+            try:
+                logger.debug(f"masterseed_secret_details: {secret_details}")
+                logger.info("001 Creating mnemonic secret frame")
+                # Create labels and entry fields
+                labels = ['Label:', 'Mnemonic type:']
+                entries = {}
+
+                for i, label_text in enumerate(labels):
+                    try:
+                        label = self._create_label(label_text)
+                        label.place(relx=0.045, rely=0.2 + i * 0.15, anchor="w")
+                        logger.debug(f"Created label: {label_text}")
+
+                        entry = self._create_entry()
+                        entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
+                        entries[label_text.lower()[:-1]] = entry
+                        logger.debug(f"Created entry for: {label_text}")
+                    except Exception as e:
+                        logger.error(f"Error creating label or entry for {label_text}: {e}", exc_info=True)
+                        raise UIElementError(f"Failed to create label or entry for {label_text}: {e}") from e
+
+                # Set values to label and mnemonic type
+                entries['label'].insert(0, secret_details['label'])
+                entries['mnemonic type'].insert(0, secret_details['type'])
+
+                # lock possibilities to wright into entries
+                entries['label'].configure(state='disabled')
+                entries['mnemonic type'].configure(state='disabled')
+                logger.debug("Entry values set")
+
+                if secret_details['secret'] != "Export failed: export not allowed by SeedKeeper policy.":
+                    # Decode seed to mnemonic
+                    try:
+                        logger.debug("Decoding seed to mnemonic words")
+                        secret = self.controller.decode_masterseed(secret_details)
+                        mnemonic = secret['mnemonic']
+                        passphrase = secret['passphrase']
+                    except Exception as e:
+                        logger.error(f"Error decoding Masterseed: {e}", exc_info=True)
+                        raise ControllerError(f"015 Failed to decode Masterseed: {e}") from e
+                else:
+                    mnemonic = secret_details['secret']
+                    passphrase = secret_details['secret']
+
+                # Create mnemonic field
+                try:
+                    mnemonic_label = self._create_label("Mnemonic:")
+                    mnemonic_label.place(relx=0.045, rely=0.65, anchor="w")
+
+                    mnemonic_textbox = self._create_textbox()
+                    mnemonic_textbox.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
+                    mnemonic_textbox.insert("1.0", '*' * len(mnemonic))
+                    logger.debug("013 Mnemonic field created")
+                except Exception as e:
+                    logger.error(f"014 Error creating mnemonic field: {e}", exc_info=True)
+                    raise UIElementError(f"015 Failed to create mnemonic field: {e}") from e
+
+                # Function to toggle visibility of mnemonic
+                @log_method
+                def _toggle_mnemonic_visibility(textbox, original_text):
+                    try:
+                        logger.info("016 Toggling mnemonic visibility")
+                        textbox.configure(state='normal')
+                        # Obtenir le contenu actuel de la textbox
+                        current_text = textbox.get("1.0", "end-1c")
+
+                        if current_text == '*' * len(original_text):
+                            # Si la textbox contient uniquement des étoiles, afficher le texte original
+                            textbox.delete("1.0", "end")
+                            textbox.insert("1.0", original_text)
+                            textbox.configure(state='disabled')
+                            logger.log(SUCCESS, "017 Mnemonic visibility toggled to visible")
+                        else:
+                            # Sinon, masquer le texte avec des étoiles
+                            textbox.delete("1.0", "end")
+                            textbox.insert("1.0", '*' * len(original_text))
+                            textbox.configure(state='disabled')
+                            logger.log(SUCCESS, "017 Mnemonic visibility toggled to hidden")
+
+                    except Exception as e:
+                        logger.error(f"018 Error toggling mnemonic visibility: {e}", exc_info=True)
+                        raise UIElementError(f"019 Failed to toggle mnemonic visibility: {e}") from e
+
+                # Create action buttons
+                try:
+                    delete_button = self._create_button(text="Delete secret",
+                                                        command=lambda: None)  # self._delete_secret(secret['id']))
+                    delete_button.place(relx=0.7, rely=0.15, anchor="se")
+
+                    show_button = self._create_button(text="Show",
+                                                      command=lambda: [_toggle_mnemonic_visibility(mnemonic_textbox, mnemonic)])
+                    show_button.place(relx=0.95, rely=0.8, anchor="e")
+                    logger.debug("020 Action buttons created")
+                except Exception as e:
+                    logger.error(f"021 Error creating action buttons: {e}", exc_info=True)
+                    raise UIElementError(f"022 Failed to create action buttons: {e}") from e
+
+                logger.log(SUCCESS, "023 Mnemonic secret frame created successfully")
+            except Exception as e:
+                logger.error(f"024 Unexpected error in _create_mnemonic_secret_frame: {e}", exc_info=True)
+                raise ViewError(f"025 Failed to create mnemonic secret frame: {e}") from e
+
+        @log_method
+        def _create_mnemonic_secret_frame(secret_details):
             try:
                 logger.debug(f"masterseed_secret_details: {secret_details}")
                 logger.info("001 Creating mnemonic secret frame")
@@ -2752,14 +2867,14 @@ class View(customtkinter.CTk):
                 raise UIElementError(f"Failed to create generic secret frame: {e}")
 
         try:
-            logger.info("022 Creating secrets frame")
+            logger.info("Creating secrets frame")
             _create_secrets_frame()
             _create_secrets_header()
             _create_secrets_table(secrets_data)
             self.create_seedkeeper_menu()
-            logger.log(SUCCESS, "023 Secrets frame created successfully")
+            logger.log(SUCCESS, "Secrets frame created successfully")
         except Exception as e:
-            error_msg = f"024 Failed to create secrets frame: {e}"
+            error_msg = f"Failed to create secrets frame: {e}"
             logger.error(error_msg, exc_info=True)
             raise SecretFrameCreationError(error_msg) from e
 
