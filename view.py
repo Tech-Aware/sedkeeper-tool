@@ -2150,7 +2150,7 @@ class View(customtkinter.CTk):
                     logger.info("010 Loading background image")
                     self.background_photo = self._create_background_photo(self, "./pictures_db/about.png")
                     self.canvas = self._create_canvas()
-                    self.canvas.place(relx=0.5, rely=0.3, anchor="center")
+                    self.canvas.place(relx=0.5, rely=0.2, anchor="center")
                     self.canvas.create_image(0, 0, image=self.background_photo, anchor="nw")
                     logger.log(SUCCESS, "011 Background image loaded successfully")
                 except Exception as e:
@@ -2162,12 +2162,12 @@ class View(customtkinter.CTk):
                 try:
                     logger.info("014 Creating card information section")
                     card_information = self._create_label("Card information")
-                    card_information.place(relx=0.05, rely=0.25, anchor="w")
+                    card_information.place(relx=0.05, rely=0.21, anchor="w")
                     card_information.configure(font=self._make_text_bold())
 
                     applet_version = self._create_label(
                         f"Applet version: {self.controller.card_status['applet_full_version_string']}")
-                    applet_version.place(relx=0.05, rely=0.33)
+                    applet_version.place(relx=0.05, rely=0.29)
 
                     if self.controller.cc.card_type == "Satodime" or self.controller.cc.is_pin_set():
                         _create_authenticated_card_info()
@@ -2184,26 +2184,26 @@ class View(customtkinter.CTk):
                 card_label_named = self._create_label(f"Label: [{self.controller.get_card_label_infos()}]")
                 is_authentic, _, _, _, _ = self.controller.cc.card_verify_authenticity()
                 card_genuine = self._create_label(f"Genuine: {'YES' if is_authentic else 'NO'}")
-                card_label_named.place(relx=0.05, rely=0.28)
-                card_genuine.place(relx=0.05, rely=0.38)
+                card_label_named.place(relx=0.05, rely=0.24)
+                card_genuine.place(relx=0.05, rely=0.34)
 
             @log_method
             def _create_card_configuration():
                 try:
                     logger.info("018 Creating card configuration section")
                     card_configuration = self._create_label("Card configuration")
-                    card_configuration.place(relx=0.05, rely=0.48, anchor="w")
+                    card_configuration.place(relx=0.05, rely=0.42, anchor="w")
                     card_configuration.configure(font=self._make_text_bold())
 
                     if self.controller.cc.card_type != "Satodime":
                         pin_info = f"PIN counter:[{self.controller.card_status['PIN0_remaining_tries']}] tries remaining"
                     else:
                         pin_info = "No PIN required"
-                    self._create_label(pin_info).place(relx=0.05, rely=0.52)
+                    self._create_label(pin_info).place(relx=0.05, rely=0.44)
 
                     if self.controller.cc.card_type == "Satochip":
                         two_fa_status = "2FA enabled" if self.controller.cc.needs_2FA else "2FA disabled"
-                        self._create_label(two_fa_status).place(relx=0.05, rely=0.58)
+                        self._create_label(two_fa_status).place(relx=0.05, rely=0.52)
 
                     logger.log(SUCCESS, "019 Card configuration section created successfully")
                 except Exception as e:
@@ -2211,18 +2211,29 @@ class View(customtkinter.CTk):
                     raise UIElementError(f"021 Failed to create card configuration section: {e}") from e
 
             @log_method
+            def _create_make_backup():
+                self._create_label("Make a backup of your Seedkeeper to another one:").place(relx=0.05, rely=0.53)
+                self._create_button("Make it !", None, None).place(relx=0.62, rely=0.522)
+
+            @log_method
+            def _create_seed_my_satochip():
+                self._create_label("Initialize your Satochip hardware wallet:").place(relx=0.05, rely=0.65)
+                self._create_button("Initialize it !", None, None).place(relx=0.49, rely=0.642)
+
+
+            @log_method
             def _create_card_connectivity():
                 try:
                     logger.info("022 Creating card connectivity section")
                     card_connectivity = self._create_label("Card connectivity")
-                    card_connectivity.place(relx=0.05, rely=0.68, anchor="w")
+                    card_connectivity.place(relx=0.05, rely=0.76, anchor="w")
                     card_connectivity.configure(font=self._make_text_bold())
 
                     nfc_status = {
                         0: "NFC enabled",
                         1: "NFC disabled",
                     }.get(self.controller.cc.nfc_policy, "NFC: [BLOCKED]")
-                    self._create_label(nfc_status).place(relx=0.05, rely=0.715)
+                    self._create_label(nfc_status).place(relx=0.05, rely=0.775)
 
                     logger.log(SUCCESS, "023 Card connectivity section created successfully")
                 except Exception as e:
@@ -2235,10 +2246,10 @@ class View(customtkinter.CTk):
                 try:
                     logger.info("026 Creating software information section")
                     software_information = self._create_label("Software information")
-                    software_information.place(relx=0.05, rely=0.81, anchor="w")
+                    software_information.place(relx=0.05, rely=0.85, anchor="w")
                     software_information.configure(font=self._make_text_bold())
-                    self._create_label(f"SeedKeeper-Tool version: {VERSION}").place(relx=0.05, rely=0.83)
-                    self._create_label(f"Pysatochip version: {PYSATOCHIP_VERSION}").place(relx=0.05, rely=0.88)
+                    self._create_label(f"SeedKeeper-Tool version: {VERSION}").place(relx=0.05, rely=0.87)
+                    self._create_label(f"Pysatochip version: {PYSATOCHIP_VERSION}").place(relx=0.05, rely=0.91)
 
                     logger.log(SUCCESS, "027 Software information section created successfully")
                 except Exception as e:
@@ -2250,6 +2261,8 @@ class View(customtkinter.CTk):
             _create_about_header()
             _create_card_information()
             _create_card_configuration()
+            _create_make_backup()
+            _create_seed_my_satochip()
             _create_card_connectivity()
             _create_software_information()
             self.create_satochip_utils_menu()
