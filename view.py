@@ -2212,8 +2212,403 @@ class View(customtkinter.CTk):
 
             @log_method
             def _create_make_backup():
-                self._create_label("Make a backup of your Seedkeeper to another one:").place(relx=0.05, rely=0.53)
-                self._create_button("Make it !", None, None).place(relx=0.62, rely=0.522)
+                try:
+                    logger.info("Creating make backup section")
+                    self._create_label("Make a backup of your Seedkeeper to another one:").place(relx=0.05, rely=0.53)
+                    self._create_button("Make it !", lambda: show_view_start_backup_process(), None).place(relx=0.62,
+                                                                                                           rely=0.522)
+                    logger.debug("Make backup section created successfully")
+                except Exception as e:
+                    logger.error(f"Error creating make backup section: {e}", exc_info=True)
+                    raise UIElementError(f"Failed to create make backup section: {e}") from e
+
+                def show_view_start_backup_process():
+                    try:
+                        logger.info("Showing start backup process view")
+                        view_start_backup_process()
+                        logger.debug("Start backup process view shown successfully")
+                    except Exception as e:
+                        logger.error(f"Error showing start backup process view: {e}", exc_info=True)
+                        raise ViewError(f"Failed to show start backup process view: {e}") from e
+
+                @log_method
+                def view_start_backup_process():
+                    try:
+                        logger.info("Starting backup process view")
+                        self._create_frame()
+
+                        def create_start_backup_header():
+                            try:
+                                logger.debug("Creating start backup header")
+                                self._create_an_header('Make a backup', 'settings_icon_ws.png').place(relx=0.03, rely=0.08,
+                                                                                                      anchor="nw")
+                                logger.debug("Start backup header created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating start backup header: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create start backup header: {e}") from e
+
+                        def create_start_backup_subheader():
+                            try:
+                                logger.debug("Creating start backup subheader")
+                                subheader_label = self._create_label('Create a backup of your Seedkeeper to another one')
+                                subheader_label.configure(text_color='grey')
+                                subheader_label.place(relx=0.04, rely=0.17, anchor="nw")
+                                logger.debug("Start backup subheader created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating start backup subheader: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create start backup subheader: {e}") from e
+
+                        def create_start_backup_infobox_label():
+                            try:
+                                logger.debug("Creating start backup infobox label")
+                                infos_message_line_1 = "You are about to create a carbon copy of your current card - aka the master card - to"
+                                infos_message_line_2 = "a Seedkeeper backup card - aka the backup card - via an encrypted communication."
+                                infos_message_line_3 = "Prepare your backup card and press the start button."
+
+                                self._create_label(infos_message_line_1).place(relx=0.04, rely=0.25, anchor='nw')
+                                self._create_label(infos_message_line_2).place(relx=0.04, rely=0.29, anchor='nw')
+                                self._create_label(infos_message_line_3).place(relx=0.04, rely=0.33, anchor='nw')
+                                logger.debug("Start backup infobox label created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating start backup infobox label: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create start backup infobox label: {e}") from e
+
+                        def load_start_backup_background_image():
+                            try:
+                                logger.info("Loading start backup background image")
+                                self.backup_start_pictures = self._create_background_photo(self,
+                                                                                           "./pictures_db/backup_start_ws.png")
+                                self.canvas = self._create_canvas()
+                                self.canvas.config(width=750, height=600)
+                                self.canvas.place(relx=0.5, rely=0.5, anchor="center")
+                                self.canvas.create_image(380, 375, image=self.backup_start_pictures, anchor="center")
+                                logger.debug("Start backup background image loaded successfully")
+                            except Exception as e:
+                                logger.error(f"Error loading start backup background image: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to load start backup background image: {e}") from e
+
+                        def create_start_backup_buttons():
+                            try:
+                                logger.debug("Creating start backup buttons")
+                                self._create_button('Back', self.show_view_about, None).place(relx=0.1, rely=0.9)
+                                self._create_button('Start', lambda: show_view_step_1_backup_process(), None).place(
+                                    relx=0.75, rely=0.9)
+                                logger.debug("Start backup buttons created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating start backup buttons: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create start backup buttons: {e}") from e
+
+                        def load_start_backup_process():
+                            try:
+                                logger.info("Loading start backup process")
+                                load_start_backup_background_image()
+                                create_start_backup_header()
+                                create_start_backup_subheader()
+                                create_start_backup_infobox_label()
+                                create_start_backup_buttons()
+                                logger.debug("Start backup process loaded successfully")
+                            except Exception as e:
+                                logger.error(f"Error loading start backup process: {e}", exc_info=True)
+                                raise ViewError(f"Failed to load start backup process: {e}") from e
+
+                        load_start_backup_process()
+                        self.create_satochip_utils_menu()
+                        logger.log(SUCCESS, "Backup process view started successfully")
+                    except Exception as e:
+                        logger.error(f"Error in view_start_backup_process: {e}", exc_info=True)
+                        raise ViewError(f"Failed to start backup process view: {e}") from e
+
+                def show_view_step_1_backup_process():
+                    try:
+                        logger.info("Showing step 1 backup process view")
+                        view_step_1_backup_process()
+                        logger.debug("Step 1 backup process view shown successfully")
+                    except Exception as e:
+                        logger.error(f"Error showing step 1 backup process view: {e}", exc_info=True)
+                        raise ViewError(f"Failed to show step 1 backup process view: {e}") from e
+
+                @log_method
+                def view_step_1_backup_process():
+                    try:
+                        logger.info("Starting step 1 backup process view")
+                        self._create_frame()
+
+                        def create_step_1_backup_header():
+                            try:
+                                logger.debug("Creating step 1 backup header")
+                                self._create_an_header('Make a backup', 'settings_icon_ws.png').place(relx=0.03, rely=0.08,
+                                                                                                      anchor="nw")
+                                logger.debug("Step 1 backup header created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 1 backup header: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 1 backup header: {e}") from e
+
+                        def create_step_1_backup_subheader():
+                            try:
+                                logger.debug("Creating step 1 backup subheader")
+                                subheader_label = self._create_label('Create a backup of your Seedkeeper to another one')
+                                subheader_label.configure(text_color='grey')
+                                subheader_label.place(relx=0.04, rely=0.17, anchor="nw")
+                                logger.debug("Step 1 backup subheader created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 1 backup subheader: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 1 backup subheader: {e}") from e
+
+                        def create_step_1_backup_infobox_label():
+                            try:
+                                logger.debug("Creating step 1 backup infobox label")
+                                infos_message_line_1 = "Step 1/3"
+                                infos_message_line_2 = "Remove the master card from the reader and plug in your backup card."
+                                infos_message_line_3 = "The fingerprint of your backup card is now recorded."
+
+                                step_label = self._create_label(infos_message_line_1)
+                                step_label.configure(font=self._make_text_bold())
+                                step_label.place(relx=0.04, rely=0.25, anchor='nw')
+                                self._create_label(infos_message_line_2).place(relx=0.04, rely=0.29, anchor='nw')
+                                self._create_label(infos_message_line_3).place(relx=0.04, rely=0.33, anchor='nw')
+                                logger.debug("Step 1 backup infobox label created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 1 backup infobox label: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 1 backup infobox label: {e}") from e
+
+                        def load_step_1_backup_background_image():
+                            try:
+                                logger.info("Loading step 1 backup background image")
+                                self.backup_start_pictures = self._create_background_photo(self,
+                                                                                           "./pictures_db/backup_step_1_ws.png")
+                                self.canvas = self._create_canvas()
+                                self.canvas.config(width=750, height=600)
+                                self.canvas.place(relx=0.5, rely=0.5, anchor="center")
+                                self.canvas.create_image(380, 375, image=self.backup_start_pictures, anchor="center")
+                                logger.debug("Step 1 backup background image loaded successfully")
+                            except Exception as e:
+                                logger.error(f"Error loading step 1 backup background image: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to load step 1 backup background image: {e}") from e
+
+                        def create_step_1_backup_buttons():
+                            try:
+                                logger.debug("Creating step 1 backup buttons")
+                                self._create_button('Back', lambda: show_view_start_backup_process(), None).place(relx=0.1,
+                                                                                                                  rely=0.9)
+                                self._create_button('Start', lambda: show_view_step_2_backup_process(), None).place(
+                                    relx=0.75, rely=0.9)
+                                logger.debug("Step 1 backup buttons created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 1 backup buttons: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 1 backup buttons: {e}") from e
+
+                        def load_step_1_backup_process():
+                            try:
+                                logger.info("Loading step 1 backup process")
+                                load_step_1_backup_background_image()
+                                create_step_1_backup_header()
+                                create_step_1_backup_subheader()
+                                create_step_1_backup_infobox_label()
+                                create_step_1_backup_buttons()
+                                logger.debug("Step 1 backup process loaded successfully")
+                            except Exception as e:
+                                logger.error(f"Error loading step 1 backup process: {e}", exc_info=True)
+                                raise ViewError(f"Failed to load step 1 backup process: {e}") from e
+
+                        load_step_1_backup_process()
+                        self.create_satochip_utils_menu()
+                        logger.log(SUCCESS, "Step 1 backup process view started successfully")
+                    except Exception as e:
+                        logger.error(f"Error in view_step_1_backup_process: {e}", exc_info=True)
+                        raise ViewError(f"Failed to start step 1 backup process view: {e}") from e
+
+                def show_view_step_2_backup_process():
+                    try:
+                        logger.info("Showing step 2 backup process view")
+                        view_step_2_backup_process()
+                        logger.debug("Step 2 backup process view shown successfully")
+                    except Exception as e:
+                        logger.error(f"Error showing step 2 backup process view: {e}", exc_info=True)
+                        raise ViewError(f"Failed to show step 2 backup process view: {e}") from e
+
+                @log_method
+                def view_step_2_backup_process():
+                    try:
+                        logger.info("Starting step 2 backup process view")
+                        self._create_frame()
+
+                        def create_step_2_backup_header():
+                            try:
+                                logger.debug("Creating step 2 backup header")
+                                self._create_an_header('Make a backup', 'settings_icon_ws.png').place(relx=0.03, rely=0.08,
+                                                                                                      anchor="nw")
+                                logger.debug("Step 2 backup header created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 2 backup header: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 2 backup header: {e}") from e
+
+                        def create_step_2_backup_subheader():
+                            try:
+                                logger.debug("Creating step 2 backup subheader")
+                                subheader_label = self._create_label('Create a backup of your Seedkeeper to another one')
+                                subheader_label.configure(text_color='grey')
+                                subheader_label.place(relx=0.04, rely=0.17, anchor="nw")
+                                logger.debug("Step 2 backup subheader created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 2 backup subheader: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 2 backup subheader: {e}") from e
+
+                        def create_step_2_backup_infobox_label():
+                            try:
+                                logger.debug("Creating step 2 backup infobox label")
+                                infos_message_line_1 = "Step 2/3"
+                                infos_message_line_2 = "Remove the backup card from the reader and plug in your master card."
+                                infos_message_line_3 = "The master card is now ready to copy its content using an encrypted communication."
+
+                                step_label = self._create_label(infos_message_line_1)
+                                step_label.configure(font=self._make_text_bold())
+                                step_label.place(relx=0.04, rely=0.25, anchor='nw')
+                                self._create_label(infos_message_line_2).place(relx=0.04, rely=0.29, anchor='nw')
+                                self._create_label(infos_message_line_3).place(relx=0.04, rely=0.33, anchor='nw')
+                                logger.debug("Step 2 backup infobox label created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 2 backup infobox label: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 2 backup infobox label: {e}") from e
+
+                        def load_step_2_backup_background_image():
+                            try:
+                                logger.info("Loading step 2 backup background image")
+                                self.backup_start_pictures = self._create_background_photo(self,
+                                                                                           "./pictures_db/backup_start_ws.png")
+                                self.canvas = self._create_canvas()
+                                self.canvas.config(width=750, height=600)
+                                self.canvas.place(relx=0.5, rely=0.5, anchor="center")
+                                self.canvas.create_image(380, 375, image=self.backup_start_pictures, anchor="center")
+                                logger.debug("Step 2 backup background image loaded successfully")
+                            except Exception as e:
+                                logger.error(f"Error loading step 2 backup background image: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to load step 2 backup background image: {e}") from e
+
+                        def create_step_2_backup_buttons():
+                            try:
+                                logger.debug("Creating step 2 backup buttons")
+                                self._create_button('Back', lambda: show_view_step_1_backup_process(), None).place(relx=0.1, rely=0.9)
+                                self._create_button('Start', lambda: show_view_step_3_backup_process(), None).place(relx=0.75, rely=0.9)
+                                logger.debug("Step 2 backup buttons created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 2 backup buttons: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 2 backup buttons: {e}") from e
+
+                        def load_step_2_backup_process():
+                            try:
+                                logger.info("Loading step 2 backup process")
+                                load_step_2_backup_background_image()
+                                create_step_2_backup_header()
+                                create_step_2_backup_subheader()
+                                create_step_2_backup_infobox_label()
+                                create_step_2_backup_buttons()
+                                logger.debug("Step 2 backup process loaded successfully")
+                            except Exception as e:
+                                logger.error(f"Error loading step 2 backup process: {e}", exc_info=True)
+                                raise ViewError(f"Failed to load step 2 backup process: {e}") from e
+
+                        load_step_2_backup_process()
+                        self.create_satochip_utils_menu()
+                        logger.log(SUCCESS, "Step 2 backup process view started successfully")
+                    except Exception as e:
+                        logger.error(f"Error in view_step_2_backup_process: {e}", exc_info=True)
+                        raise ViewError(f"Failed to start step 2 backup process view: {e}") from e
+
+                def show_view_step_3_backup_process():
+                    try:
+                        logger.info("Showing step 3 backup process view")
+                        view_step_3_backup_process()
+                        logger.debug("Step 3 backup process view shown successfully")
+                    except Exception as e:
+                        logger.error(f"Error showing step 3 backup process view: {e}", exc_info=True)
+                        raise ViewError(f"Failed to show step 3 backup process view: {e}") from e
+
+                @log_method
+                def view_step_3_backup_process():
+                    try:
+                        logger.info("Starting step 3 backup process view")
+                        self._create_frame()
+
+                        def create_step_3_backup_header():
+                            try:
+                                logger.debug("Creating step 3 backup header")
+                                self._create_an_header('Make a backup', 'settings_icon_ws.png').place(relx=0.03, rely=0.08, anchor="nw")
+                                logger.debug("Step 3 backup header created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 3 backup header: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 3 backup header: {e}") from e
+
+                        def create_step_3_backup_subheader():
+                            try:
+                                logger.debug("Creating step 3 backup subheader")
+                                subheader_label = self._create_label('Create a backup of your Seedkeeper to another one')
+                                subheader_label.configure(text_color='grey')
+                                subheader_label.place(relx=0.04, rely=0.17, anchor="nw")
+                                logger.debug("Step 3 backup subheader created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 3 backup subheader: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 3 backup subheader: {e}") from e
+
+                        def create_step_3_backup_infobox_label():
+                            try:
+                                logger.debug("Creating step 3 backup infobox label")
+                                infos_message_line_1 = "Step 3/3"
+                                infos_message_line_2 = "Remove the master card from the reader and plug in your backup card."
+                                infos_message_line_3 = "The content is now copied to the backup card. Well done!"
+
+                                step_label = self._create_label(infos_message_line_1)
+                                step_label.configure(font=self._make_text_bold())
+                                step_label.place(relx=0.04, rely=0.25, anchor='nw')
+                                self._create_label(infos_message_line_2).place(relx=0.04, rely=0.29, anchor='nw')
+                                self._create_label(infos_message_line_3).place(relx=0.04, rely=0.33, anchor='nw')
+                                logger.debug("Step 3 backup infobox label created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 3 backup infobox label: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 3 backup infobox label: {e}") from e
+
+                        def load_step_3_backup_background_image():
+                            try:
+                                logger.info("Loading step 3 backup background image")
+                                self.backup_start_pictures = self._create_background_photo(self, "./pictures_db/backup_step_1_ws.png")
+                                self.canvas = self._create_canvas()
+                                self.canvas.config(width=750, height=600)
+                                self.canvas.place(relx=0.5, rely=0.5, anchor="center")
+                                self.canvas.create_image(380, 375, image=self.backup_start_pictures, anchor="center")
+                                logger.debug("Step 3 backup background image loaded successfully")
+                            except Exception as e:
+                                logger.error(f"Error loading step 3 backup background image: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to load step 3 backup background image: {e}") from e
+
+                        def create_step_3_backup_buttons():
+                            try:
+                                logger.debug("Creating step 3 backup buttons")
+                                self._create_button('Back', lambda: show_view_step_2_backup_process(), None).place(relx=0.1, rely=0.9)
+                                self._create_button('Finish', lambda: self.show_view_about(), None).place(relx=0.75, rely=0.9)
+                                logger.debug("Step 3 backup buttons created successfully")
+                            except Exception as e:
+                                logger.error(f"Error creating step 3 backup buttons: {e}", exc_info=True)
+                                raise UIElementError(f"Failed to create step 3 backup buttons: {e}") from e
+
+                        def load_step_3_backup_process():
+                            try:
+                                logger.info("Loading step 3 backup process")
+                                load_step_3_backup_background_image()
+                                create_step_3_backup_header()
+                                create_step_3_backup_subheader()
+                                create_step_3_backup_infobox_label()
+                                create_step_3_backup_buttons()
+                                logger.debug("Step 3 backup process loaded successfully")
+                            except Exception as e:
+                                logger.error(f"Error loading step 3 backup process: {e}", exc_info=True)
+                                raise ViewError(f"Failed to load step 3 backup process: {e}") from e
+
+                        load_step_3_backup_process()
+                        self.create_satochip_utils_menu()
+                        logger.log(SUCCESS, "Step 3 backup process view started successfully")
+                    except Exception as e:
+                        logger.error(f"Error in view_step_3_backup_process: {e}", exc_info=True)
+                        raise ViewError(f"Failed to start step 3 backup process view: {e}") from e
+
 
             @log_method
             def _create_seed_my_satochip():
