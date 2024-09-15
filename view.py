@@ -1257,7 +1257,7 @@ class View(customtkinter.CTk):
             raise MenuDeletionError(f"006 Failed to delete Satochip-utils menu: {e}") from e
 
     ####################################################################################################################
-    """ METHODS TO DISPLAY A VIEW FROM MENU SELECTION """
+    """ METHODS TO DISPLAY A VIEW FROM SEEDKEEPER MENU SELECTION """
 
     # SEEDKEEPER MENU SELECTION
     @log_method
@@ -1421,6 +1421,7 @@ class View(customtkinter.CTk):
     # POPUP
     ########################################
 
+    # this is popup called for different kind of message
     @log_method
     def show(
             self,
@@ -2675,6 +2676,13 @@ class View(customtkinter.CTk):
             self,
             secrets_data: Dict[str, Any]
     ):
+        """
+            This method manage to:
+                - Show a list of all secrets into the card
+                - Select and show details about each secret from the list
+                - Including some specific widgets and button according to secret type/ subtype
+        """
+
         @log_method
         def _create_secrets_frame():
             try:
@@ -3082,15 +3090,23 @@ class View(customtkinter.CTk):
                 entries['mnemonic type'].configure(state='disabled')
                 logger.debug("Entry values set")
 
-                try:
-                    xpub_button = self._create_button(text="Xpub",
-                                                      command=lambda: None)  # self._show_xpub(secret['id']))
-                    xpub_button.place(relx=0.60, rely=0.53, anchor="se")
+                def show_seed_qr_code():
+                    import pyqrcode
+                    # Fonction pour générer et afficher le QR code
+                    qr = pyqrcode.create(f'{mnemonic}{passphrase if passphrase is not None else None}', error='L', mode='binary')
+                    qr_xbm = qr.xbm(scale=3) if len(mnemonic.split()) <=12 else qr.xbm(scale=2)
+                    # Convertir le code XBM en image Tkinter
+                    qr_bmp = tkinter.BitmapImage(data=qr_xbm)
+                    label = self._create_label("")
+                    label.place(relx=0.8, rely=0.4)
+                    label.configure(image=qr_bmp)
+                    label.image = qr_bmp  # Prévenir le garbage collection
 
+                try:
                     seedqr_button = self._create_button(text="SeedQR",
-                                                        command=lambda: None)  # self._show_seedqr(secret['id']))
+                                                        command=lambda: show_seed_qr_code())
                     seedqr_button.place(relx=0.78, rely=0.53, anchor="se")
-                    logger.debug("Xpub and SeedQR buttons created")
+                    logger.debug("SeedQR buttons created")
                 except Exception as e:
                     logger.error(f"Error creating Xpub and SeedQR buttons: {e}", exc_info=True)
                     raise UIElementError(f"Failed to create Xpub and SeedQR buttons: {e}") from e
@@ -3128,9 +3144,9 @@ class View(customtkinter.CTk):
                     mnemonic_label = self._create_label("Mnemonic:")
                     mnemonic_label.place(relx=0.045, rely=0.65, anchor="w")
 
-                    mnemonic_textbox = self._create_textbox()
-                    mnemonic_textbox.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
-                    mnemonic_textbox.insert("1.0", '*' * len(mnemonic))
+                    self.seed_mnemonic_textbox = self._create_textbox()
+                    self.seed_mnemonic_textbox.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
+                    self.seed_mnemonic_textbox.insert("1.0", '*' * len(mnemonic))
                     logger.debug("013 Mnemonic field created")
                 except Exception as e:
                     logger.error(f"014 Error creating mnemonic field: {e}", exc_info=True)
@@ -3194,7 +3210,7 @@ class View(customtkinter.CTk):
                     delete_button.place(relx=0.7, rely=0.15, anchor="se")
 
                     show_button = self._create_button(text="Show",
-                                                      command=lambda: [_toggle_mnemonic_visibility(mnemonic_textbox, mnemonic), _toggle_passphrase_visibility(passphrase_entry, passphrase)])
+                                                      command=lambda: [_toggle_mnemonic_visibility(self.seed_mnemonic_textbox, mnemonic), _toggle_passphrase_visibility(passphrase_entry, passphrase)])
                     show_button.place(relx=0.95, rely=0.8, anchor="e")
                     logger.debug("020 Action buttons created")
                 except Exception as e:
