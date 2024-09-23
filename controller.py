@@ -33,12 +33,13 @@ class Controller:
         0x91: 'Master Password',
         0xA0: 'Certificate',
         0xB0: '2FA secret',
-        0xC0: 'Bitcoin Descriptor'
+        0xC0: 'Free text',
+        0xC1: 'Wallet descriptor'
     }
 
 
     @log_method
-    def __init__(self, cc, view, loglevel=logger.setLevel(logging.DEBUG)):
+    def __init__(self, cc, view, loglevel=setup_logging()):
         self.view = view
         self.view.controller = self
         self.truststore={}
@@ -148,7 +149,6 @@ class Controller:
                 logger.log(SUCCESS, "006 Applet setup successfully")
                 self.setup_done = True
                 self.view.update_status()
-                self.view.show_view_start_setup()
                 return True
 
         except Exception as e:
@@ -212,8 +212,10 @@ class Controller:
                         try:
                             if self.cc.setup_done:
                                 self.cc.card_verify_PIN_simple(pin)
+                                self.add_authentikey_to_truststore()
                             else:
                                 self.card_setup_native_pin(pin)
+                                self.add_authentikey_to_truststore()
                             break
                         except Exception as e:
                             logger.info("exception from pin dialog")
@@ -450,52 +452,6 @@ class Controller:
             logger.error(f"Error generating random seed: {e}", exc_info=True)
             raise ControllerError(f"Failed to generate random seed: {e}")
 
-    @log_method
-    def import_seed(self, mnemonic, passphrase=None):
-        try:
-            logger.info("Importing seed")
-            MNEMONIC = Mnemonic(language="english")
-            if MNEMONIC.check(mnemonic):
-                logger.info("Imported seed is valid")
-                if passphrase:
-                    seed = Mnemonic.to_seed(mnemonic, passphrase)
-                else:
-                    seed = Mnemonic.to_seed(mnemonic)
-                self.card_setup_native_seed(seed)
-                logger.log(SUCCESS, "Seed imported successfully")
-            else:
-                logger.warning("Imported seed is invalid")
-                self.view.show('WARNING', "Invalid BIP39 seedphrase, please retry.", 'Ok', None,
-                               "./pictures_db/generate_icon_ws.png")
-        except Exception as e:
-            logger.error(f"Error importing seed: {e}", exc_info=True)
-            self.view.show("ERROR", "Failed to import seed", "Ok", None, "./pictures_db/generate_icon_ws.png")
-
-    @log_method
-    def card_setup_native_seed(self, seed):
-        # get authentikey
-        try:
-            authentikey = self.cc.card_bip32_get_authentikey()
-        except UninitializedSeedError:
-            # seed dialog...
-            authentikey = self.cc.card_bip32_import_seed(seed)
-            logger.info(f"authentikey: {authentikey}")
-            if authentikey:
-                self.is_seeded = True
-                self.view.show('SUCCESS',
-                               'Your card is now seeded!',
-                               'Ok',
-                               lambda: None,
-                               "./pictures_db/icon_seed_popup.jpg")
-                self.view.update_status()
-                self.view.view_start_setup()
-
-                hex_authentikey = authentikey.get_public_key_hex()
-                logger.info(f"Authentikey={hex_authentikey}")
-            else:
-                self.view.show('ERROR', 'Error when importing seed to Satochip!', 'Ok', None,
-                               "./pictures_db/icon_seed_popup.jpg")
-
     def get_logs(self):
         logger.debug('In get_logs')
         ins_dic = {0x40: 'Create PIN', 0x42: 'Verify PIN', 0x44: 'Change PIN', 0x46: 'Unblock PIN',
@@ -649,6 +605,49 @@ class Controller:
             raise ControllerError(f"007 Failed to import masterseed: {str(e)}") from e
 
     @log_method
+    def import_free_text(self, label: str, free_text: str):
+        try:
+            logger.info("Starting import of free text")
+
+            # Validate input
+            if not label:
+                raise ValueError("Label is required")
+            if not free_text:
+                raise ValueError("Free text is required")
+
+            # Prepare the secret data
+            secret_type = 0xC0  # SECRET_TYPE_FREE_TEXT
+            secret_subtype = 0x00  # SECRET_SUBTYPE_DEFAULT
+            export_rights = 0x01  # SECRET_EXPORT_ALLOWED
+
+            # Encode the free text
+            raw_text_bytes = free_text.encode('utf-8')
+            text_size = len(raw_text_bytes)
+
+            # Prepare the secret dictionary
+            secret_dic = {
+                'header': self.cc.make_header(secret_type, export_rights, label, subtype=secret_subtype),
+                'secret_list': list(text_size.to_bytes(2, byteorder='big')) + list(raw_text_bytes)
+            }
+
+            # Import the secret
+            id, fingerprint = self.cc.seedkeeper_import_secret(secret_dic)
+
+            logger.log(SUCCESS, f"Free text imported successfully with id: {id} and fingerprint: {fingerprint}")
+            return id, fingerprint
+
+        except ValueError as e:
+            logger.error(f"Validation error during free text import: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during free text import: {str(e)}")
+            raise ControllerError(f"Failed to import free text: {str(e)}") from e
+
+    @log_method
+    def import_wallet_descriptor(self, label: str, wallet_descriptor: str):
+        pass
+
+    @log_method
     def decode_secret(self, secret_dict: Dict[str, Any]) -> Dict[str, Any]:
         try:
             logger.info("Starting secret decoding process")
@@ -680,7 +679,7 @@ class Controller:
                 raise ValueError("Invalid hexadecimal string provided for secret")
 
             if result['type'] in [0x10, 0x30, 0x40]:  # Masterseed, BIP39, or Electrum mnemonic
-                return self._decode_masterseed(result, secret_bytes)
+                return self.decode_masterseed(result, secret_bytes)
             elif result['type'] == 0x90:  # Password
                 return self._decode_password(result, secret_bytes)
             else:
@@ -857,6 +856,103 @@ class Controller:
         except Exception as e:
             logger.error(f"Unexpected error during masterseed decoding: {str(e)}")
             raise ControllerError(f"Failed to decode masterseed: {str(e)}") from e
+
+    @log_method
+    def decode_free_text(self, secret_dict: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            logger.info("Starting free text decoding process")
+            logger.debug(f"Secret dictionary provided: {secret_dict}")
+
+            result = {
+                'type': secret_dict['type'],
+                'label': secret_dict['label'],
+                'text': ''
+            }
+
+            # Convert the hexadecimal string of the secret to bytes
+            try:
+                secret_bytes = binascii.unhexlify(secret_dict['secret'])
+                logger.debug(f"Secret bytes: {secret_bytes.hex()}")
+            except binascii.Error:
+                raise ValueError("Invalid hexadecimal string provided for secret")
+
+            # Extract the text size (first 2 bytes)
+            if len(secret_bytes) < 2:
+                raise ValueError("Secret is too short to contain size information")
+            text_size = int.from_bytes(secret_bytes[:2], byteorder='big')
+            logger.debug(f"Decoded text size: {text_size}")
+
+            # Extract and decode the raw text bytes
+            raw_text_bytes = secret_bytes[2:]
+            if len(raw_text_bytes) != text_size:
+                raise ValueError(
+                    f"Mismatch between declared text size ({text_size}) and actual data size ({len(raw_text_bytes)})")
+
+            try:
+                decoded_text = raw_text_bytes.decode('utf-8')
+                result['text'] = decoded_text
+                logger.debug(f"Decoded text: {decoded_text}")
+            except UnicodeDecodeError:
+                raise ValueError("Failed to decode text as UTF-8")
+
+            logger.log(SUCCESS, "Free text successfully decoded")
+            return result
+
+        except ValueError as e:
+            logger.error(f"Validation error during free text decoding: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during free text decoding: {str(e)}")
+            raise ControllerError(f"Failed to decode free text: {str(e)}") from e
+
+    def add_authentikey_to_truststore(self):
+        logger.debug('In add_authentikey_to_truststore()')
+
+        # Vérifier si la carte est présente
+        if not self.cc.card_present:
+            logger.warning("No card present, unable to add authentikey.")
+            return False
+
+        # Exporter l'authentikey
+        try:
+            self.authentikey = self.cc.card_export_authentikey()
+        except Exception as ex:
+            logger.warning(f"Failed to export authentikey: {repr(ex)}")
+            self.view.show('ERROR', repr(ex), 'Ok', None)
+            return False
+
+        # Récupérer le label de la carte
+        try:
+            (response, sw1, sw2, card_label) = self.cc.card_get_label()
+            self.card_label = card_label
+        except Exception as ex:
+            logger.warning(f"Error while getting card label: {str(ex)}")
+
+        # Ajouter l'authentikey à la TrustStore
+        authentikey_hex = self.authentikey.get_public_key_bytes(compressed=False).hex()
+
+        if authentikey_hex in self.truststore:
+            logger.info('Authentikey already in TrustStore!')
+            self.view.show('INFOS', 'Authentikey already in TrustStore!', 'Ok', None)
+        else:
+            # Si l'authentikey n'est pas encore présente dans le TrustStore
+            authentikey_bytes = bytes.fromhex(authentikey_hex)
+            secret = bytes([len(authentikey_bytes)]) + authentikey_bytes
+            fingerprint = hashlib.sha256(secret).hexdigest()[0:8]  # Empreinte SHA-256
+            authentikey_comp = self.authentikey.get_public_key_bytes(compressed=True).hex()  # Clé publique compressée
+
+            # Ajouter l'authentikey à la TrustStore avec le label et l'empreinte
+            self.truststore[authentikey_hex] = {
+                'card_label': self.card_label,
+                'fingerprint': fingerprint,
+                'authentikey_comp': authentikey_comp
+            }
+            print(self.truststore)
+
+            logger.info('Authentikey added to TrustStore!')
+            self.view.show('INFOS:', f'Authentikey added to TrustStore! \n{authentikey_comp}', 'Ok', None)
+
+        return True
 
     def get_secret_header_list(self):
         # get a list of all the secrets & pubkeys available
