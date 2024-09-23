@@ -13,7 +13,7 @@ from customtkinter import CTkOptionMenu
 
 from controller import Controller
 
-from log_config import log_method
+from log_config import log_method, setup_logging
 from exceptions import *
 
 from pysatochip.version import PYSATOCHIP_VERSION
@@ -35,7 +35,7 @@ HIGHLIGHT_COLOR = "#D3D3D3"
 
 class View(customtkinter.CTk):
     @log_method
-    def __init__(self, loglevel=logging.INFO):
+    def __init__(self, loglevel=setup_logging()):
         try:
             super().__init__()
 
@@ -821,50 +821,34 @@ class View(customtkinter.CTk):
     ):
         try:
             logger.info("Starting status update")
-            if self.controller.cc.mode_factory_reset == True:
-                # we are in factory reset mode
-                if isConnected is True:
-                    logger.info("002 Card inserted for Reset Factory!")
-                    try:
-                        self.show_button.configure(text='Reset', state='normal')
-                        logger.debug("003 Labels and button updated for card insertion")
-                    except Exception as e:
-                        logger.error(f"004 Error updating labels and button for card insertion: {e}", exc_info=True)
-                        raise UIElementError(f"005 Failed to update UI elements for card insertion: {e}") from e
+            # normal mode
+            logger.info("011 Updating status in normal mode")
+            if isConnected is True:
+                try:
+                    logger.info("012 Getting card status")
+                    status = self.controller.get_card_status()
+                    if not status['setup_done'] and not self.welcome_in_display:
+                        if self.controller.cc.is_pin_set():
+                            self.controller.cc.card_verify_PIN_simple()
+                        else:
+                            self.controller.PIN_dialog(f'Unlock your {self.controller.cc.card_type}')
+                    self.controller.PIN_dialog(f'Unlock your {self.controller.cc.card_type}')
+                    logger.debug("013 Card status updated and button configured")
+                except Exception as e:
+                    logger.error(f"014 Error getting card status: {e}", exc_info=True)
+                    raise CardError(f"015 Failed to get card status: {e}") from e
 
-                elif isConnected is False:
-                    logger.info("006 Card removed for Reset Factory!")
-                    try:
-                        self.show_button.configure(text='Insert card', state='disabled')
-                        logger.debug("007 Labels and button updated for card removal")
-                    except Exception as e:
-                        logger.error(f"008 Error updating labels and button for card removal: {e}", exc_info=True)
-                        raise UIElementError(f"009 Failed to update UI elements for card removal: {e}") from e
-                else:  # None
-                    logger.debug("010 No connection status change")
-            else:
-                # normal mode
-                logger.info("011 Updating status in normal mode")
-                if isConnected is True:
-                    try:
-                        logger.info("012 Getting card status")
-                        self.controller.get_card_status()
-                        logger.debug("013 Card status updated and button configured")
-                    except Exception as e:
-                        logger.error(f"014 Error getting card status: {e}", exc_info=True)
-                        raise CardError(f"015 Failed to get card status: {e}") from e
+            elif isConnected is False:
+                try:
+                    logger.info("016 Card disconnected, resetting status")
+                    # self.view_welcome()
+                    logger.debug("017 Status reset for card disconnection")
+                except Exception as e:
+                    logger.error(f"018 Error resetting card status: {e}", exc_info=True)
+                    raise UIElementError(f"019 Failed to reset UI for card disconnection: {e}") from e
 
-                elif isConnected is False:
-                    try:
-                        logger.info("016 Card disconnected, resetting status")
-                        self.view_welcome()
-                        logger.debug("017 Status reset for card disconnection")
-                    except Exception as e:
-                        logger.error(f"018 Error resetting card status: {e}", exc_info=True)
-                        raise UIElementError(f"019 Failed to reset UI for card disconnection: {e}") from e
-
-                else:  # isConnected is None
-                    logger.debug("020 No connection status change")
+            else:  # isConnected is None
+                logger.debug("020 No connection status change")
 
             logger.log(SUCCESS, "021 Status update completed successfully")
         except Exception as e:
@@ -2211,7 +2195,6 @@ class View(customtkinter.CTk):
                     logger.error(f"020 Error creating card configuration section: {e}", exc_info=True)
                     raise UIElementError(f"021 Failed to create card configuration section: {e}") from e
 
-            @log_method
             def _create_make_backup():
                 try:
                     logger.info("Creating make backup section")
@@ -2236,6 +2219,10 @@ class View(customtkinter.CTk):
                 def view_start_backup_process():
                     try:
                         logger.info("Starting backup process view")
+                        (label_list, id_list, label_pubkey_list, id_pubkey_list) = self.controller.get_secret_header_list()
+                        label_pubkey_list = label_pubkey_list[1:]  # remove (none) value and id
+                        print(label_pubkey_list)
+                        id_pubkey_list = id_pubkey_list[1:]
                         self._create_frame()
 
                         def create_start_backup_header():
@@ -2274,6 +2261,18 @@ class View(customtkinter.CTk):
                                 logger.error(f"Error creating start backup infobox label: {e}", exc_info=True)
                                 raise UIElementError(f"Failed to create start backup infobox label: {e}") from e
 
+                        def insure_that_card_insert_is_a_backup_card():
+                            if len(label_pubkey_list) == 0:
+                                self.show(
+                                    'ERROR',
+                                    'No authentikey available for encrypted export.\nInsert a backup SeedKeeper\nfor pairing or import a Trusted Pubkey first!',
+                                    'Ok',
+                                    None,
+                                    './pictures_db/settings_icon_ws.png'
+                                )
+                            else:
+                                show_view_step_1_backup_process()
+
                         def load_start_backup_background_image():
                             try:
                                 logger.info("Loading start backup background image")
@@ -2292,8 +2291,8 @@ class View(customtkinter.CTk):
                             try:
                                 logger.debug("Creating start backup buttons")
                                 self._create_button('Back', self.show_view_about, None).place(relx=0.1, rely=0.9)
-                                self._create_button('Start', lambda: show_view_step_1_backup_process(), None).place(
-                                    relx=0.75, rely=0.9)
+                                self.button_to_start_backup_process = self._create_button('Start', lambda: insure_that_card_insert_is_a_backup_card(), None)
+                                self.button_to_start_backup_process.place(relx=0.75, rely=0.9)
                                 logger.debug("Start backup buttons created successfully")
                             except Exception as e:
                                 logger.error(f"Error creating start backup buttons: {e}", exc_info=True)
@@ -2677,10 +2676,11 @@ class View(customtkinter.CTk):
             secrets_data: Dict[str, Any]
     ):
         """
-            This method manage to:
-                - Show a list of all secrets into the card
-                - Select and show details about each secret from the list
-                - Including some specific widgets and button according to secret type/ subtype
+            This method manages to:
+                - Show a list of all secrets stored on the card.
+                - Select and display details about each secret from the list.
+                - Include specific widgets and buttons according to the secret type/subtype.
+                - This method is built using a structural encapsulation approach, meaning that each function within it contains everything necessary for its operation, ensuring modularity and self-sufficiency.
         """
 
         @log_method
@@ -2768,6 +2768,11 @@ class View(customtkinter.CTk):
                         logger.debug(f"Secret: {secret}, with id {secret['id']} is a {secret['type']}")
                         _create_2FA_secret_frame(secret_details)
                         logger.debug(f"Frame corresponding to {secret['type']} details called")
+                    elif secret['type'] == 'Free text':
+                        logger.info(f"this is mnemonic, subtype: {secret['subtype']}")
+                        logger.debug(f"Frame corresponding to {secret['type']} details called for subtype: {secret['subtype']}")
+                        _create_free_text_secret_frame(secret_details)
+
                     else:
                         logger.warning(f"Unsupported secret type: {secret['type']}")
                         self.show("WARNING", f"Unsupported type:\n{secret['type']}", "Ok", None, "./pictures_db/secrets_icon_ws.png")
@@ -3290,6 +3295,88 @@ class View(customtkinter.CTk):
             except Exception as e:
                 logger.error(f"Error creating generic secret frame: {e}", exc_info=True)
                 raise UIElementError(f"Failed to create generic secret frame: {e}")
+
+        @log_method
+        def _create_free_text_secret_frame(secret_details):
+            try:
+                logger.info("Creating free text secret frame to display secret details")
+
+                # Create field for label
+                label_label = self._create_label("Label:")
+                label_label.place(relx=0.045, rely=0.2)
+                self.label_entry = self._create_entry()
+                self.label_entry.insert(0, secret_details['label'])
+                self.label_entry.place(relx=0.045, rely=0.27)
+                self.label_entry.configure(state='disabled')
+                logger.debug("Label field created")
+
+                # Create field for free text content
+                free_text_label = self._create_label("Free Text Content:")
+                free_text_label.place(relx=0.045, rely=0.34)
+                self.free_text_textbox = self._create_textbox()
+                self.free_text_textbox.place(relx=0.045, rely=0.41, relheight=0.4, relwidth=0.7)
+                logger.debug("Free text content field created")
+
+                # Decode secret
+                try:
+                    logger.debug("Decoding free text to show")
+                    self.decoded_text = self.controller.decode_free_text(secret_details)
+                    free_text = self.decoded_text['text']
+                    logger.log(SUCCESS, f"Free text secret decoded successfully")
+                except ValueError as e:
+                    self.show("ERROR", f"Invalid secret format: {str(e)}", "Ok")
+                except ControllerError as e:
+                    self.show("ERROR", f"Failed to decode secret: {str(e)}", "Ok")
+
+                # Insert decoded text into textbox
+                self.free_text_textbox.insert("1.0", '*' * len(self.decoded_text['text']))
+                self.free_text_textbox.configure(state='disabled')
+
+                # Function to toggle visibility of free text
+                @log_method
+                def _toggle_free_text_visibility(free_text_textbox, original_text):
+                    try:
+                        logger.info("Toggling Free text visibility")
+                        free_text_textbox.configure(state='normal')
+                        # Obtenir le contenu actuel de la textbox
+                        current_text = free_text_textbox.get("1.0", "end-1c")
+
+                        if current_text == '*' * len(original_text):
+                            # Si la textbox contient uniquement des étoiles, afficher le texte original
+                            free_text_textbox.delete("1.0", "end")
+                            free_text_textbox.insert("1.0", original_text)
+                            free_text_textbox.configure(state='disabled')
+                            logger.log(SUCCESS, "Free text visibility toggled to visible")
+                        else:
+                            # Sinon, masquer le texte avec des étoiles
+                            free_text_textbox.delete("1.0", "end")
+                            free_text_textbox.insert("1.0", '*' * len(original_text))
+                            free_text_textbox.configure(state='disabled')
+                            logger.log(SUCCESS, "Free text visibility toggled to hidden")
+
+                    except Exception as e:
+                        logger.error(f"Error toggling Free text visibility: {e}", exc_info=True)
+                        raise UIElementError(f"Failed to toggle Free text visibility: {e}") from e
+
+                # Create action buttons
+                try:
+                    show_button = self._create_button(text="Show",
+                                                      command=lambda: _toggle_free_text_visibility(self.free_text_textbox, free_text))
+                    show_button.place(relx=0.95, rely=0.65, anchor="se")
+
+                    delete_button = self._create_button(text="Delete secret",
+                                                        command=lambda: self.controller.seedkeeper_reset_secret(
+                                                            secret_details['id']))
+                    delete_button.place(relx=0.75, rely=0.98, anchor="se")
+                    logger.debug("Action buttons created")
+                except Exception as e:
+                    logger.error(f"Error creating action buttons: {e}", exc_info=True)
+                    raise UIElementError(f"Failed to create action buttons: {e}") from e
+
+                logger.log(SUCCESS, "Free text secret frame created successfully")
+            except Exception as e:
+                logger.error(f"Unexpected error in _create_free_text_secret_frame: {e}", exc_info=True)
+                raise ViewError(f"Failed to create free text secret frame: {e}") from e
 
         def _load_view_my_secrets():
                 logger.info("Creating secrets frame")
@@ -3872,6 +3959,10 @@ class View(customtkinter.CTk):
                         elif selected_type == "Login/password":
                             logger.debug("Couple login/password selected")
                             _show_import_password()
+                        elif selected_type == "Free text":
+                            _show_import_free_text()
+                        elif selected_type == "Wallet descriptor":
+                            pass
                         else:
                             logger.warning("No secret type selected")
                             self.show("ERROR", "Please select a secret type", "Ok")
@@ -3898,7 +3989,7 @@ class View(customtkinter.CTk):
                     type_label.place(relx=0.05, rely=0.35, anchor="w")
 
                     self.secret_type, secret_type_menu = self.create_option_list(
-                        ["Mnemonic seedphrase", "Login/password"],
+                        ["Mnemonic seedphrase", "Login/password", "Free text", "Wallet descriptor"],
                         default_value="Mnemonic seedphrase",
                         width=555,
                     )
@@ -4209,6 +4300,103 @@ class View(customtkinter.CTk):
                 except Exception as e:
                     logger.error(f"064 Unexpected error in _show_import_password: {e}", exc_info=True)
                     raise ViewError(f"065 Failed to show import login/password view: {e}") from e
+
+            @log_method
+            def _show_import_free_text():
+                try:
+                    logger.info("Starting _show_import_free_text")
+
+                    @log_method
+                    def _import_free_text_frame():
+                        try:
+                            logger.info("Creating import free text frame")
+                            self._create_frame()
+                            logger.log(SUCCESS, "Import free text frame created successfully")
+                        except Exception as e:
+                            logger.error(f"Error creating import free text frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"Failed to create import free text frame: {e}") from e
+
+                    @log_method
+                    def _import_free_text_header():
+                        try:
+                            logger.info("Creating import free text header")
+                            header_text = "Import free text"
+                            self.header = self._create_an_header(header_text, "import_icon_ws.png")
+                            self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                            logger.log(SUCCESS, "Import free text header created successfully")
+                        except Exception as e:
+                            logger.error(f"Error creating import free text header: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create import free text header: {e}") from e
+
+                    @log_method
+                    def _import_free_text_widgets():
+                        try:
+                            logger.info("Creating import free text content")
+
+                            self.import_free_text_label = self._create_label("Label*:")
+                            self.import_free_text_label.place(relx=0.05, rely=0.20, anchor="nw")
+
+                            self.import_free_text_label_name = self._create_entry()
+                            self.import_free_text_label_name.place(relx=0.04, rely=0.25, anchor="nw")
+
+                            self._create_label('Free text to import*:').place(relx=0.045, rely=0.35, anchor="nw")
+
+                            self.import_free_text_textbox = self._create_textbox()
+                            self.import_free_text_textbox.place(relx=0.045, rely=0.5, anchor="w")
+
+                            self.import_save_button = self._create_button("Save on card",
+                                                                          command=lambda: _save_free_text_to_import_on_card())
+                            self.import_save_button.place(relx=0.85, rely=0.93, anchor="center")
+
+                            self.import_back_button = self._create_button("Back", command=lambda: [self.show_view_import_secret()])
+                            self.import_back_button.place(relx=0.65, rely=0.93, anchor="center")
+
+                            logger.log(SUCCESS, "Import mnemonic content created successfully")
+                        except Exception as e:
+                            logger.error(f"Error creating import mnemonic content: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create import mnemonic content: {e}") from e
+
+                    @log_method
+                    def _save_free_text_to_import_on_card():
+                        try:
+                            logger.info("019 Saving mnemonic to card")
+
+                            # Récupération des valeurs nécessaires
+                            free_text_label = self.import_free_text_label_name.get()
+                            free_text = self.import_free_text_textbox.get("1.0", customtkinter.END).strip()
+
+                            # Vérification que le free text est fournie
+                            if not free_text:
+                                logger.warning("No mnemonic to save")
+                                raise ValueError("Mnemonic field is mandatory.")
+                            elif not free_text_label:
+                                logger.warning("No label provide")
+                                raise ValueError("Label field is mandatory.")
+
+                            id, fingerprint = self.controller.import_free_text(free_text_label, free_text)
+
+                            # Affichage du succès
+                            self.show("SUCCESS", f"Free text saved successfully\nID: {id}\nFingerlogger.debug: {fingerprint}",
+                                      "Ok", self.show_view_my_secrets, "./pictures_db/import_icon_ws.png")
+                            logger.log(SUCCESS, "Free text saved to card successfully")
+
+                        except ValueError as e:
+                            logger.error(f"Error saving Free text to card: {e}", exc_info=True)
+                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/import_icon_ws.png")
+                            raise UIElementError(f"Failed to save Free text to card: {e}") from e
+                        except Exception as e:
+                            logger.error(f"Unexpected error saving Free text to card: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to save Free text to card: {e}") from e
+
+                    self._clear_current_frame()
+                    _import_free_text_frame()
+                    _import_free_text_header()
+                    _import_free_text_widgets()
+                    self.create_seedkeeper_menu()
+                    logger.log(SUCCESS, "028 _show_import_mnemonic completed successfully")
+                except Exception as e:
+                    logger.error(f"029 Unexpected error in _show_import_mnemonic: {e}", exc_info=True)
+                    raise ViewError(f"030 Failed to show import mnemonic view: {e}") from e
 
             _create_import_secret_selection_frame()
             self.create_seedkeeper_menu()
