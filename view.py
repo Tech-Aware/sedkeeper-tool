@@ -2748,15 +2748,14 @@ class View(customtkinter.CTk):
                         _create_password_secret_frame(secret_details)
                         logger.debug(f"Frame corresponding to {secret['type']} details called")
                     elif secret['type'] == 'Masterseed':
-                        if secret_details['subtype'] > 0:
-                            print(f"this is mnemonic, subtype: {secret['subtype']}")
+                        if secret_details['subtype'] > 0 or secret_details['subtype'] == '0x1':
+                            logger.info(f"this is mnemonic, subtype: {secret['subtype']}")
+                            logger.debug(f"Frame corresponding to {secret['type']} details called for subtype: {secret['subtype']}")
                             _create_mnemonic_secret_frame(secret_details)
                         else:
+                            logger.info(f"this is masterseed, subtype: {secret['subtype']}")
                             _create_masterseed_secret_frame(secret_details)
-                            print(f"this is masterseed, subtype: {secret['subtype']}")
-                        logger.debug(f"Secret: {secret}, with id {secret['id']} is a {secret['type']}")
-                        _create_masterseed_secret_frame(secret_details)
-                        logger.debug(f"Frame corresponding to {secret['type']} details called")
+                            logger.debug(f"Frame corresponding to {secret['type']} details called for subtype: {secret['subtype']}")
                     elif secret['type'] == "BIP39 mnemonic":
                         logger.debug(f"Secret: {secret}, with id {secret['id']} is a {secret['type']}")
                         _create_mnemonic_secret_frame(secret_details)
@@ -3085,6 +3084,7 @@ class View(customtkinter.CTk):
                 entries['label'].insert(0, secret_details['label'])
                 entries['mnemonic type'].insert(0, secret_details['type'])
 
+
                 # lock possibilities to wright into entries
                 entries['label'].configure(state='disabled')
                 entries['mnemonic type'].configure(state='disabled')
@@ -3118,6 +3118,7 @@ class View(customtkinter.CTk):
                         secret = self.controller.decode_masterseed(secret_details)
                         mnemonic = secret['mnemonic']
                         passphrase = secret['passphrase']
+                        print(passphrase)
                     except Exception as e:
                         logger.error(f"Error decoding Masterseed: {e}", exc_info=True)
                         raise ControllerError(f"015 Failed to decode Masterseed: {e}") from e
@@ -3290,17 +3291,21 @@ class View(customtkinter.CTk):
                 logger.error(f"Error creating generic secret frame: {e}", exc_info=True)
                 raise UIElementError(f"Failed to create generic secret frame: {e}")
 
+        def _load_view_my_secrets():
+                logger.info("Creating secrets frame")
+                _create_secrets_frame()
+                _create_secrets_header()
+                _create_secrets_table(secrets_data)
+                self.create_seedkeeper_menu()
+                logger.log(SUCCESS, "Secrets frame created successfully")
+
         try:
-            logger.info("Creating secrets frame")
-            _create_secrets_frame()
-            _create_secrets_header()
-            _create_secrets_table(secrets_data)
-            self.create_seedkeeper_menu()
-            logger.log(SUCCESS, "Secrets frame created successfully")
+            _load_view_my_secrets()
         except Exception as e:
             error_msg = f"Failed to create secrets frame: {e}"
             logger.error(error_msg, exc_info=True)
             raise SecretFrameCreationError(error_msg) from e
+
 
     @log_method
     def view_generate_secret(self):
