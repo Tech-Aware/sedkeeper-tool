@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -31,12 +32,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run Tests
-      run: |
-        python -m unittest discover tests  # Ajustez ou commentez cette ligne si vous n'avez pas de tests
+    # Si PyInstaller est dans requirements.txt, cette étape n'est pas nécessaire
+    # Sinon, ajoutez cette étape
+    - name: Install PyInstaller
+      run: pip install pyinstaller
 
     - name: Build with PyInstaller
-      run: pyinstaller --onefile seedkeeper_tool.py  # Ajustez selon votre configuration
+      run: python build_windows.py
 
     - name: Archive production artifacts
       uses: actions/upload-artifact@v2
