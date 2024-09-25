@@ -645,7 +645,45 @@ class Controller:
 
     @log_method
     def import_wallet_descriptor(self, label: str, wallet_descriptor: str):
-        pass
+        try:
+            logger.info("Starting import of wallet descriptor")
+
+            # Validate input
+            if not label:
+                raise ValueError("Label is required")
+            if not wallet_descriptor:
+                raise ValueError("Wallet descriptor is required")
+
+            # Prepare the secret data
+            secret_type = 0xC1  # SECRET_TYPE_WALLET_DESCRIPTOR
+            secret_subtype = 0x00  # SECRET_SUBTYPE_DEFAULT
+            export_rights = 0x01  # SECRET_EXPORT_ALLOWED
+
+            # Encode the wallet descriptor
+            raw_descriptor_bytes = wallet_descriptor.encode('utf-8')
+            descriptor_size = len(raw_descriptor_bytes)
+
+            if descriptor_size > 65535:  # 2^16 - 1, max value for 2 bytes
+                raise ValueError("Wallet descriptor is too long (max 65535 bytes)")
+
+            # Prepare the secret dictionary
+            secret_dic = {
+                'header': self.cc.make_header(secret_type, export_rights, label, subtype=secret_subtype),
+                'secret_list': list(descriptor_size.to_bytes(2, byteorder='big')) + list(raw_descriptor_bytes)
+            }
+
+            # Import the secret
+            id, fingerprint = self.cc.seedkeeper_import_secret(secret_dic)
+
+            logger.log(SUCCESS, f"Wallet descriptor imported successfully with id: {id} and fingerprint: {fingerprint}")
+            return id, fingerprint
+
+        except ValueError as e:
+            logger.error(f"Validation error during wallet descriptor import: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during wallet descriptor import: {str(e)}")
+            raise ControllerError(f"Failed to import wallet descriptor: {str(e)}") from e
 
     @log_method
     def decode_secret(self, secret_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -904,6 +942,54 @@ class Controller:
         except Exception as e:
             logger.error(f"Unexpected error during free text decoding: {str(e)}")
             raise ControllerError(f"Failed to decode free text: {str(e)}") from e
+
+    @log_method
+    def decode_wallet_descriptor(self, secret_dict: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            logger.info("Starting wallet descriptor decoding process")
+            logger.debug(f"Secret dictionary provided: {secret_dict}")
+
+            result = {
+                'type': secret_dict['type'],
+                'label': secret_dict['label'],
+                'descriptor': ''
+            }
+
+            # Convert the hexadecimal string of the secret to bytes
+            try:
+                secret_bytes = binascii.unhexlify(secret_dict['secret'])
+                logger.debug(f"Secret bytes: {secret_bytes.hex()}")
+            except binascii.Error:
+                raise ValueError("Invalid hexadecimal string provided for secret")
+
+            # Extract the descriptor size (first 2 bytes)
+            if len(secret_bytes) < 2:
+                raise ValueError("Secret is too short to contain size information")
+            descriptor_size = int.from_bytes(secret_bytes[:2], byteorder='big')
+            logger.debug(f"Decoded descriptor size: {descriptor_size}")
+
+            # Extract and decode the raw descriptor bytes
+            raw_descriptor_bytes = secret_bytes[2:]
+            if len(raw_descriptor_bytes) != descriptor_size:
+                raise ValueError(
+                    f"Mismatch between declared descriptor size ({descriptor_size}) and actual data size ({len(raw_descriptor_bytes)})")
+
+            try:
+                decoded_descriptor = raw_descriptor_bytes.decode('utf-8')
+                result['descriptor'] = decoded_descriptor
+                logger.debug(f"Decoded descriptor: {decoded_descriptor}")
+            except UnicodeDecodeError:
+                raise ValueError("Failed to decode descriptor as UTF-8")
+
+            logger.log(SUCCESS, "Wallet descriptor successfully decoded")
+            return result
+
+        except ValueError as e:
+            logger.error(f"Validation error during wallet descriptor decoding: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during wallet descriptor decoding: {str(e)}")
+            raise ControllerError(f"Failed to decode wallet descriptor: {str(e)}") from e
 
     def add_authentikey_to_truststore(self):
         logger.debug('In add_authentikey_to_truststore()')
