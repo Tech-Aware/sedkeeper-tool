@@ -2772,7 +2772,10 @@ class View(customtkinter.CTk):
                         logger.info(f"this is mnemonic, subtype: {secret['subtype']}")
                         logger.debug(f"Frame corresponding to {secret['type']} details called for subtype: {secret['subtype']}")
                         _create_free_text_secret_frame(secret_details)
-
+                    elif secret['type'] == 'Wallet descriptor':
+                        logger.info(f"this is wallet descriptor, subtype: {secret['subtype']}")
+                        logger.debug(f"Frame corresponding to {secret['type']} details called for subtype: {secret['subtype']}")
+                        _create_wallet_descriptor_secret_frame(secret_details)
                     else:
                         logger.warning(f"Unsupported secret type: {secret['type']}")
                         self.show("WARNING", f"Unsupported type:\n{secret['type']}", "Ok", None, "./pictures_db/secrets_icon_ws.png")
@@ -3378,6 +3381,89 @@ class View(customtkinter.CTk):
                 logger.error(f"Unexpected error in _create_free_text_secret_frame: {e}", exc_info=True)
                 raise ViewError(f"Failed to create free text secret frame: {e}") from e
 
+        @log_method
+        def _create_wallet_descriptor_secret_frame(secret_details):
+            try:
+                logger.info("Creating wallet descriptor secret frame to display secret details")
+
+                # Create field for label
+                label_label = self._create_label("Label:")
+                label_label.place(relx=0.045, rely=0.2)
+                self.label_entry = self._create_entry()
+                self.label_entry.insert(0, secret_details['label'])
+                self.label_entry.place(relx=0.045, rely=0.27)
+                self.label_entry.configure(state='disabled')
+                logger.debug("Label field created")
+
+                # Create field for wallet descriptor content
+                wallet_descriptor_label = self._create_label("Wallet Descriptor Content:")
+                wallet_descriptor_label.place(relx=0.045, rely=0.34)
+                self.wallet_descriptor_textbox = self._create_textbox()
+                self.wallet_descriptor_textbox.place(relx=0.045, rely=0.41, relheight=0.4, relwidth=0.7)
+                logger.debug("Wallet descriptor content field created")
+
+                # Decode secret
+                try:
+                    logger.debug("Decoding wallet descriptor to show")
+                    self.decoded_text = self.controller.decode_wallet_descriptor(secret_details)
+                    wallet_descriptor = self.decoded_text['descriptor']
+                    logger.log(SUCCESS, f"Wallet descriptor secret decoded successfully")
+                except ValueError as e:
+                    self.show("ERROR", f"Invalid secret format: {str(e)}", "Ok")
+                except ControllerError as e:
+                    self.show("ERROR", f"Failed to decode secret: {str(e)}", "Ok")
+
+                # Insert decoded text into textbox
+                self.wallet_descriptor_textbox.insert("1.0", '*' * len(self.decoded_text['descriptor']))
+                self.wallet_descriptor_textbox.configure(state='disabled')
+
+                # Function to toggle visibility of wallet descriptor
+                @log_method
+                def _toggle_wallet_descriptor_visibility(wallet_descriptor_textbox, original_text):
+                    try:
+                        logger.info("Toggling Wallet descriptor visibility")
+                        wallet_descriptor_textbox.configure(state='normal')
+                        # Obtenir le contenu actuel de la textbox
+                        current_text = wallet_descriptor_textbox.get("1.0", "end-1c")
+
+                        if current_text == '*' * len(original_text):
+                            # Si la textbox contient uniquement des étoiles, afficher le texte original
+                            wallet_descriptor_textbox.delete("1.0", "end")
+                            wallet_descriptor_textbox.insert("1.0", original_text)
+                            wallet_descriptor_textbox.configure(state='disabled')
+                            logger.log(SUCCESS, "Wallet descriptor visibility toggled to visible")
+                        else:
+                            # Sinon, masquer le texte avec des étoiles
+                            wallet_descriptor_textbox.delete("1.0", "end")
+                            wallet_descriptor_textbox.insert("1.0", '*' * len(original_text))
+                            wallet_descriptor_textbox.configure(state='disabled')
+                            logger.log(SUCCESS, "Wallet descriptor visibility toggled to hidden")
+
+                    except Exception as e:
+                        logger.error(f"Error toggling Wallet descriptor visibility: {e}", exc_info=True)
+                        raise UIElementError(f"Failed to toggle Wallet descriptor visibility: {e}") from e
+
+                # Create action buttons
+                try:
+                    show_button = self._create_button(text="Show",
+                                                      command=lambda: _toggle_wallet_descriptor_visibility(
+                                                          self.wallet_descriptor_textbox, wallet_descriptor))
+                    show_button.place(relx=0.95, rely=0.65, anchor="se")
+
+                    delete_button = self._create_button(text="Delete secret",
+                                                        command=lambda: self.controller.seedkeeper_reset_secret(
+                                                            secret_details['id']))
+                    delete_button.place(relx=0.75, rely=0.98, anchor="se")
+                    logger.debug("Action buttons created")
+                except Exception as e:
+                    logger.error(f"Error creating action buttons: {e}", exc_info=True)
+                    raise UIElementError(f"Failed to create action buttons: {e}") from e
+
+                logger.log(SUCCESS, "Wallet descriptor secret frame created successfully")
+            except Exception as e:
+                logger.error(f"Unexpected error in _create_wallet_descriptor_secret_frame: {e}", exc_info=True)
+                raise ViewError(f"Failed to create wallet descriptor secret frame: {e}") from e
+
         def _load_view_my_secrets():
                 logger.info("Creating secrets frame")
                 _create_secrets_frame()
@@ -3962,7 +4048,7 @@ class View(customtkinter.CTk):
                         elif selected_type == "Free text":
                             _show_import_free_text()
                         elif selected_type == "Wallet descriptor":
-                            pass
+                            _show_import_wallet_descriptor()
                         else:
                             logger.warning("No secret type selected")
                             self.show("ERROR", "Please select a secret type", "Ok")
@@ -4359,7 +4445,7 @@ class View(customtkinter.CTk):
                     @log_method
                     def _save_free_text_to_import_on_card():
                         try:
-                            logger.info("019 Saving mnemonic to card")
+                            logger.info("019 Saving free text to card")
 
                             # Récupération des valeurs nécessaires
                             free_text_label = self.import_free_text_label_name.get()
@@ -4367,8 +4453,8 @@ class View(customtkinter.CTk):
 
                             # Vérification que le free text est fournie
                             if not free_text:
-                                logger.warning("No mnemonic to save")
-                                raise ValueError("Mnemonic field is mandatory.")
+                                logger.warning("No free text to save")
+                                raise ValueError("free text field is mandatory.")
                             elif not free_text_label:
                                 logger.warning("No label provide")
                                 raise ValueError("Label field is mandatory.")
@@ -4388,15 +4474,119 @@ class View(customtkinter.CTk):
                             logger.error(f"Unexpected error saving Free text to card: {e}", exc_info=True)
                             raise UIElementError(f"Failed to save Free text to card: {e}") from e
 
-                    self._clear_current_frame()
-                    _import_free_text_frame()
-                    _import_free_text_header()
-                    _import_free_text_widgets()
-                    self.create_seedkeeper_menu()
+                    @log_method
+                    def _load_free_text():
+                        self._clear_current_frame()
+                        _import_free_text_frame()
+                        _import_free_text_header()
+                        _import_free_text_widgets()
+                        self.create_seedkeeper_menu()
+
+                    _load_free_text()
                     logger.log(SUCCESS, "028 _show_import_mnemonic completed successfully")
                 except Exception as e:
                     logger.error(f"029 Unexpected error in _show_import_mnemonic: {e}", exc_info=True)
                     raise ViewError(f"030 Failed to show import mnemonic view: {e}") from e
+
+            @log_method
+            def _show_import_wallet_descriptor():
+                try:
+                    logger.info("Starting _show_import_wallet_descriptor")
+
+                    @log_method
+                    def _import_wallet_descriptor_frame():
+                        try:
+                            logger.info("Creating import wallet descriptor wallet descriptor frame")
+                            self._create_frame()
+                            logger.log(SUCCESS, "Import wallet descriptor wallet descriptor frame created successfully")
+                        except Exception as e:
+                            logger.error(f"Error creating import wallet descriptor wallet descriptor frame: {e}", exc_info=True)
+                            raise FrameCreationError(f"Failed to create import wallet descriptor wallet descriptor frame: {e}") from e
+
+                    @log_method
+                    def _import_wallet_descriptor_header():
+                        try:
+                            logger.info("Creating import wallet descriptor header")
+                            header_text = "Import wallet descriptor"
+                            self.header = self._create_an_header(header_text, "import_icon_ws.png")
+                            self.header.place(relx=0.03, rely=0.08, anchor="nw")
+                            logger.log(SUCCESS, "Import wallet descriptor wallet descriptor header created successfully")
+                        except Exception as e:
+                            logger.error(f"Error creating import wallet descriptor wallet descriptor header: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create import wallet descriptor wallet descriptor header: {e}") from e
+
+                    @log_method
+                    def _import_wallet_descriptor_widgets():
+                        try:
+                            logger.info("Creating import wallet descriptor wallet descriptor content")
+
+                            self.import_wallet_descriptor_label = self._create_label("Label*:")
+                            self.import_wallet_descriptor_label.place(relx=0.05, rely=0.20, anchor="nw")
+
+                            self.import_wallet_descriptor_label_name = self._create_entry()
+                            self.import_wallet_descriptor_label_name.place(relx=0.04, rely=0.25, anchor="nw")
+
+                            self._create_label('Wallet descriptor to import*:').place(relx=0.045, rely=0.35, anchor="nw")
+
+                            self.import_wallet_descriptor_textbox = self._create_textbox()
+                            self.import_wallet_descriptor_textbox.place(relx=0.045, rely=0.5, anchor="w")
+
+                            self.import_save_button = self._create_button("Save on card",
+                                                                          command=lambda: _save_wallet_descriptor_to_import_on_card())
+                            self.import_save_button.place(relx=0.85, rely=0.93, anchor="center")
+
+                            self.import_back_button = self._create_button("Back", command=lambda: [
+                                self.show_view_import_secret()])
+                            self.import_back_button.place(relx=0.65, rely=0.93, anchor="center")
+
+                            logger.log(SUCCESS, "Import wallet descriptor content created successfully")
+                        except Exception as e:
+                            logger.error(f"Error creating import wallet descriptor content: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to create import wallet descriptor content: {e}") from e
+
+                    @log_method
+                    def _save_wallet_descriptor_to_import_on_card():
+                        try:
+                            logger.info("Saving wallet descriptor to card")
+
+                            # Récupération des valeurs nécessaires
+                            wallet_descriptor_label = self.import_wallet_descriptor_label_name.get()
+                            wallet_descriptor = self.import_wallet_descriptor_textbox.get("1.0", customtkinter.END).strip()
+
+                            # Vérification que le free text est fournie
+                            if not wallet_descriptor:
+                                logger.warning("No wallet descriptor to save")
+                                raise ValueError("Wallet descriptor field is mandatory.")
+                            elif not wallet_descriptor_label:
+                                logger.warning("No label provide")
+                                raise ValueError("Label field is mandatory.")
+
+                            id, fingerprint = self.controller.import_wallet_descriptor(wallet_descriptor_label, wallet_descriptor)
+
+                            # Affichage du succès
+                            self.show("SUCCESS",
+                                      f"Wallet descriptor saved successfully\nID: {id}\nFingerlogger.debug: {fingerprint}",
+                                      "Ok", self.show_view_my_secrets, "./pictures_db/import_icon_ws.png")
+                            logger.log(SUCCESS, "Wallet descriptor saved to card successfully")
+
+                        except ValueError as e:
+                            logger.error(f"Error saving Wallet descriptor to card: {e}", exc_info=True)
+                            self.show("ERROR", str(e), "Ok", None, "./pictures_db/import_icon_ws.png")
+                            raise UIElementError(f"Failed to save Wallet descriptor to card: {e}") from e
+                        except Exception as e:
+                            logger.error(f"Unexpected error saving Wallet descriptor to card: {e}", exc_info=True)
+                            raise UIElementError(f"Failed to save Wallet descriptor to card: {e}") from e
+
+                    self._clear_current_frame()
+                    _import_wallet_descriptor_frame()
+                    _import_wallet_descriptor_header()
+                    _import_wallet_descriptor_widgets()
+                    self.create_seedkeeper_menu()
+                    logger.log(SUCCESS, "_show_import_wallet_descriptor completed successfully")
+                except Exception as e:
+                    logger.error(f"Unexpected error in _show_import_wallet_descriptor: {e}", exc_info=True)
+                    raise ViewError(f"Failed to show import wallet descriptor view: {e}") from e
+
 
             _create_import_secret_selection_frame()
             self.create_seedkeeper_menu()
