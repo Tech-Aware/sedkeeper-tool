@@ -4425,10 +4425,10 @@ class View(customtkinter.CTk):
                             self.import_free_text_label_name = self._create_entry()
                             self.import_free_text_label_name.place(relx=0.04, rely=0.25, anchor="nw")
 
-                            self._create_label('Free text to import*:').place(relx=0.045, rely=0.35, anchor="nw")
+                            self._create_label('Free text to import*:').place(relx=0.045, rely=0.4, anchor="nw")
 
                             self.import_free_text_textbox = self._create_textbox()
-                            self.import_free_text_textbox.place(relx=0.045, rely=0.5, anchor="w")
+                            self.import_free_text_textbox.place(relx=0.045, rely=0.6, relheight=0.3, anchor="w")
 
                             self.import_save_button = self._create_button("Save on card",
                                                                           command=lambda: _save_free_text_to_import_on_card())
@@ -4526,10 +4526,10 @@ class View(customtkinter.CTk):
                             self.import_wallet_descriptor_label_name = self._create_entry()
                             self.import_wallet_descriptor_label_name.place(relx=0.04, rely=0.25, anchor="nw")
 
-                            self._create_label('Wallet descriptor to import*:').place(relx=0.045, rely=0.35, anchor="nw")
+                            self._create_label('Wallet descriptor to import*:').place(relx=0.045, rely=0.4, anchor="nw")
 
                             self.import_wallet_descriptor_textbox = self._create_textbox()
-                            self.import_wallet_descriptor_textbox.place(relx=0.045, rely=0.5, anchor="w")
+                            self.import_wallet_descriptor_textbox.place(relx=0.045, rely=0.6, relheight=0.3, anchor="w")
 
                             self.import_save_button = self._create_button("Save on card",
                                                                           command=lambda: _save_wallet_descriptor_to_import_on_card())
