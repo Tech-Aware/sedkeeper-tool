@@ -100,28 +100,14 @@ def setup_logging():
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG if '-v' in sys.argv or '--verbose' in sys.argv else logging.INFO)
 
-    pysatochip_logger = logging.getLogger('pysatochip')
-
     # Vérifie si le root_logger a des handlers
     if not root_logger.hasHandlers():
         root_logger.addHandler(console_handler)
-
-    # Supprimer la propagation pour éviter les doublons
-    pysatochip_logger.propagate = False
-
-    # Ajouter un handler uniquement si nécessaire
-    if not pysatochip_logger.hasHandlers():
-        pysatochip_logger.setLevel(logging.DEBUG)
-        pysatochip_logger.addHandler(console_handler)
 
     # Logs de test pour vérifier
     root_logger.debug("Debug logging is enabled")
     root_logger.info("Info logging is enabled")
     root_logger.log(SUCCESS, "Success logging is enabled")
-
-    pysatochip_logger.debug("This is a debug log from pysatochip")
-    pysatochip_logger.info("This is an info log from pysatochip")
-    pysatochip_logger.warning("This is a warning log from pysatochip")
 
     # Simuler un log venant de CardConnector pour vérifier la couleur
     card_connector_logger = logging.getLogger('pysatochip.CardConnector')
