@@ -213,9 +213,11 @@ class Controller:
                             if self.cc.setup_done:
                                 self.cc.card_verify_PIN_simple(pin)
                                 self.add_authentikey_to_truststore()
+                                self.view.view_welcome()
                             else:
                                 self.card_setup_native_pin(pin)
                                 self.add_authentikey_to_truststore()
+                                self.view.view_welcome()
                             break
                         except Exception as e:
                             logger.info("exception from pin dialog")
@@ -366,10 +368,6 @@ class Controller:
     @log_method
     def retrieve_secrets_stored_into_the_card(self) -> Dict[str, Any]:
         try:
-            if self.cc.is_pin_set():
-                self.cc.card_verify_PIN_simple()
-            else:
-                self.PIN_dialog(f'Unlock your {self.cc.card_type}')
             headers = self.cc.seedkeeper_list_secret_headers()
             logger.log(SUCCESS, f"Secrets retrieved successfully: {headers}")
             return self._format_secret_headers(headers)
@@ -515,8 +513,11 @@ class Controller:
             logger.info("Starting password import process")
 
             # Préparer les données pour l'importation
-            secret_type = 0x90  # Type pour mot de passe
+            # Prepare datas for the importation
+            secret_type = 0x90  # Type pour mot de passe/ password
             export_rights = 0x01  # Droits d'exportation (à ajuster selon vos besoins)
+
+
 
             # Créer le dictionnaire secret
             secret_dic = {
@@ -684,51 +685,6 @@ class Controller:
         except Exception as e:
             logger.error(f"Unexpected error during wallet descriptor import: {str(e)}")
             raise ControllerError(f"Failed to import wallet descriptor: {str(e)}") from e
-
-    @log_method
-    def decode_secret(self, secret_dict: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            logger.info("Starting secret decoding process")
-            logger.debug(f"Secret dictionary provided: {secret_dict}")
-
-            # Mapping des types de secrets
-            secret_type_mapping = {
-                "Masterseed": 0x10,
-                "BIP39 mnemonic": 0x30,
-                "Electrum mnemonic": 0x40,
-                "Password": 0x90
-            }
-
-            result = {
-                'type': secret_type_mapping.get(secret_dict['type']),
-                'subtype': secret_dict.get('subtype', 0x00),  # Default subtype if not provided
-            }
-
-            if result['type'] is None:
-                raise ValueError(f"Unsupported secret type: {secret_dict['type']}")
-
-            logger.debug(f"Initial result dictionary: {result}")
-
-            # Convertir la chaîne hexadécimale du secret en bytes
-            try:
-                secret_bytes = binascii.unhexlify(secret_dict['secret'])
-                logger.debug(f"Secret bytes: {secret_bytes.hex()}")
-            except binascii.Error:
-                raise ValueError("Invalid hexadecimal string provided for secret")
-
-            if result['type'] in [0x10, 0x30, 0x40]:  # Masterseed, BIP39, or Electrum mnemonic
-                return self.decode_masterseed(result, secret_bytes)
-            elif result['type'] == 0x90:  # Password
-                return self._decode_password(result, secret_bytes)
-            else:
-                raise ValueError(f"Decoding not implemented for type: {hex(result['type'])}")
-
-        except ValueError as e:
-            logger.error(f"Validation error during secret decoding: {str(e)}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error during secret decoding: {str(e)}")
-            raise ControllerError(f"Failed to decode secret: {str(e)}") from e
 
     @log_method
     def _decode_password(self, result: Dict[str, Any], secret_bytes: bytes) -> Dict[str, Any]:
@@ -1092,3 +1048,33 @@ class Controller:
                 authentikey_list.append(authentikey)
 
         return label_authentikey_list, authentikey_list
+
+    def make_backup(self, authentikey_importer):
+        logger.debug('In make_backup')
+        secrets_obj = {
+            'authentikey_exporter': self.cc.parser.authentikey.get_public_key_bytes(False).hex(),
+            'authentikey_importer': authentikey_importer,
+            'secrets': []
+        }
+
+        label_list, id_list, _, _ = self.get_secret_header_list()
+
+        for sid in id_list:
+            try:
+                secret_dict = self.cc.seedkeeper_export_secret(sid, authentikey_importer)
+                secret = {
+                    'label': secret_dict['label'],
+                    'type': secret_dict['type'],
+                    'fingerprint': secret_dict['fingerprint'],
+                    'header': secret_dict['header'],
+                    'iv': secret_dict['iv'],
+                    'secret_encrypted': secret_dict['secret_encrypted'],
+                    'hmac': secret_dict['hmac'],
+                }
+                secrets_obj['secrets'].append(secret)
+            except Exception as ex:
+                logger.warning(f'Exception during secret export: {str(ex)}')
+                secret = {'error': str(ex)}
+                secrets_obj['secrets'].append(secret)
+
+        return json.dumps(secrets_obj)
