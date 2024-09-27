@@ -2845,7 +2845,13 @@ class View(customtkinter.CTk):
                         text_color = TEXT_COLOR if i % 2 == 0 else BUTTON_TEXT_COLOR
 
                         buttons = []
-                        values = [secret['id'], secret['type'] if subtype_dict.get(secret['subtype']) == 'masterseed' else subtype_dict.get(secret['subtype']), secret['label']]
+                        values = [
+                            secret['id'],
+                            secret['type'] if subtype_dict.get(secret['subtype']) == 'masterseed'
+                            else secret['type'] if secret['type'] != 'Masterseed'
+                            else subtype_dict.get(secret['subtype']),
+                            secret['label']
+                        ]
                         for value, width in zip(values, header_widths):
                             cell_button = customtkinter.CTkButton(row_frame, text=value, text_color=text_color,
                                                                   fg_color=fg_color,
