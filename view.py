@@ -2804,7 +2804,7 @@ class View(customtkinter.CTk):
 
                 subtype_dict = {
                     '0x0': 'masterseed',
-                    '0x1': 'Mnemonic seedphrase'
+                    '0x1': 'Mnemonic seedphrase',
                 }
 
                 # Introduce table
@@ -2845,14 +2845,12 @@ class View(customtkinter.CTk):
                         text_color = TEXT_COLOR if i % 2 == 0 else BUTTON_TEXT_COLOR
 
                         buttons = []
-                        values = [
-                            secret['id'],
-                            secret['type'] if subtype_dict.get(secret['subtype']) == 'masterseed'
-                            else secret['type'] if secret['type'] != 'Masterseed'
-                            else subtype_dict.get(secret['subtype']),
-                            secret['label']
-                        ]
+                        secret_type = None
+                        if secret['type'] == "Masterseed" and secret['subtype'] == '0x1':
+                            secret_type = "Mnemonic seedphrase"
+                        values = [secret['id'], secret['type'] if not secret_type else secret_type, secret['label']]
                         for value, width in zip(values, header_widths):
+                            print(value)
                             cell_button = customtkinter.CTkButton(row_frame, text=value, text_color=text_color,
                                                                   fg_color=fg_color,
                                                                   font=customtkinter.CTkFont(size=14, family='Outfit'),
