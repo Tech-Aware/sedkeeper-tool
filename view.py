@@ -1,3 +1,4 @@
+import binascii
 import logging
 import sys
 import os
@@ -827,12 +828,14 @@ class View(customtkinter.CTk):
                 try:
                     logger.info("012 Getting card status")
                     status = self.controller.get_card_status()
-                    if not status['setup_done'] and not self.welcome_in_display:
+                    self.view_welcome()
+                    if not status['setup_done']:
                         if self.controller.cc.is_pin_set():
                             self.controller.cc.card_verify_PIN_simple()
                         else:
                             self.controller.PIN_dialog(f'Unlock your {self.controller.cc.card_type}')
                     self.controller.PIN_dialog(f'Unlock your {self.controller.cc.card_type}')
+
                     logger.debug("013 Card status updated and button configured")
                 except Exception as e:
                     logger.error(f"014 Error getting card status: {e}", exc_info=True)
@@ -841,7 +844,7 @@ class View(customtkinter.CTk):
             elif isConnected is False:
                 try:
                     logger.info("016 Card disconnected, resetting status")
-                    # self.view_welcome()
+                    self.view_welcome()
                     logger.debug("017 Status reset for card disconnection")
                 except Exception as e:
                     logger.error(f"018 Error resetting card status: {e}", exc_info=True)
@@ -1600,15 +1603,23 @@ class View(customtkinter.CTk):
         def _create_welcome_button():
             try:
                 logger.info("Creating welcome button")
-                if self.controller.cc.card_present:
+                if self.controller.cc.card_present and self.controller.cc.is_pin_set():
                     self.lets_go_button = self._create_welcome_button("Let's go", self.show_view_my_secrets)
                 else:
-                    self.lets_go_button = self._create_welcome_button("Let's go", lambda: self.show(
-                        "ERROR",
-                        'Insert card to continue.',
-                        'Ok',
-                        lambda: self.view_welcome(),
-                        "./pictures_db/insert_card__icon_ws.png"))
+                    if not self.controller.cc.card_present:
+                        self.lets_go_button = self._create_welcome_button("Let's go", lambda: self.show(
+                            "ERROR",
+                            'Insert card to continue.',
+                            'Ok',
+                            lambda: self.view_welcome(),
+                            "./pictures_db/insert_card__icon_ws.png"))
+                    else:
+                        self.lets_go_button = self._create_welcome_button("Let's go", lambda: self.show(
+                            "ERROR",
+                            'Enter your PIN to continue.',
+                            'Ok',
+                            lambda: self.view_welcome(),
+                            "./pictures_db/change_pin_popup_icon.jpg"))
                 self.lets_go_button.place(relx=0.85, rely=0.93, anchor="center")
 
                 logger.log(SUCCESS, "018 Welcome button created successfully")
@@ -2291,7 +2302,7 @@ class View(customtkinter.CTk):
                             try:
                                 logger.debug("Creating start backup buttons")
                                 self._create_button('Back', self.show_view_about, None).place(relx=0.1, rely=0.9)
-                                self.button_to_start_backup_process = self._create_button('Start', lambda: insure_that_card_insert_is_a_backup_card(), None)
+                                self.button_to_start_backup_process = self._create_button('Start', lambda: show_view_step_1_backup_process(), None)
                                 self.button_to_start_backup_process.place(relx=0.75, rely=0.9)
                                 logger.debug("Start backup buttons created successfully")
                             except Exception as e:
@@ -2898,7 +2909,7 @@ class View(customtkinter.CTk):
                     # Decode secret
                     try:
                         logger.debug("006 Decoding secret to show")
-                        self.decoded_login_password = self.controller.decode_secret(secret_details)
+                        self.decoded_login_password = self.controller._decode_password(secret_details, binascii.unhexlify(secret_details['secret']))
                         logger.log(
                             SUCCESS, f"login password secret decoded successfully: {self.decoded_login_password}"
                         )
@@ -2909,7 +2920,7 @@ class View(customtkinter.CTk):
 
                     self.login_entry.insert(0, self.decoded_login_password['login'])
                     self.url_entry.insert(0, self.decoded_login_password['url'])
-                    self.password_entry.insert(0, self.decoded_login_password['password'])
+                    self.password_entry.insert(0, self.decoded_login_password['password'][1:])
 
                 except Exception as e:
                     logger.error(f"008 Error creating fields: {e}", exc_info=True)
