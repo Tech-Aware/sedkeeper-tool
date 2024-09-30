@@ -2738,6 +2738,7 @@ class View(customtkinter.CTk):
                         secret_details['type'] = secret['type']
                         secret_details['label'] = secret['label']
                         secret_details['secret'] = 'Export failed: export not allowed by SeedKeeper policy.'
+                        secret_details['subtype'] = 0x0 if secret['subtype'] == '0x0' else '0x1'
                         logger.debug(f"Export_rights: Not allowed for {secret} with id {secret['id']}")
                     else:
                         logger.debug(f"Export rights allowed for {secret} with id {secret['id']}")
@@ -3116,7 +3117,8 @@ class View(customtkinter.CTk):
                 def show_seed_qr_code():
                     import pyqrcode
                     # Fonction pour générer et afficher le QR code
-                    qr = pyqrcode.create(f'{mnemonic}{passphrase if passphrase is not None else None}', error='L', mode='binary')
+                    qr_data = f'{mnemonic} {passphrase if passphrase else ""}'
+                    qr = pyqrcode.create(qr_data, error='L')
                     qr_xbm = qr.xbm(scale=3) if len(mnemonic.split()) <=12 else qr.xbm(scale=2)
                     # Convertir le code XBM en image Tkinter
                     qr_bmp = tkinter.BitmapImage(data=qr_xbm)
