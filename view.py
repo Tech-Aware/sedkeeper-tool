@@ -1,4 +1,5 @@
 import binascii
+import json
 import logging
 import sys
 import os
@@ -18,7 +19,7 @@ from log_config import log_method, setup_logging
 from exceptions import *
 
 from pysatochip.version import PYSATOCHIP_VERSION
-from pysatochip.CardConnector import CardError
+from pysatochip.CardConnector import UninitializedSeedError, SeedKeeperError, UnexpectedSW12Error, CardError
 
 logger = get_logger(__name__)
 
@@ -39,6 +40,12 @@ class View(customtkinter.CTk):
     def __init__(self, loglevel=setup_logging()):
         try:
             super().__init__()
+
+            self.trustore = {}
+            self.in_backup_process = False
+            self.in_start_backup_process = False
+            self.in_step_1_backup_process = False
+            self.in_step_2_backup_process = False
 
             try:
                 self._initialize_attributes()
@@ -828,13 +835,21 @@ class View(customtkinter.CTk):
                 try:
                     logger.info("012 Getting card status")
                     status = self.controller.get_card_status()
-                    self.view_welcome()
-                    if not status['setup_done']:
+                    if status['setup_done']:
                         if self.controller.cc.is_pin_set():
                             self.controller.cc.card_verify_PIN_simple()
-                        else:
-                            self.controller.PIN_dialog(f'Unlock your {self.controller.cc.card_type}')
                     self.controller.PIN_dialog(f'Unlock your {self.controller.cc.card_type}')
+                    if not self.in_backup_process:
+                        self.show_view_my_secrets()
+                    else:
+                        if self.in_start_backup_process:
+                            self.button_to_start_backup_process.configure(state='normal')
+                        elif self.in_step_1_backup_process:
+                            self.proceed_to_step_2.configure(state='normal')
+                        elif self.in_step_2_backup_process:
+                            self.proceed_to_step_3.configure(state='normal')
+
+
 
                     logger.debug("013 Card status updated and button configured")
                 except Exception as e:
@@ -844,7 +859,16 @@ class View(customtkinter.CTk):
             elif isConnected is False:
                 try:
                     logger.info("016 Card disconnected, resetting status")
-                    self.view_welcome()
+                    if not self.in_backup_process:
+                        logger.info("Not in backup process, returning to welcome view")
+                        self.view_welcome()
+                    else:
+                        if self.in_start_backup_process:
+                            self.button_to_start_backup_process.configure(state='disabled')
+                        elif self.in_step_1_backup_process:
+                            self.proceed_to_step_2.configure(state='disabled')
+                        elif self.in_step_2_backup_process:
+                            self.proceed_to_step_3.configure(state='disabled')
                     logger.debug("017 Status reset for card disconnection")
                 except Exception as e:
                     logger.error(f"018 Error resetting card status: {e}", exc_info=True)
@@ -1250,6 +1274,7 @@ class View(customtkinter.CTk):
     @log_method
     def show_view_my_secrets(self):
         try:
+            self.in_backup_process = False
             logger.info("001 Initiating show secrets process")
             self.welcome_in_display = False
             self._clear_welcome_frame()
@@ -1268,6 +1293,7 @@ class View(customtkinter.CTk):
     @log_method
     def show_view_generate_secret(self):
         try:
+            self.in_backup_process = False
             logger.info("001 Initiating secret generation process")
             self.welcome_in_display = False
             logger.debug("002 Welcome frame cleared")
@@ -1281,6 +1307,7 @@ class View(customtkinter.CTk):
     @log_method
     def show_view_import_secret(self):
         try:
+            self.in_backup_process = False
             logger.info("001 Initiating secret import process")
             self.welcome_in_display = False
             self._clear_current_frame()
@@ -1293,12 +1320,14 @@ class View(customtkinter.CTk):
 
     @log_method
     def show_view_logs(self):
+        self.in_backup_process = False
         total_number_of_logs, total_number_available_logs, logs = self.controller.get_logs()
         self.view_logs_details(logs)
 
     @log_method
     def show_view_settings(self):
         try:
+            self.in_backup_process = False
             logger.info("001 Displaying settings")
             self._delete_seedkeeper_menu()
             logger.debug("002 Seedkeeper menu deleted")
@@ -1315,6 +1344,7 @@ class View(customtkinter.CTk):
     def show_view_help(self):
         try:
             logger.info("001 Displaying help information")
+            self.in_backup_process = False
             self.welcome_in_display = False
             self._clear_current_frame()
             self._clear_welcome_frame()
@@ -1330,7 +1360,7 @@ class View(customtkinter.CTk):
     def show_view_start_setup(self):
         try:
             logger.info("001 Starting show_view_start_setup method")
-
+            self.in_backup_process = False
             self.welcome_in_display = False
             self._clear_welcome_frame()
             self._clear_current_frame()
@@ -1346,7 +1376,7 @@ class View(customtkinter.CTk):
     def show_view_change_pin(self):
         try:
             logger.info("001 Starting show_view_change_pin method")
-
+            self.in_backup_process = False
             self.welcome_in_display = False
             self._clear_welcome_frame()
             self._clear_current_frame()
@@ -1362,7 +1392,7 @@ class View(customtkinter.CTk):
     def show_view_edit_label(self):
         try:
             logger.info("001 Starting show_view_edit_label method")
-
+            self.in_backup_process = False
             self.welcome_in_display = False
             self._clear_welcome_frame()
             self._clear_current_frame()
@@ -1378,7 +1408,7 @@ class View(customtkinter.CTk):
     def show_view_check_authenticity(self):
         try:
             logger.info("001 Starting show_view_check_authenticity method")
-
+            self.in_backup_process = False
             self.welcome_in_display = False
             self._clear_welcome_frame()
             self._clear_current_frame()
@@ -1395,6 +1425,7 @@ class View(customtkinter.CTk):
         try:
             logger.info("001 Initiating about view process")
             self.welcome_in_display = False
+            self.in_backup_process = False
             self._clear_welcome_frame()
             self._clear_current_frame()
             logger.debug("002 Welcome and current frames cleared")
@@ -2116,6 +2147,7 @@ class View(customtkinter.CTk):
 
     @log_method
     def view_about(self):
+
         try:
             logger.info("001 Starting view_about method")
 
@@ -2206,12 +2238,28 @@ class View(customtkinter.CTk):
                     logger.error(f"020 Error creating card configuration section: {e}", exc_info=True)
                     raise UIElementError(f"021 Failed to create card configuration section: {e}") from e
 
+            @log_method
             def _create_make_backup():
+
+                def switch_in_backup_process_to(value: bool):
+                    self.in_backup_process = value
+
+                def switch_in_start_backup_process_to(value: bool):
+                    self.in_start_backup_process = value
+
+                def switch_in_step_1_backup_process_to(value: bool):
+                    self.in_step_1_backup_process = value
+
+                def switch_in_step_2_backup_process_to(value: bool):
+                    self.in_step_2_backup_process = value
+
                 try:
+                    print(f'Entering _create_make_backup')
+                    print(f'TrustStore: {self.controller.truststore}')
                     logger.info("Creating make backup section")
                     self._create_label("Make a backup of your Seedkeeper to another one:").place(relx=0.05, rely=0.53)
-                    self._create_button("Make it !", lambda: show_view_start_backup_process(), None).place(relx=0.62,
-                                                                                                           rely=0.522)
+                    self._create_button("Make it !", lambda: [switch_in_backup_process_to(True), show_view_start_backup_process()], None).place(relx=0.62,
+                                                                                                             rely=0.522)
                     logger.debug("Make backup section created successfully")
                 except Exception as e:
                     logger.error(f"Error creating make backup section: {e}", exc_info=True)
@@ -2219,7 +2267,9 @@ class View(customtkinter.CTk):
 
                 def show_view_start_backup_process():
                     try:
+                        print(f'Entering show_view_start_backup_process')
                         logger.info("Showing start backup process view")
+                        switch_in_start_backup_process_to(True)
                         view_start_backup_process()
                         logger.debug("Start backup process view shown successfully")
                     except Exception as e:
@@ -2229,17 +2279,15 @@ class View(customtkinter.CTk):
                 @log_method
                 def view_start_backup_process():
                     try:
+                        print(f'Entering view_start_backup_process')
                         logger.info("Starting backup process view")
-                        (label_list, id_list, label_pubkey_list, id_pubkey_list) = self.controller.get_secret_header_list()
-                        label_pubkey_list = label_pubkey_list[1:]  # remove (none) value and id
-                        print(label_pubkey_list)
-                        id_pubkey_list = id_pubkey_list[1:]
-                        self._create_frame()
 
                         def create_start_backup_header():
                             try:
+                                print(f'Creating start backup header')
                                 logger.debug("Creating start backup header")
-                                self._create_an_header('Make a backup', 'settings_icon_ws.png').place(relx=0.03, rely=0.08,
+                                self._create_an_header('Make a backup', 'settings_icon_ws.png').place(relx=0.03,
+                                                                                                      rely=0.08,
                                                                                                       anchor="nw")
                                 logger.debug("Start backup header created successfully")
                             except Exception as e:
@@ -2248,8 +2296,10 @@ class View(customtkinter.CTk):
 
                         def create_start_backup_subheader():
                             try:
+                                print(f'Creating start backup subheader')
                                 logger.debug("Creating start backup subheader")
-                                subheader_label = self._create_label('Create a backup of your Seedkeeper to another one')
+                                subheader_label = self._create_label(
+                                    'Create a backup of your Seedkeeper to another one')
                                 subheader_label.configure(text_color='grey')
                                 subheader_label.place(relx=0.04, rely=0.17, anchor="nw")
                                 logger.debug("Start backup subheader created successfully")
@@ -2259,10 +2309,11 @@ class View(customtkinter.CTk):
 
                         def create_start_backup_infobox_label():
                             try:
+                                print(f'Creating start backup infobox label')
                                 logger.debug("Creating start backup infobox label")
                                 infos_message_line_1 = "You are about to create a carbon copy of your current card - aka the master card - to"
                                 infos_message_line_2 = "a Seedkeeper backup card - aka the backup card - via an encrypted communication."
-                                infos_message_line_3 = "Prepare your backup card and press the start button."
+                                infos_message_line_3 = "Insert your backup card and press the start button."
 
                                 self._create_label(infos_message_line_1).place(relx=0.04, rely=0.25, anchor='nw')
                                 self._create_label(infos_message_line_2).place(relx=0.04, rely=0.29, anchor='nw')
@@ -2272,23 +2323,13 @@ class View(customtkinter.CTk):
                                 logger.error(f"Error creating start backup infobox label: {e}", exc_info=True)
                                 raise UIElementError(f"Failed to create start backup infobox label: {e}") from e
 
-                        def insure_that_card_insert_is_a_backup_card():
-                            if len(label_pubkey_list) == 0:
-                                self.show(
-                                    'ERROR',
-                                    'No authentikey available for encrypted export.\nInsert a backup SeedKeeper\nfor pairing or import a Trusted Pubkey first!',
-                                    'Ok',
-                                    None,
-                                    './pictures_db/settings_icon_ws.png'
-                                )
-                            else:
-                                show_view_step_1_backup_process()
-
                         def load_start_backup_background_image():
                             try:
+                                print(f'Loading start backup background image')
                                 logger.info("Loading start backup background image")
                                 self.backup_start_pictures = self._create_background_photo(self,
                                                                                            "./pictures_db/backup_start_ws.png")
+                                print(f'Backup start pictures: {self.backup_start_pictures}')
                                 self.canvas = self._create_canvas()
                                 self.canvas.config(width=750, height=600)
                                 self.canvas.place(relx=0.5, rely=0.5, anchor="center")
@@ -2300,9 +2341,13 @@ class View(customtkinter.CTk):
 
                         def create_start_backup_buttons():
                             try:
+                                print(f'Creating start backup buttons')
                                 logger.debug("Creating start backup buttons")
                                 self._create_button('Back', self.show_view_about, None).place(relx=0.1, rely=0.9)
-                                self.button_to_start_backup_process = self._create_button('Start', lambda: show_view_step_1_backup_process(), None)
+                                self.button_to_start_backup_process = self._create_button('Start',
+                                                                                          lambda: show_view_step_1_backup_process(),
+                                                                                          None)
+                                self.button_to_start_backup_process.configure(state='disabled')
                                 self.button_to_start_backup_process.place(relx=0.75, rely=0.9)
                                 logger.debug("Start backup buttons created successfully")
                             except Exception as e:
@@ -2311,6 +2356,7 @@ class View(customtkinter.CTk):
 
                         def load_start_backup_process():
                             try:
+                                print(f'Loading start backup process')
                                 logger.info("Loading start backup process")
                                 load_start_backup_background_image()
                                 create_start_backup_header()
@@ -2331,7 +2377,10 @@ class View(customtkinter.CTk):
 
                 def show_view_step_1_backup_process():
                     try:
+                        print(f'Entering show_view_step_1_backup_process')
                         logger.info("Showing step 1 backup process view")
+                        switch_in_start_backup_process_to(False)
+                        switch_in_step_1_backup_process_to(True)
                         view_step_1_backup_process()
                         logger.debug("Step 1 backup process view shown successfully")
                     except Exception as e:
@@ -2341,13 +2390,15 @@ class View(customtkinter.CTk):
                 @log_method
                 def view_step_1_backup_process():
                     try:
-                        logger.info("Starting step 1 backup process view")
+
                         self._create_frame()
 
                         def create_step_1_backup_header():
                             try:
+                                print(f'Creating step 1 backup header')
                                 logger.debug("Creating step 1 backup header")
-                                self._create_an_header('Make a backup', 'settings_icon_ws.png').place(relx=0.03, rely=0.08,
+                                self._create_an_header('Make a backup', 'settings_icon_ws.png').place(relx=0.03,
+                                                                                                      rely=0.08,
                                                                                                       anchor="nw")
                                 logger.debug("Step 1 backup header created successfully")
                             except Exception as e:
@@ -2356,8 +2407,10 @@ class View(customtkinter.CTk):
 
                         def create_step_1_backup_subheader():
                             try:
+                                print(f'Creating step 1 backup subheader')
                                 logger.debug("Creating step 1 backup subheader")
-                                subheader_label = self._create_label('Create a backup of your Seedkeeper to another one')
+                                subheader_label = self._create_label(
+                                    'Create a backup of your Seedkeeper to another one')
                                 subheader_label.configure(text_color='grey')
                                 subheader_label.place(relx=0.04, rely=0.17, anchor="nw")
                                 logger.debug("Step 1 backup subheader created successfully")
@@ -2367,10 +2420,11 @@ class View(customtkinter.CTk):
 
                         def create_step_1_backup_infobox_label():
                             try:
+                                print(f'Creating step 1 backup infobox label')
                                 logger.debug("Creating step 1 backup infobox label")
-                                infos_message_line_1 = "Step 1/3"
-                                infos_message_line_2 = "Remove the master card from the reader and plug in your backup card."
-                                infos_message_line_3 = "The fingerprint of your backup card is now recorded."
+                                infos_message_line_1 = "Step 1/3: The fingerprint of your backup card is now recorded."
+                                infos_message_line_2 = "Remove it from card reader and plug in your 'master' card"
+                                infos_message_line_3 = "The master card will be ready to copy its content using encrypted communication."
 
                                 step_label = self._create_label(infos_message_line_1)
                                 step_label.configure(font=self._make_text_bold())
@@ -2384,9 +2438,11 @@ class View(customtkinter.CTk):
 
                         def load_step_1_backup_background_image():
                             try:
+                                print(f'Loading step 1 backup background image')
                                 logger.info("Loading step 1 backup background image")
                                 self.backup_start_pictures = self._create_background_photo(self,
                                                                                            "./pictures_db/backup_step_1_ws.png")
+                                print(f'Backup step 1 pictures: {self.backup_start_pictures}')
                                 self.canvas = self._create_canvas()
                                 self.canvas.config(width=750, height=600)
                                 self.canvas.place(relx=0.5, rely=0.5, anchor="center")
@@ -2398,11 +2454,14 @@ class View(customtkinter.CTk):
 
                         def create_step_1_backup_buttons():
                             try:
+                                print(f'Creating step 1 backup buttons')
                                 logger.debug("Creating step 1 backup buttons")
-                                self._create_button('Back', lambda: show_view_start_backup_process(), None).place(relx=0.1,
-                                                                                                                  rely=0.9)
-                                self._create_button('Start', lambda: show_view_step_2_backup_process(), None).place(
-                                    relx=0.75, rely=0.9)
+                                self._create_button('Back', lambda: show_view_start_backup_process(), None).place(
+                                    relx=0.1, rely=0.9)
+                                self.proceed_to_step_2 = self._create_button('Backup', lambda: show_view_step_2_backup_process(), None)
+                                self.proceed_to_step_2.place(relx=0.75, rely=0.9)
+                                self.proceed_to_step_2.configure(state='disabled')
+
                                 logger.debug("Step 1 backup buttons created successfully")
                             except Exception as e:
                                 logger.error(f"Error creating step 1 backup buttons: {e}", exc_info=True)
@@ -2410,6 +2469,7 @@ class View(customtkinter.CTk):
 
                         def load_step_1_backup_process():
                             try:
+                                print(f'Loading step 1 backup process')
                                 logger.info("Loading step 1 backup process")
                                 load_step_1_backup_background_image()
                                 create_step_1_backup_header()
@@ -2431,6 +2491,8 @@ class View(customtkinter.CTk):
                 def show_view_step_2_backup_process():
                     try:
                         logger.info("Showing step 2 backup process view")
+                        switch_in_step_1_backup_process_to(False)
+                        switch_in_step_2_backup_process_to(True)
                         view_step_2_backup_process()
                         logger.debug("Step 2 backup process view shown successfully")
                     except Exception as e:
@@ -2467,9 +2529,9 @@ class View(customtkinter.CTk):
                         def create_step_2_backup_infobox_label():
                             try:
                                 logger.debug("Creating step 2 backup infobox label")
-                                infos_message_line_1 = "Step 2/3"
-                                infos_message_line_2 = "Remove the backup card from the reader and plug in your master card."
-                                infos_message_line_3 = "The master card is now ready to copy its content using an encrypted communication."
+                                infos_message_line_1 = "Step 2/3: The backup of your master card is ready."
+                                infos_message_line_2 = "Remove it and insert your backup card to import backup in it"
+                                infos_message_line_3 = "The data encypted will be transfer to your backup card"
 
                                 step_label = self._create_label(infos_message_line_1)
                                 step_label.configure(font=self._make_text_bold())
@@ -2499,7 +2561,9 @@ class View(customtkinter.CTk):
                             try:
                                 logger.debug("Creating step 2 backup buttons")
                                 self._create_button('Back', lambda: show_view_step_1_backup_process(), None).place(relx=0.1, rely=0.9)
-                                self._create_button('Start', lambda: show_view_step_3_backup_process(), None).place(relx=0.75, rely=0.9)
+                                self.proceed_to_step_3 = self._create_button('Import', lambda: show_view_step_3_backup_process(), None)
+                                self.proceed_to_step_3.place(relx=0.75, rely=0.9)
+                                self.proceed_to_step_3.configure(state='disabled')
                                 logger.debug("Step 2 backup buttons created successfully")
                             except Exception as e:
                                 logger.error(f"Error creating step 2 backup buttons: {e}", exc_info=True)
@@ -2513,6 +2577,7 @@ class View(customtkinter.CTk):
                                 create_step_2_backup_subheader()
                                 create_step_2_backup_infobox_label()
                                 create_step_2_backup_buttons()
+                                self.backup_data, self.sid_pubkey = self.controller.make_backup()
                                 logger.debug("Step 2 backup process loaded successfully")
                             except Exception as e:
                                 logger.error(f"Error loading step 2 backup process: {e}", exc_info=True)
@@ -2528,6 +2593,8 @@ class View(customtkinter.CTk):
                 def show_view_step_3_backup_process():
                     try:
                         logger.info("Showing step 3 backup process view")
+                        switch_in_step_2_backup_process_to(False)
+                        self.controller.import_backup(self.backup_data)
                         view_step_3_backup_process()
                         logger.debug("Step 3 backup process view shown successfully")
                     except Exception as e:
@@ -2563,9 +2630,9 @@ class View(customtkinter.CTk):
                         def create_step_3_backup_infobox_label():
                             try:
                                 logger.debug("Creating step 3 backup infobox label")
-                                infos_message_line_1 = "Step 3/3"
-                                infos_message_line_2 = "Remove the master card from the reader and plug in your backup card."
-                                infos_message_line_3 = "The content is now copied to the backup card. Well done!"
+                                infos_message_line_1 = "Step 3/3: congrat's!"
+                                infos_message_line_2 = "The content is now copied to the backup card. Well done!"
+                                infos_message_line_3 = "Click on Finish to go back to your secrets list"
 
                                 step_label = self._create_label(infos_message_line_1)
                                 step_label.configure(font=self._make_text_bold())
@@ -2594,7 +2661,7 @@ class View(customtkinter.CTk):
                             try:
                                 logger.debug("Creating step 3 backup buttons")
                                 self._create_button('Back', lambda: show_view_step_2_backup_process(), None).place(relx=0.1, rely=0.9)
-                                self._create_button('Finish', lambda: self.show_view_about(), None).place(relx=0.75, rely=0.9)
+                                self._create_button('Finish', lambda: [switch_in_backup_process_to(False), self.show_view_my_secrets()], None).place(relx=0.75, rely=0.9)
                                 logger.debug("Step 3 backup buttons created successfully")
                             except Exception as e:
                                 logger.error(f"Error creating step 3 backup buttons: {e}", exc_info=True)
@@ -4861,3 +4928,6 @@ class View(customtkinter.CTk):
             logger.error(f"027 Unexpected error in view_help: {e}", exc_info=True)
             self.view.show("ERROR", "An unexpected error occurred while displaying help", "Ok", None,
                            "./pictures_db/help_icon.png")
+
+
+
