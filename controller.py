@@ -1,6 +1,6 @@
 import sys
 import os
-from typing import Optional, Dict, List, Callable, Any
+from typing import Optional, Dict, List, Callable, Any, Tuple, Union
 from functools import wraps
 import logging
 import json
@@ -213,11 +213,13 @@ class Controller:
                             if self.cc.setup_done:
                                 self.cc.card_verify_PIN_simple(pin)
                                 self.add_authentikey_to_truststore()
-                                self.view.view_welcome()
+                                if not self.view.in_backup_process:
+                                    self.view.view_welcome()
                             else:
                                 self.card_setup_native_pin(pin)
                                 self.add_authentikey_to_truststore()
-                                self.view.view_welcome()
+                                if not self.view.in_backup_process:
+                                    self.view.view_welcome()
                             break
                         except Exception as e:
                             logger.info("exception from pin dialog")
@@ -687,6 +689,102 @@ class Controller:
             raise ControllerError(f"Failed to import wallet descriptor: {str(e)}") from e
 
     @log_method
+    def import_backup(self, backup_data):
+        try:
+            logger.info("Starting backup import process")
+            secret_json_str = backup_data
+
+            try:
+                secret_json = json.loads(secret_json_str)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse backup data: {e}", exc_info=True)
+                raise ValueError(f"Invalid backup data format: {e}") from e
+
+            authentikey_importer = secret_json['authentikey_importer']
+            authentikey = self.cc.card_export_authentikey().get_public_key_bytes(compressed=False).hex()
+
+            if authentikey != authentikey_importer:
+                logger.error(f"Authentikey mismatch: Expected {authentikey}, got {authentikey_importer}")
+                raise ValueError("Authentikey mismatch: backup data doesn't match current device")
+
+            authentikey_exporter = secret_json['authentikey_exporter']
+            sid_pubkey = None
+            headers = self.cc.seedkeeper_list_secret_headers()
+            for header_dic in headers:
+                if header_dic['type'] == 0x70:
+                    secret_dic = self.cc.seedkeeper_export_secret(header_dic['id'], None)  # export pubkey in plain
+                    pubkey = secret_dic['secret'][2:]  # [0:2] is the pubkey size in hex
+                    if pubkey == authentikey_exporter:
+                        sid_pubkey = header_dic['id']
+                        logger.debug('Found sid_pubkey: ' + str(sid_pubkey))
+                        break
+
+            if sid_pubkey is None:
+                # look in the truststore
+                card_label = self.truststore.get(authentikey_exporter, {}).get('card_label',
+                                                                               None)  # self.truststore.get(authentikey_exporter, None)
+                if card_label is not None:
+                    authentikey_exporter_comp = self.truststore.get(authentikey_exporter, {}).get('authentikey_comp',
+                                                                                                  None)
+                    logger.info(f"Found authentikey in truststore: {authentikey_exporter_comp}")
+
+                    pubkey_list = list(bytes.fromhex(authentikey_exporter))
+                    secret_list = [len(pubkey_list)] + pubkey_list
+                    header = self.cc.make_header(0x70, 0x01, card_label + ' authentikey')
+                    secret_dic = {'header': header, 'secret_list': secret_list}
+                    try:
+                        (sid_pubkey, fingerprint) = self.cc.seedkeeper_import_secret(secret_dic)
+                        logger.info(f"Imported authentikey from truststore with id {sid_pubkey}")
+                    except Exception as e:
+                        logger.error(f"Failed to import authentikey from truststore: {e}", exc_info=True)
+                        raise
+                else:
+                    logger.error(f"Could not find a trusted pubkey matching {authentikey_exporter[:66]}")
+                    raise ValueError(f"Could not find a trusted pubkey matching {authentikey_exporter[:66]}")
+
+            nb_secrets = nb_errors = 0
+            msg = ''
+            for secret_dic in secret_json['secrets']:
+                try:
+                    (itype, stype, label, fingerprint_header) = self.parse_secret_header(secret_dic)
+                    (sid, fingerprint) = self.cc.seedkeeper_import_secret(secret_dic, sid_pubkey)
+                    nb_secrets += 1
+                    msg += f"Imported {stype} with label '{label}', fingerprint {fingerprint} & id {sid}\n"
+                    logger.info(f"Successfully imported secret: {stype}, label: {label}, id: {sid}")
+                except (SeedKeeperError, UnexpectedSW12Error) as ex:
+                    nb_errors += 1
+                    logger.error(f"Error during secure secret import: {ex}", exc_info=True)
+                    msg += f'Error during secret import: {ex} \n'
+            if (nb_errors == 0):
+                msg = f'Imported {nb_secrets} secrets successfully:\n' + msg
+                logger.info(msg)
+                self.view.show('SUCCESS', msg, 'Ok', None)
+                return nb_secrets
+            else:
+                msg = f'Warning: {nb_errors} errors raised during secret import:\n' + msg
+                logger.warning(msg)
+                self.view.show('ERROR', msg, 'Ok', None)
+                return None
+
+        except Exception as e:
+            logger.error(f"Unexpected error during backup import: {e}", exc_info=True)
+            self.view.show('ERROR', f"An unexpected error occurred: {str(e)}", 'Ok', None)
+            return None
+    def parse_secret_header(self, secret_dic):
+        header_list= list(bytes.fromhex(secret_dic['header']))[2:] #first 2 bytes is sid
+        itype= header_list[0]
+        stype= Controller.dic_type.get(itype, hex(itype))
+        label_size= header_list[12]
+        try:
+            #if ( len(header_list)>=(12+label_size) ):
+            label= header_list[13:(13+label_size)]
+            label= bytes(label).decode('utf8')
+        except Exception as ex:
+            label= 'label error'
+        fingerprint= bytes(header_list[6:(6+4)]).hex()
+
+        return itype, stype, label, fingerprint
+    @log_method
     def _decode_password(self, result: Dict[str, Any], secret_bytes: bytes) -> Dict[str, Any]:
         try:
             logger.info("Decoding password secret")
@@ -975,7 +1073,6 @@ class Controller:
 
         if authentikey_hex in self.truststore:
             logger.info('Authentikey already in TrustStore!')
-            self.view.show('INFOS', 'Authentikey already in TrustStore!', 'Ok', None)
         else:
             # Si l'authentikey n'est pas encore présente dans le TrustStore
             authentikey_bytes = bytes.fromhex(authentikey_hex)
@@ -985,15 +1082,20 @@ class Controller:
 
             # Ajouter l'authentikey à la TrustStore avec le label et l'empreinte
             self.truststore[authentikey_hex] = {
+                'card_label': card_label,
+                'fingerprint': fingerprint,
+                'authentikey_comp': authentikey_comp
+            }
+
+            self.view.trustore[authentikey_hex] = {
                 'card_label': self.card_label,
                 'fingerprint': fingerprint,
                 'authentikey_comp': authentikey_comp
             }
+            print(self.view.trustore)
             print(self.truststore)
 
-            logger.info('Authentikey added to TrustStore!')
-            self.view.show('INFOS:', f'Authentikey added to TrustStore! \n{authentikey_comp}', 'Ok', None)
-
+            logger.info(f'Authentikey added to TrustStore: {authentikey_comp}')
         return True
 
     def get_secret_header_list(self):
@@ -1010,7 +1112,7 @@ class Controller:
                 label_list.append(Controller.dic_type.get(header_dic['type'], hex(header_dic['type'])) + ': ' + header_dic[
                     'fingerprint'] + ': ' + header_dic['label'])
                 id_list.append(header_dic['id'])
-                if header_dic['type'] == 0x70:
+                if header_dic['type'] == 0x70:  # if SECRET_TYPE_PUBKEY
                     pubkey_dic = self.cc.seedkeeper_export_secret(header_dic['id'],
                                                                   None)  # export pubkey in plain #todo: compressed form?
                     pubkey = pubkey_dic['secret'][2:10]  # [0:2] is the pubkey size in hex
@@ -1049,32 +1151,134 @@ class Controller:
 
         return label_authentikey_list, authentikey_list
 
-    def make_backup(self, authentikey_importer):
-        logger.debug('In make_backup')
-        secrets_obj = {
-            'authentikey_exporter': self.cc.parser.authentikey.get_public_key_bytes(False).hex(),
-            'authentikey_importer': authentikey_importer,
-            'secrets': []
-        }
+    @log_method
+    def make_backup(self) -> Optional[Tuple[str, Union[Union[int, str], Any]]]:
+        try:
+            logger.info("Starting backup process")
+            # Récupérer les listes de labels et d'ID
+            label_list, id_list, label_pubkey_list, id_pubkey_list = self.get_secret_header_list()
+            logger.debug(f"Initial label_list: {label_list}")
+            logger.debug(f"Initial id_list: {id_list}")
+            logger.debug(f"Initial label_pubkey_list: {label_pubkey_list}")
+            logger.debug(f"Initial id_pubkey_list: {id_pubkey_list}")
 
-        label_list, id_list, _, _ = self.get_secret_header_list()
+            # Supprimer la première entrée (considérée comme valeur par défaut ou placeholder)
+            label_pubkey_list = label_pubkey_list[1:]
+            id_pubkey_list = id_pubkey_list[1:]
+            logger.debug(f"Adjusted label_pubkey_list: {label_pubkey_list}")
+            logger.debug(f"Adjusted id_pubkey_list: {id_pubkey_list}")
+            logger.debug(f"TrustStore: {self.truststore}")
 
-        for sid in id_list:
-            try:
-                secret_dict = self.cc.seedkeeper_export_secret(sid, authentikey_importer)
-                secret = {
-                    'label': secret_dict['label'],
-                    'type': secret_dict['type'],
-                    'fingerprint': secret_dict['fingerprint'],
-                    'header': secret_dict['header'],
-                    'iv': secret_dict['iv'],
-                    'secret_encrypted': secret_dict['secret_encrypted'],
-                    'hmac': secret_dict['hmac'],
-                }
-                secrets_obj['secrets'].append(secret)
-            except Exception as ex:
-                logger.warning(f'Exception during secret export: {str(ex)}')
-                secret = {'error': str(ex)}
-                secrets_obj['secrets'].append(secret)
+            if len(label_pubkey_list) == 0:
+                logger.warning("No authentikeys available. Showing error message.")
+                self.view.show(
+                    'ERROR',
+                    "Insert your backup card and click on 'Make it!'",
+                    'Ok',
+                    lambda: self.view.show_view_about(),
+                    './pictures_db/settings_icon_ws.png'
+                )
+                return  # Arrêter l'exécution si aucune authentikey n'est disponible
 
-        return json.dumps(secrets_obj)
+            logger.info("Selecting first label_pubkey from the list")
+            label_pubkey = label_pubkey_list[0]
+            logger.debug(f"Selected label_pubkey: {label_pubkey}")
+            index = label_pubkey_list.index(label_pubkey)
+            sid_pubkey = id_pubkey_list[index]
+            logger.debug(f"sid_pubkey: {sid_pubkey}, type: {type(sid_pubkey)}")
+
+            backup_json = ''
+
+            if isinstance(sid_pubkey, int):
+                logger.info("sid_pubkey is an integer, indicating it’s from a device, attempting export...")
+                try:
+                    logger.debug(f"Attempting to export authentikey from device with sid_pubkey: {sid_pubkey}")
+                    secret_dict_pubkey = self.cc.seedkeeper_export_secret(sid_pubkey)
+                    logger.debug(f"secret_dict_pubkey: {secret_dict_pubkey}")
+                    authentikey_importer = secret_dict_pubkey['secret'][2:]
+                    logger.debug(f"Authentikey importer obtained: {authentikey_importer}")
+                except Exception as ex:
+                    logger.error(f"Exception during authentikey export: {str(ex)}", exc_info=True)
+                    authentikey_importer = "(unknown)"
+            elif isinstance(sid_pubkey, str):
+                logger.info("sid_pubkey is a string, indicating it’s from the truststore, attempting import...")
+                try:
+                    authentikey_importer = sid_pubkey
+                    logger.debug(f"Authentikey importer (from truststore): {authentikey_importer}")
+                    authentikey_list = list(bytes.fromhex(authentikey_importer))
+                    logger.debug(f"Authentikey list: {authentikey_list}")
+                    secret_list = [len(authentikey_list)] + authentikey_list
+                    logger.debug(f"Secret list: {secret_list}")
+                    card_label = self.truststore.get(authentikey_importer, {}).get('card_label', '') + ' authentikey'
+                    logger.debug(f"Card label: {card_label}")
+                    backup_header = self.cc.make_header(0x70, 0x01, card_label)
+                    logger.debug(f"Backup header: {backup_header}")
+                    secret_dict = {'header': backup_header, 'secret_list': secret_list}
+                    logger.debug(f"Secret dictionary for import: {secret_dict}")
+                    sid_pubkey, fingerprint = self.cc.seedkeeper_import_secret(secret_dict)
+                    logger.debug(f"Imported sid_pubkey: {sid_pubkey}, fingerprint: {fingerprint}")
+                    self.view.show('INFO', f"Authentikey '{card_label}' imported from TrustStore with id {sid_pubkey}")
+                    id_pubkey_list[index] = sid_pubkey
+                    logger.debug(f"Updated id_pubkey_list: {id_pubkey_list}")
+                except Exception as ex:
+                    logger.error(f"Exception during authentikey import: {str(ex)}", exc_info=True)
+                    authentikey_importer = '(unknown)'
+            else:
+                logger.error(f"sid_pubkey is of unexpected type: {type(sid_pubkey)}")
+                raise ValueError(f"Invalid sid_pubkey type: {type(sid_pubkey)}")
+
+            # Exporter les secrets sous forme de JSON
+            exporter_pubkey = self.cc.parser.authentikey.get_public_key_bytes(False).hex()
+            logger.debug(f"Exporter authentikey public key (hex): {exporter_pubkey}")
+            secrets_obj = {
+                'authentikey_exporter': exporter_pubkey,
+                'authentikey_importer': authentikey_importer,
+                'secrets': []
+            }
+            logger.log(SUCCESS, "Initialized secrets object for backup")
+
+            # Parcourir tous les secrets
+            nb_secrets = 0
+            nb_errors = 0
+            logger.info("Starting export of secrets...")
+            for sid in id_list:
+                logger.debug(f"Processing sid: {sid}")
+                if sid == sid_pubkey:
+                    logger.debug(f"Skipping sid_pubkey: {sid_pubkey}")
+                    continue
+                try:
+                    logger.debug(f"Attempting to export secret with sid: {sid}")
+                    secret_dict = self.cc.seedkeeper_export_secret(sid, sid_pubkey)
+                    logger.debug(f"secret_dict: {secret_dict}")
+                    secret = {
+                        'label': secret_dict['label'],
+                        'type': secret_dict['type'],
+                        'fingerprint': secret_dict['fingerprint'],
+                        'header': secret_dict['header'],
+                        'iv': secret_dict['iv'],
+                        'secret_encrypted': secret_dict['secret_encrypted'],
+                        'hmac': secret_dict['hmac'],
+                    }
+                    logger.debug(f"Appending secret to secrets_obj: {secret}")
+                    secrets_obj['secrets'].append(secret)
+                    nb_secrets += 1
+                    logger.log(SUCCESS, f"Secret exported successfully. Total secrets exported: {nb_secrets}")
+                except (SeedKeeperError, UnexpectedSW12Error, Exception) as ex:
+                    logger.error(f"Exception during secret export: {str(ex)}", exc_info=True)
+                    secret = {'error': str(ex)}
+                    logger.debug(f"Appending error to secrets_obj: {secret}")
+                    secrets_obj['secrets'].append(secret)
+                    nb_errors += 1
+                    logger.info(f"Error occurred. Total errors: {nb_errors}")
+
+            backup_json = json.dumps(secrets_obj)
+            logger.log(SUCCESS, "Backup JSON created")
+            logger.debug(f"Backup JSON: {backup_json}")
+
+            return backup_json, sid_pubkey
+        except Exception as e:
+            logger.error(f"Unexpected error during backup: {str(e)}", exc_info=True)
+            raise ValueError(f"Failed to make backup: {str(e)}") from e
+
+
+
