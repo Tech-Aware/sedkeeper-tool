@@ -44,12 +44,17 @@ jobs:
           const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
           const status = '${{ job.status }}';
           
-          github.rest.repos.createCommitStatus({
-            owner: owner,
-            repo: repo,
-            sha: context.sha,
-            state: status.toLowerCase(),
-            target_url: run_url,
-            description: `Build and test ${status.toLowerCase()}`,
-            context: 'Windows Build and Test'
-          });
+          try {
+            await github.rest.repos.createCommitStatus({
+              owner: owner,
+              repo: repo,
+              sha: context.sha,
+              state: status.toLowerCase(),
+              target_url: run_url,
+              description: `Build and test ${status.toLowerCase()}`,
+              context: 'Windows Build and Test'
+            });
+          } catch (error) {
+            console.error('Failed to create commit status:', error.message);
+            core.setFailed('Failed to create commit status');
+          }
