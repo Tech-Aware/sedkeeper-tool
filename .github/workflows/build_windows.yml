@@ -1,60 +1,46 @@
-name: Windows Build and Test
+name: Building Seedkeeper Tool Windows Binary
 
 on:
   push:
+    tags: '*'
+    branches: [ main, dev, test_* ]
+  pull_request:
     branches: [ main ]
 
 jobs:
-  build-and-test:
-    runs-on: windows-latest
+  build_windows:
+    runs-on: windows-2022
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        node-version: '16'
+        python-version: '3.10'
+        architecture: 'x64'
 
     - name: Install dependencies
-      run: npm ci
-      shell: powershell
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
 
-    - name: Run tests
-      run: npm test
+    - name: Build Windows executable
+      run: |
+        pyinstaller --onefile --windowed --icon=satochip_utils.ico seedkeeper_tool.py
 
-    - name: Build project
-      if: success()
-      run: npm run build
-
-    - name: Upload build artifacts
-      if: success()
+    - name: Archive Windows binary
       uses: actions/upload-artifact@v4
       with:
-        name: dist
-        path: dist
+        name: seedkeeper-tool-windows
+        path: dist/seedkeeper_tool.exe
 
-    - name: Report status
-      if: always()
-      uses: actions/github-script@v6
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const { owner, repo } = context.repo;
-          const run_id = context.runId;
-          const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
-          const status = '${{ job.status }}';
-          
-          try {
-            await github.rest.repos.createCommitStatus({
-              owner: owner,
-              repo: repo,
-              sha: context.sha,
-              state: status.toLowerCase(),
-              target_url: run_url,
-              description: `Build and test ${status.toLowerCase()}`,
-              context: 'Windows Build and Test'
-            });
-          } catch (error) {
-            console.error('Failed to create commit status:', error.message);
-          }
+        files: dist/seedkeeper_tool.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
