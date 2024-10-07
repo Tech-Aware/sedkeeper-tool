@@ -18,7 +18,7 @@ jobs:
 
     - name: Install dependencies
       run: npm ci
-      shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+      shell: powershell
 
     - name: Run tests
       run: npm test
@@ -57,5 +57,4 @@ jobs:
             });
           } catch (error) {
             console.error('Failed to create commit status:', error.message);
-            core.setFailed('Failed to create commit status');
           }
