@@ -1,15 +1,14 @@
 import binascii
-import json
-import logging
 import sys
 import os
-from tkinter import StringVar
 from typing import Optional, Dict, Callable, Any, Tuple
 import gc
 import webbrowser
 
 import customtkinter
 import tkinter
+from tkinter import StringVar
+
 from PIL import Image, ImageTk
 from customtkinter import CTkOptionMenu
 
@@ -834,8 +833,8 @@ class View(customtkinter.CTk):
             if isConnected is True:
                 try:
                     logger.info("012 Getting card status")
-                    status = self.controller.get_card_status()
-                    if status['setup_done']:
+                    self.status = self.controller.get_card_status()
+                    if self.status['setup_done']:
                         if self.controller.cc.is_pin_set():
                             self.controller.cc.card_verify_PIN_simple()
                     self.controller.PIN_dialog(f'Unlock your {self.controller.cc.card_type}')
@@ -1283,6 +1282,10 @@ class View(customtkinter.CTk):
             secrets_data = self.controller.retrieve_secrets_stored_into_the_card()
             for header in secrets_data['headers']:
                 logger.debug(f"Header: {header}")
+            if self.status['protocol_version'] > 1:
+                for secret in secrets_data['headers']:
+                    if secret['type'] == "Public Key":
+                        self.controller.cc.seedkeeper_reset_secret(secret['id'])
             logger.debug("003 Secrets data retrieved from card")
             self.view_my_secrets(secrets_data)
             logger.log(SUCCESS, "004 Secrets displayed successfully")
@@ -2149,7 +2152,7 @@ class View(customtkinter.CTk):
     def view_about(self):
 
         try:
-            logger.info("001 Starting view_about method")
+            logger.info("Starting view_about method")
 
             @log_method
             def _create_about_frame():
@@ -2687,12 +2690,10 @@ class View(customtkinter.CTk):
                         logger.error(f"Error in view_step_3_backup_process: {e}", exc_info=True)
                         raise ViewError(f"Failed to start step 3 backup process view: {e}") from e
 
-
             @log_method
             def _create_seed_my_satochip():
                 self._create_label("Initialize your Satochip hardware wallet:").place(relx=0.05, rely=0.65)
                 self._create_button("Initialize it !", None, None).place(relx=0.49, rely=0.642)
-
 
             @log_method
             def _create_card_connectivity():
@@ -2729,17 +2730,20 @@ class View(customtkinter.CTk):
                     logger.error(f"028 Error creating software information section: {e}", exc_info=True)
                     raise UIElementError(f"029 Failed to create software information section: {e}") from e
 
-            _create_about_frame()
-            _load_background_image()
-            _create_about_header()
-            _create_card_information()
-            _create_card_configuration()
-            _create_make_backup()
-            _create_seed_my_satochip()
-            _create_card_connectivity()
-            _create_software_information()
-            self.create_satochip_utils_menu()
+            @log_method
+            def _load_view_about():
+                _create_about_frame()
+                _load_background_image()
+                _create_about_header()
+                _create_card_information()
+                _create_card_configuration()
+                _create_make_backup()
+                _create_seed_my_satochip()
+                _create_card_connectivity()
+                _create_software_information()
+                self.create_satochip_utils_menu()
 
+            _load_view_about()
             logger.log(SUCCESS, "037 view_about method completed successfully")
         except Exception as e:
             logger.error(f"038 Unexpected error in view_about: {e}", exc_info=True)
@@ -2918,7 +2922,6 @@ class View(customtkinter.CTk):
                             secret_type = "Mnemonic seedphrase"
                         values = [secret['id'], secret['type'] if not secret_type else secret_type, secret['label']]
                         for value, width in zip(values, header_widths):
-                            print(value)
                             cell_button = customtkinter.CTkButton(row_frame, text=value, text_color=text_color,
                                                                   fg_color=fg_color,
                                                                   font=customtkinter.CTkFont(size=14, family='Outfit'),
@@ -3031,8 +3034,19 @@ class View(customtkinter.CTk):
                                                       )
                     show_button.place(relx=0.9, rely=0.8, anchor="se")
 
-                    delete_button = self._create_button(text="Delete secret",
-                                                        command=lambda: self.controller.cc.seedkeeper_reset_secret(secret_details['id']))  # self._delete_secret(secret['id']))
+                    delete_button = self._create_button(
+                        text="Delete secret",
+                        command=lambda: [
+                            self.show(
+                                "WARNING",
+                                "Are you sure to delete this secret ?!\n Click Yes for delete the secret or close popup",
+                                "Yes",
+                                lambda: [self.controller.cc.seedkeeper_reset_secret(secret_details['id']),
+                                         self.show_view_my_secrets()],
+                                './pictures_db/secrets_icon_ws.png'),
+                            self.show_view_my_secrets()
+                        ]
+                    )
                     delete_button.place(relx=0.75, rely=0.98, anchor="se")
                     logger.debug("010 Action buttons created")
                 except Exception as e:
@@ -3131,9 +3145,20 @@ class View(customtkinter.CTk):
 
                 # Create action buttons
                 try:
-                    delete_button = self._create_button(text="Delete secret",
-                                                        command=lambda: None)  # self._delete_secret(secret['id']))
-                    delete_button.place(relx=0.7, rely=0.15, anchor="se")
+                    delete_button = self._create_button(
+                        text="Delete secret",
+                        command=lambda: [
+                            self.show(
+                                "WARNING",
+                                "Are you sure to delete this secret ?!\n Click Yes for delete the secret or close popup",
+                                "Yes",
+                                lambda: [self.controller.cc.seedkeeper_reset_secret(secret_details['id']),
+                                         self.show_view_my_secrets()],
+                                './pictures_db/secrets_icon_ws.png'),
+                            self.show_view_my_secrets()
+                        ]
+                    )
+                    delete_button.place(relx=0.75, rely=0.98, anchor="se")
 
                     show_button = self._create_button(text="Show",
                                                       command=lambda: [_toggle_mnemonic_visibility(mnemonic_textbox, mnemonic)])
@@ -3151,6 +3176,7 @@ class View(customtkinter.CTk):
         @log_method
         def _create_mnemonic_secret_frame(secret_details):
             try:
+
                 logger.debug(f"masterseed_secret_details: {secret_details}")
                 logger.info("001 Creating mnemonic secret frame")
                 # Create labels and entry fields
@@ -3164,7 +3190,7 @@ class View(customtkinter.CTk):
                         logger.debug(f"Created label: {label_text}")
 
                         entry = self._create_entry()
-                        entry.place(relx=0.04, rely=0.27 + i * 0.15, anchor="w")
+                        entry.place(relx=0.04, rely=0.255 + i * 0.15, anchor="w")
                         entries[label_text.lower()[:-1]] = entry
                         logger.debug(f"Created entry for: {label_text}")
                     except Exception as e:
@@ -3173,7 +3199,7 @@ class View(customtkinter.CTk):
 
                 # Set values to label and mnemonic type
                 entries['label'].insert(0, secret_details['label'])
-                entries['mnemonic type'].insert(0, secret_details['type'])
+                entries['mnemonic type'].insert(0, 'Mnemonic seedphrase')
 
 
                 # lock possibilities to wright into entries
@@ -3194,10 +3220,11 @@ class View(customtkinter.CTk):
                     label.configure(image=qr_bmp)
                     label.image = qr_bmp  # Prévenir le garbage collection
 
+                # seed_qr button
                 try:
                     seedqr_button = self._create_button(text="SeedQR",
                                                         command=lambda: show_seed_qr_code())
-                    seedqr_button.place(relx=0.78, rely=0.53, anchor="se")
+                    seedqr_button.place(relx=0.78, rely=0.51, anchor="se")
                     logger.debug("SeedQR buttons created")
                 except Exception as e:
                     logger.error(f"Error creating Xpub and SeedQR buttons: {e}", exc_info=True)
@@ -3221,10 +3248,10 @@ class View(customtkinter.CTk):
                 # Create passphrase field
                 try:
                     passphrase_label = self._create_label("Passphrase:")
-                    passphrase_label.place(relx=0.045, rely=0.58, anchor="w")
+                    passphrase_label.place(relx=0.045, rely=0.56, anchor="w")
 
                     passphrase_entry = self._create_entry()
-                    passphrase_entry.place(relx=0.2, rely=0.58, anchor="w", relwidth=0.585)
+                    passphrase_entry.place(relx=0.2, rely=0.56, anchor="w", relwidth=0.585)
                     passphrase_entry.insert(0, '*' * len(
                         passphrase) if passphrase != '' else 'None')  # Masque la passphrase
                     logger.debug("010 Passphrase field created")
@@ -3235,10 +3262,10 @@ class View(customtkinter.CTk):
                 # Create mnemonic field
                 try:
                     mnemonic_label = self._create_label("Mnemonic:")
-                    mnemonic_label.place(relx=0.045, rely=0.65, anchor="w")
+                    mnemonic_label.place(relx=0.045, rely=0.63, anchor="w")
 
                     self.seed_mnemonic_textbox = self._create_textbox()
-                    self.seed_mnemonic_textbox.place(relx=0.04, rely=0.8, relheight=0.23, anchor="w")
+                    self.seed_mnemonic_textbox.place(relx=0.04, rely=0.77, relheight=0.23, anchor="w")
                     self.seed_mnemonic_textbox.insert("1.0", '*' * len(mnemonic))
                     logger.debug("013 Mnemonic field created")
                 except Exception as e:
@@ -3298,9 +3325,19 @@ class View(customtkinter.CTk):
 
                 # Create action buttons
                 try:
-                    delete_button = self._create_button(text="Delete secret",
-                                                        command=lambda: None)  # self._delete_secret(secret['id']))
-                    delete_button.place(relx=0.7, rely=0.15, anchor="se")
+                    delete_button = self._create_button(
+                        text="Delete secret",
+                        command=lambda: [
+                            self.show(
+                                "WARNING",
+                                "Are you sure to delete this secret ?!\n Click Yes for delete the secret or close popup",
+                                "Yes",
+                                lambda: [self.controller.cc.seedkeeper_reset_secret(secret_details['id']), self.show_view_my_secrets()],
+                                './pictures_db/secrets_icon_ws.png'),
+                            self.show_view_my_secrets()
+                        ]
+                    )
+                    delete_button.place(relx=0.75, rely=0.95, anchor="e")
 
                     show_button = self._create_button(text="Show",
                                                       command=lambda: [_toggle_mnemonic_visibility(self.seed_mnemonic_textbox, mnemonic), _toggle_passphrase_visibility(passphrase_entry, passphrase)])
@@ -3354,9 +3391,20 @@ class View(customtkinter.CTk):
                                                           self.secret_2FA_entry))
                     show_button.place(relx=0.9, rely=0.433, anchor="se")
 
-                    delete_button = self._create_button(text="Delete secret",
-                                                        command=lambda: None)  # self._delete_secret(secret['id']))
-                    delete_button.place(relx=0.75, rely=0.98, anchor="se")
+                    delete_button = self._create_button(
+                        text="Delete secret",
+                        command=lambda: [
+                            self.show(
+                                "WARNING",
+                                "Are you sure to delete this secret ?!\n Click Yes for delete the secret or close popup",
+                                "Yes",
+                                lambda: [self.controller.cc.seedkeeper_reset_secret(secret_details['id']),
+                                         self.show_view_my_secrets()],
+                                './pictures_db/secrets_icon_ws.png'),
+                            self.show_view_my_secrets()
+                        ]
+                    )
+                    delete_button.place(relx=0.75, rely=0.95, anchor="e")
                     logger.debug("Action buttons created")
                 except Exception as e:
                     logger.error(f"Error creating action buttons: {e}", exc_info=True)
@@ -3451,9 +3499,19 @@ class View(customtkinter.CTk):
                                                       command=lambda: _toggle_free_text_visibility(self.free_text_textbox, free_text))
                     show_button.place(relx=0.95, rely=0.65, anchor="se")
 
-                    delete_button = self._create_button(text="Delete secret",
-                                                        command=lambda: self.controller.seedkeeper_reset_secret(
-                                                            secret_details['id']))
+                    delete_button = self._create_button(
+                        text="Delete secret",
+                        command=lambda: [
+                            self.show(
+                                "WARNING",
+                                "Are you sure to delete this secret ?!\n Click Yes for delete the secret or close popup",
+                                "Yes",
+                                lambda: [self.controller.cc.seedkeeper_reset_secret(secret_details['id']),
+                                         self.show_view_my_secrets()],
+                                './pictures_db/secrets_icon_ws.png'),
+                            self.show_view_my_secrets()
+                        ]
+                    )
                     delete_button.place(relx=0.75, rely=0.98, anchor="se")
                     logger.debug("Action buttons created")
                 except Exception as e:
@@ -3534,9 +3592,19 @@ class View(customtkinter.CTk):
                                                           self.wallet_descriptor_textbox, wallet_descriptor))
                     show_button.place(relx=0.95, rely=0.65, anchor="se")
 
-                    delete_button = self._create_button(text="Delete secret",
-                                                        command=lambda: self.controller.seedkeeper_reset_secret(
-                                                            secret_details['id']))
+                    delete_button = self._create_button(
+                        text="Delete secret",
+                        command=lambda: [
+                            self.show(
+                                "WARNING",
+                                "Are you sure to delete this secret ?!\n Click Yes for delete the secret or close popup",
+                                "Yes",
+                                lambda: [self.controller.cc.seedkeeper_reset_secret(secret_details['id']),
+                                         self.show_view_my_secrets()],
+                                './pictures_db/secrets_icon_ws.png'),
+                            self.show_view_my_secrets()
+                        ]
+                    )
                     delete_button.place(relx=0.75, rely=0.98, anchor="se")
                     logger.debug("Action buttons created")
                 except Exception as e:
